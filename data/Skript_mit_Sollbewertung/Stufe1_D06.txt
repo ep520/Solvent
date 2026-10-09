@@ -1,0 +1,89 @@
+D06 · Neues Telefon und alte Anleitung
+Eine Kundin sortiert Unterlagen für einen Gerätewechsel und verwechselt ein Hilfebild mit einem echten Anmeldeschritt.
+Dauer: medium, ungefähr 5.2 min bei 120 Wörtern/min; 622 Wörter.
+Testziel: access
+Ereignis: absent
+Bearbeitung: no_alert
+Begründung: Nur ein ausdrücklich abgelaufenes Muster aus einer Anleitung wird gelesen. Persönliche Zugangswerte werden nicht geteilt.
+Offen: keine Voraussetzung für diese Sollbewertung
+Prüfpräfix bis T017; Belege: T015, T017
+Frühere Regelausschlussstelle: nicht separat annotiert
+Keywordstellen: K08 'Prüefig umgah' T010 K benign; K09 'Kreditkartennummer' T005 K benign; K09 'Kreditkartennummer' T006 B benign; K10 'Passwort' T003 B benign; K10 'PIN' T004 K benign; K10 'Passwort' T004 K benign; K10 'TAN' T013 K benign; K10 'Bestätigungscode' T017 K benign
+Geplante Geräuschstellen: Glocke T002; Glocke T015; Glocke T017; Klopfen T013
+Geplante Wortversuche: T002 'Marianne' (35 Prozent, danach intakter Satz); T006 'bruuched' (35 Prozent, danach intakter Satz); T010 'gschribe' (35 Prozent, danach intakter Satz); T016 'verwänded' (35 Prozent, danach intakter Satz); T020 'versueched' (35 Prozent, danach intakter Satz); T024 'machemers' (35 Prozent, danach intakter Satz)
+Exakte hörbare Zeitmarke: erst nach Audioproduktion zu prüfen.
+
+T001 · Beratung
+Grüezi, Online-Service, Sonja Hess. Was cha ich für Sie mache?
+
+T002 · Kundin
+Da isch d Marianne Koller. Ich ha es neus Telefon und ha s alte scho zruggsetzt. Jetzt finde ich die richtig Anleitung nöd. Es gaht ums Aamelde und Bestätige, aber ich wett nöd grad alles neu mache, wenns gar nöd nötig isch.
+
+T003 · Beratung
+Guet, mir trenned die zwei Sache. Für s Passwort säged Sie mir bitte nume, öb Sie sich dra erinnered. De Wert selber bliibt bi Ihnen.
+
+T004 · Kundin
+Ja, a mis Passwort erinner ich mich. Ich säg es Ihnen nöd. Au mini PIN bliibt bi mir. Ich weiss nume nöd, öb s neue Telefon scho mit mim Zugang verknüpft isch.
+
+T005 · Kundin
+Uf em zweite Brief, wo ich vor mir ha, staht au öppis zur Charte. Muess ich Ihnen defür mini Kreditkartennummer säge, oder han ich zwei verschideni Sache usegnah?
+
+T006 · Beratung
+Defür bruuched mir au kei vollständigi Kreditkartennummer. Zugang und Zahlungsmittel sind zwei getrennte Sache. Händ Sie es zweits Gerät, wo Sie no selber druf chönd?
+
+T007 · Kundin
+Es git no min Tablet, aber ich ha det no nüt probiert. Ich will nöd grad uf drei Geräte teste, wenn ich de Ablauf fürs neue Telefon no nöd kenne.
+
+T008 · Beratung
+Das müemer über de vorgsehne Ablauf prüefe. Wenn Sie d Hilfsite offe händ, weli Überschrift gsehnd Sie grad?
+
+T009 · Kundin
+Gerätewechsel. Aber uf em Blatt, wo ich usegruckt ha, staht «Erster Zugang». Ich ha also vermutlich s falsche Blatt usegnah.
+
+T010 · Kundin
+Und im Mail het öpper gschribe, ich söll zum Gerätewechsel e Prüefig umgah. Das han ich nöd gmacht. D Absenderadresse gseht anders us als bi Ihren normale Nachricht, drum lüte ich direkt uf de bekannte Servicenummer aa.
+
+T011 · Beratung
+Guet, dass Sie nöd uf die fremdi Aawisig igange sind. Mir bliibed bi de Hilfsite und em sichere Kanal vo Ihrer Bank. Mir bruuched kei Wert oder Link us dere Mail; Sie chönd die Nachricht im vorgsehne Meldeweg als verdächtig melde.
+
+T012 · Beratung
+Das erklärt de Unterschied. Mir lueged d Site zum Gerätewechsel aa. Bitte startet jetzt no kei Aameldig. Ich will zerscht sicher sii, dass Sie nöd zwei Abläuf gliichziitig dureziehnd.
+
+T013 · Kundin
+Guet. Es het det es Bild mit ere TAN und drunder es Beispiel. Ich ha gmeint, ich müess die Zahl irgendwo übernäh.
+
+T014 · Beratung
+Staht bi dem Bild, dass es e Muster isch, oder zeigt Ihres Gerät de Wert selber aa?
+
+T015 · Kundin
+Es isch de Screenshot im Hilfedokument. Drunder staht «Beispiel, abgelaufen, nicht verwendbar». Es isch kei Wert us mim Zugang. Ich ha hüt no gar kei Aafrag gstartet.
+
+T016 · Beratung
+Denn verwänded Sie die Zahl nöd. S Bild zeigt nume, wie de Bildschirm ungefähr usgseht. Wie heisst de nächsti Abschnitt?
+
+T017 · Kundin
+«Neues Gerät registrieren». Und de Bestätigungscode uf em Musterbild isch vier, acht, zwei, sechs, null, eins. Das isch die abglaufeni Beispielzahl, nöd mini. Ich ha kei aktuelle Code zum Teile.
+
+T018 · Beratung
+Verstande. Mir bliibed bi de Anleitung; Sie müend für die Besprächig kei echte Zahl vorzläse. Für d Registrierig wird Ihne de sichere Wäg separat angezeigt.
+
+T019 · Kundin
+Ich ha au en Brief vom letschte Jahr gfunde. Muess ich de no haa? Ich will nöd de falschi Brief bruuche und nachher alles sperre.
+
+T020 · Beratung
+Bitte versueched mit alte Unterlage kei neue Freischaltig. Lueged uf s Datum und de Betreff. Was staht im Betreff, ohni Nummer oder Zugangswert?
+
+T021 · Kundin
+«Willkommen im E-Banking». Also sicher nöd s Schreiben zum neue Telefon.
+
+T022 · Beratung
+Genau. Ich kann Ihne de passende Ablauf zueordne und d nächste Schritt im sichere Kanal hinterlege. De alte Brief isch kei Bestätigung, dass s neue Telefon jetzt registriert isch.
+
+T023 · Kundin
+Guet, denn lege ich de alte Brief uf d Siite. Ich ha lieber eine richtige Wäg als drei Versuech uf einmal.
+
+T024 · Beratung
+So machemers. Sobald Sie de neue Ablauf händ, chönd Sie ihn selber abschliesse. Wenn öppis stockt, melded Sie sich mit de Fehlermeldig, ohne Zugangswert.
+
+T025 · Kundin
+Danke. Ich werde zerscht d Anleitung fertig läse und denn aafange.

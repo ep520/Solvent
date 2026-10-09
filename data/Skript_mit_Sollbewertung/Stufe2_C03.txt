@@ -1,0 +1,83 @@
+C03 · Hotelbestätigung und vier Endstellen
+Vorauszahlung und verschobene Hotelreservation. Vier identische Endstellen sind nur mit dem frühen Feldbezug klassifizierbar.
+Dauer: medium, ungefähr 5.0 min bei 120 Wörtern/min; 603 Wörter.
+Testziel: numbers
+Ereignis: not_applicable
+Bearbeitung: no_alert
+Begründung: Die vier Stellen sind der maskierte Schluss eines Zahlungsmittels, kein vollständiger PAN.
+Offen: keine Voraussetzung für diese Sollbewertung
+Prüfpräfix bis T019; Belege: T004, T019
+Frühere Regelausschlussstelle: nicht separat annotiert
+Keywordstellen: keine registrierte Vollphrase; Kontexttest
+Geplante Geräuschstellen: Glocke T002; Glocke T004; Glocke T019; Klopfen T012
+Geplante Wortversuche: T002 'Hotelmitarbeiterin' (35 Prozent, danach intakter Satz); T006 'abgange' (35 Prozent, danach intakter Satz); T010 'Zerscht' (35 Prozent, danach intakter Satz); T014 'Hotelpriis' (35 Prozent, danach intakter Satz); T018 'richtige' (35 Prozent, danach intakter Satz); T022 'Nachwiis' (35 Prozent, danach intakter Satz)
+Exakte hörbare Zeitmarke: erst nach Audioproduktion zu prüfen.
+
+T001 · Beratung
+Grüezi Frau Tanner, da isch d Barbara Steiger. Mir händ Ihre Rückfrag zur Hotelreservation. Was passt uf de Bestätigung nöd?
+
+T002 · Kundin
+D Hotelmitarbeiterin seit, si cha mini Vorauszahlig nöd zuordne. Ich ha zwei Dokument gschickt und jetzt het si gfröget, weli vier Stelle am Schluss zum richtige Feld ghöred.
+
+T003 · Beratung
+Händ Sie d ursprüngliche Bezeichnig vom Feld no? Vier Stelle allei länged nöd, um de Zweck zu wüsse.
+
+T004 · Kundin
+Ja, uf de ursprüngliche Bestätigung sind das die letschte vier Stelle vo minere Charte, woni online mit zahlt ha. De Rest vo de lange Nummere isch verdeckt; die vier am Schluss gseht mer. D Reservierungsnummer staht separat drüber.
+
+T005 · Beratung
+Verstande. Mir kläred de Verwendungszweck, bevor Sie no meh schicked. Isch d Vorauszahlig uf Ihrer eigene Übersicht definitiv buecht?
+
+T006 · Kundin
+Ja. Sie isch am dritte abgange. De Hotelaufenthalt isch aber erst nächste Monet. Ich ha zuerst gmeint, de Unterschied im Datum sei de Fehler.
+
+T007 · Beratung
+Das cha bei ere Vorauszahlig normal sii. Im Dokument sött klar sii, weli Leistung mit em Betrag verknüpft isch. Händ Sie de Gesamtbetrag oder nume en Teil im Voraus zahlt?
+
+T008 · Kundin
+En Teil. D Hälfte jetzt, de Rest vor Ort. Ich ha für zwei Persone buecht, aber mini Kollegin zahlt mir ihren Anteil erst später. Das het mit de Hotelreferenz nüt z tue.
+
+T009 · Beratung
+Guet, denn vermischemer die private Abmachig nöd mit de Hotelzahlig. Was genau het s Hotel als Beleg verlangt?
+
+T010 · Kundin
+Zerscht nume en Nachwiis vom Datum und Betrag. Nach dene vier Stelle het si erst nachher gfröget. Ich ha zu viel gschickt, glaub ich. Es het au no mini Adresse uf em Usschnitt.
+
+T011 · Beratung
+Für e Rückfrag sötted Sie nume d nötig Information im vorgsehne sichere Kanal teile. Ich cha Ihnen de Buechigsnachwiis für Ihre eigene Zahlig bereitstelle.
+
+T012 · Kundin
+Ja, gern. Ich ha no en Unterschied im Betrag. S Hotel rechnet in Euro, mis Konto in Franke. Uf de Bestätigung staht de Eurobetrag, uf mim Konto e anderi Zahl. Cha das de Grund sii, warum de Nachwiis bi ihne nöd passt?
+
+T013 · Beratung
+De Nachwiis sött Originalbetrag, Währig und Buechigsdatum zeige, damit s Hotel s zuordne cha. Vergliiched Sie de Eurobetrag vo de geleistete Vorauszahlig mit em Eurobetrag im Beleg, nöd mit em Gesamtpriis oder em Frankeabgang.
+
+T014 · Kundin
+Ah, ich ha de volle Hotelpriis mit de halbe Vorauszahlig vergliche. Und no d Frankezahl statt Euro. Es git au e neui Bestätigung, will mir d Aareis um en Tag verschobe händ; de Gesamtpriis isch aber gliich.
+
+T015 · Beratung
+Denn nehmed Sie für d Rückfrag die aktuelle Bestätigung und de Nachwiis vo genau dere Vorauszahlig. So sind Termin und Betrag zueordnet, au wenn de Beleg vo de Bank weiterhin s ursprüngliche Zahlungsdatum het.
+
+T016 · Kundin
+Guet. Ich schicke nöd beidi Bestätigunge ohni Erklärig. Ich nime d neui und schriibe kurz, dass mir d Aareis verschobe händ. De Eurobetrag vo de Vorauszahlig passt im Beleg tatsächlich.
+
+T017 · Beratung
+Das wird d Rückfrag konkreter mache. Falls de Händler trotzdem e ander Referenz verlangt, lönd Sie sich de Name vom Feld säge. Mir sötted nöd nume us de Länge vo ere Zahl rate, weli Stelle er meint.
+
+T018 · Kundin
+Guet, ich ha jetzt de richtige Usschnitt. Die vier Stelle, wo mir am Afang besproche händ, chani Ihne no säge. S übrige isch verdeckt.
+
+T019 · Kundin
+D letschte vier sind: vier, zwei, vier, zwei.
+
+T020 · Beratung
+Danke. Ich ordne die vier Stelle dem Feld zue, wo Sie am Afang gnennt händ. Für de Nachwiis nähme mir Datum und Betrag vo Ihrer tatsächlich buechte Zahlig.
+
+T021 · Kundin
+Das isch mir recht. Ich will kei neue Vermuetig ans Hotel schicke, nume de richtige Nachwiis.
+
+T022 · Beratung
+De Nachwiis chunnt ins sichere Postfach. Verwänded für d Nachricht ans Hotel bitte nume de erforderliche Usschnitt.
+
+T023 · Kundin
+Danke, das mache ich. Denn isch wenigstens klar, weli Bestätigung aktuell isch.

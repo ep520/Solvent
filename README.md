@@ -65,7 +65,9 @@ interesting solutions sit in between.
 ## The data
 
 In [`data/`](data/README.md): 42 calls (WAV, mono, 16 kHz, Swiss German) from 21 dialogues, each in
-a clean and a noisy version, with the script of every dialogue as a transcript.
+a clean and a noisy version. Every dialogue comes with its script as a transcript and with the
+expected assessment: alert, no alert or review, with the reasoning and the passages that carry the
+decision. A preliminary keyword list is included as JSON.
 
 - **Level 1** (`Stufe1_`): direct keyword calls.
 - **Level 2** (`Stufe2_`): context pairs, similar calls where only the context decides.
@@ -75,7 +77,8 @@ This is 70 percent of the material. Inventx and Outcept hold back 30 percent as 
 On Sunday the solutions run on that part, so precision and recall are fairly comparable.
 
 All calls are fictional. There is no real customer or bank data. The transcripts are the scripts the
-recordings were made from, not verified transcriptions.
+recordings were made from, not verified transcriptions. Keyword list and expected assessments are test
+conventions for the sprint, not official rules of Inventx.
 
 ## The rules: if it can be self-hosted, it is allowed
 
