@@ -134,7 +134,16 @@ One small Docker container, Python standard library only, no database, no accoun
 
 ### Start
 
-The same commands work in PowerShell, cmd, bash and zsh on Windows, Linux and macOS:
+One command, the same in PowerShell, cmd, bash and zsh on Windows, Linux and macOS:
+
+```
+docker run --rm -p 8080:8080 ghcr.io/outcept/inventx-case-study
+```
+
+Then open <http://localhost:8080>. Stop it with `Ctrl+C`. For another port, change the left side of
+`-p`, for example `-p 9000:8080`.
+
+Or build it from source:
 
 ```
 git clone https://github.com/Outcept/inventx-case-study.git
