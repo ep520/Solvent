@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+triggers.json
+.DS_Store

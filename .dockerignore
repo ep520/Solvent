@@ -1,0 +1,8 @@
+.git
+.github
+tests
+README.md
+compose.yaml
+__pycache__
+*.pyc
+triggers.json

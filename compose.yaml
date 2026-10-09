@@ -1,0 +1,11 @@
+# docker compose up --build
+# Another port on your machine:  PORT=9000 docker compose up --build   (PowerShell: $env:PORT=9000; docker compose up --build)
+services:
+  trigger-api:
+    build: .
+    image: trigger-api
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      MAX_TRIGGERS: "${MAX_TRIGGERS:-1000}"
+    restart: unless-stopped

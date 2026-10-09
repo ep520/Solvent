@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trigger API · Docs</title>
+<style>
+body { font: 16px/1.55 system-ui, sans-serif; margin: 0; background: #f7f6f2; color: #121417; }
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 20px; margin: 36px 0 8px; } h3 { font-size: 16px; margin: 24px 0 6px; }
+a { color: #0268c8; } .muted { color: #6e6e76; }
+table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e4e0d6; vertical-align: top; }
+code { font: 13.5px/1.5 ui-monospace, Menlo, Consolas, monospace; background: #ece9e1; padding: 1px 5px; border-radius: 4px; }
+pre { background: #1a1d21; color: #f3f1ec; padding: 14px 16px; border-radius: 10px; overflow-x: auto; }
+pre code { background: none; padding: 0; color: inherit; }
+@media (prefers-color-scheme: dark) {
+  body { background: #121417; color: #f3f1ec; } a { color: #7ab8ff; } .muted { color: #9a98a0; }
+  th, td { border-color: #2e3138; } code { background: #2a2d33; } pre { border: 1px solid #2e3138; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Trigger API</h1>
+<p class="muted">A tiny local test endpoint. Your application reports a trigger when it detects something questionable in a call; the list page shows all reported triggers. <a href="/triggers">Open the list</a>.</p>
+
+<h2>Endpoints</h2>
+<table>
+<tr><th>Method</th><th>Path</th><th>What it does</th></tr>
+<tr><td><code>POST</code></td><td><code>/triggers</code></td><td>Report a trigger. JSON body, see below. Answers <code>201</code> with the stored trigger.</td></tr>
+<tr><td><code>GET</code></td><td><code>/triggers</code></td><td>All triggers. JSON for clients; a browser gets the list page, where a click on a title opens its link in a new tab. Force one with <code>?format=json</code> or <code>?format=html</code>.</td></tr>
+<tr><td><code>DELETE</code></td><td><code>/triggers</code></td><td>Clear the list (handy between test runs). Answers <code>204</code>.</td></tr>
+</table>
+
+<h2>Body of POST /triggers</h2>
+<table>
+<tr><th>Field</th><th>Required</th><th>Meaning</th></tr>
+<tr><td><code>url</code></td><td>yes</td><td>Absolute <code>http</code> or <code>https</code> link back into your product, ideally straight to the suspicious passage (for example with about 10 seconds of audio before and after).</td></tr>
+<tr><td><code>title</code></td><td>yes</td><td>Short label shown in the list, up to 200 characters.</td></tr>
+<tr><td><code>description</code></td><td>no</td><td>Why this was flagged, up to 2000 characters.</td></tr>
+</table>
+<p>A missing or invalid field answers <code>400</code> with an <code>error</code> message and an example body.</p>
+
+<h3>Response</h3>
+<pre><code>{
+  "id": 1,
+  "url": "https://example.com/calls/42?t=95",
+  "title": "Possible insider trading",
+  "description": "Customer wants to buy before the announcement.",
+  "created_at": "2026-10-09T18:30:00+00:00"
+}</code></pre>
+
+<h2>Examples</h2>
+<p class="muted">The examples use the address this page was opened from.</p>
+
+<h3>curl (macOS, Linux, Git Bash)</h3>
+<pre><code>curl -X POST BASE/triggers \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/calls/42?t=95", "title": "Possible insider trading", "description": "Customer wants to buy before the announcement."}'
+
+curl BASE/triggers</code></pre>
+
+<h3>PowerShell (Windows)</h3>
+<pre><code>$body = @{
+  url = "https://example.com/calls/42?t=95"
+  title = "Possible insider trading"
+  description = "Customer wants to buy before the announcement."
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "BASE/triggers" -ContentType "application/json" -Body $body
+Invoke-RestMethod -Uri "BASE/triggers"</code></pre>
+
+<h3>Python</h3>
+<pre><code>import requests
+
+trigger = {
+    "url": "https://example.com/calls/42?t=95",
+    "title": "Possible insider trading",
+    "description": "Customer wants to buy before the announcement.",  # optional
+}
+response = requests.post("BASE/triggers", json=trigger, timeout=5)
+response.raise_for_status()
+print(response.json())
+
+print(requests.get("BASE/triggers", timeout=5).json())</code></pre>
+
+<h3>JavaScript / TypeScript (Node 18+ or browser)</h3>
+<pre><code>const response = await fetch("BASE/triggers", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    url: "https://example.com/calls/42?t=95",
+    title: "Possible insider trading",
+    description: "Customer wants to buy before the announcement.", // optional
+  }),
+});
+if (!response.ok) throw new Error((await response.json()).error);
+console.log(await response.json());
+
+const { triggers } = await (await fetch("BASE/triggers")).json();</code></pre>
+
+<h3>Go</h3>
+<pre><code>body, _ := json.Marshal(map[string]string{
+	"url":         "https://example.com/calls/42?t=95",
+	"title":       "Possible insider trading",
+	"description": "Customer wants to buy before the announcement.",
+})
+resp, err := http.Post("BASE/triggers", "application/json", bytes.NewReader(body))
+if err != nil {
+	log.Fatal(err)
+}
+defer resp.Body.Close()</code></pre>
+
+<h3>Java (11+)</h3>
+<pre><code>String json = """
+    {"url": "https://example.com/calls/42?t=95",
+     "title": "Possible insider trading",
+     "description": "Customer wants to buy before the announcement."}""";
+HttpRequest request = HttpRequest.newBuilder(URI.create("BASE/triggers"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(json))
+    .build();
+HttpResponse&lt;String&gt; response = HttpClient.newHttpClient()
+    .send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.statusCode() + " " + response.body());</code></pre>
+
+<h3>C# (.NET 6+)</h3>
+<pre><code>using System.Net.Http.Json;
+
+using var client = new HttpClient();
+var response = await client.PostAsJsonAsync("BASE/triggers", new {
+    url = "https://example.com/calls/42?t=95",
+    title = "Possible insider trading",
+    description = "Customer wants to buy before the announcement."
+});
+response.EnsureSuccessStatusCode();
+Console.WriteLine(await response.Content.ReadAsStringAsync());</code></pre>
+
+<h2>Notes</h2>
+<ul>
+<li>Cross-origin requests are allowed, so a browser front end on another port can call the API directly.</li>
+<li>From inside another Docker container, reach the API on the host with <code>http://host.docker.internal:PORT</code> (on Linux add <code>--add-host=host.docker.internal:host-gateway</code>), or put both containers on one Docker network.</li>
+<li>The list lives in memory and is empty after a restart, unless <code>DATA_FILE</code> is set.</li>
+</ul>
+</main>
+<script>
+// Show the examples with the address this page is served from.
+for (const el of document.querySelectorAll("pre code")) el.textContent = el.textContent.replaceAll("BASE", location.origin);
+</script>
+</body>
+</html>
