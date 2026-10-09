@@ -6,3 +6,4 @@ compose.yaml
 __pycache__
 *.pyc
 triggers.json
+data

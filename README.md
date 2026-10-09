@@ -207,6 +207,10 @@ docker run --rm -p 8080:8080 -e DATA_FILE=/data/triggers.json -v trigger-data:/d
 - **Only for local testing.** There is no authentication. Do not expose it to the internet and do not
   send real customer data.
 
+## Data package
+
+The calls and transcripts for the case are in [`data/`](data/README.md).
+
 ## Development
 
 ```

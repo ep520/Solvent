@@ -1,0 +1,41 @@
+T001 · Beratung
+Grüezi, da isch d Esther Fankhauser. Sie händ um Hilf mit ere Anzeige im Onlinezugang bätte. Was gsehnd Sie?
+
+T002 · Kundin
+Ich ha en Screenshot uf mim Telefon. Ich wollte gester öppis bestätige und ha s Bild gmacht, bevor ich usem Fenster gange bi. Jetzt bin ich nöd sicher, was devo no zum laufende Vorgang ghört.
+
+T003 · Beratung
+Sind Sie aktuell im echte Fenster, oder lueged Sie nume de Screenshot aa? Bitte teiled kei Zahl.
+
+T004 · Kundin
+Im Moment luege ich nume s Bild aa. De obere Rand isch abgschnitte, und ich cha nöd läse, ob es no gültig gsi isch. Ich ha hüt scho öppis neu gstartet, aber ich weiss nöd, öb die gliich Anzeige dazugehört.
+
+T005 · Beratung
+Denn isch de Zusammenhang no unklar. Mir müend d Herkunft und de Status vom Wert trenne. Händ Sie s Bild selber gmacht, oder het öpper es Ihnen gschickt?
+
+T006 · Kundin
+Ich ha s selber gmacht. Niemert het mich nach ere Zahl gfröget. Ich ha nume versucht, für d Fehlermeldig en Beleg z haa.
+
+T007 · Beratung
+Guet. Für de Support bruuched mir d Fehlermeldig, nöd en Bestätigungswert. Mir sötted de Screenshot nöd als aktuelle Aawisig behandle.
+
+T008 · Kundin
+Ich weiss nöd, ob de Wert obe oder unde zueghört. De Text isch so chlii, dass ich s Bild grad vergrossere muess.
+
+T009 · Beratung
+Bitte säged Sie nume de lesbare Text. D Zahl bliibt bi Ihnen.
+
+T010 · Kundin
+Ich ha sie jetzt scho vor mir: zwei, nüün, sechs, vier, acht, eins. Ob sie jetzt oder damals gültig isch, chani nöd säge.
+
+T011 · Beratung
+Bitte kei weitere Werte vorzläse. Für de nächste Schritt müend mir de Screenshot und de laufende Vorgang auseinanderhalte. Ich bestätige kei Verwendungszweck vo dere Zahl.
+
+T012 · Kundin
+Okay, ich lege s Bild weg und warte uf de vorgsehne Ablauf. Ich will nöd no en neue Versuech drüberlege.
+
+T013 · Beratung
+Ich lege de sichere Support-Wäg im Postfach ab. Verwänded nume d verlangte Fehlermeldig.
+
+T014 · Kundin
+Danke. Ich melde mich mit em richtige Bild, wenn de Text wieder lesbar isch.
