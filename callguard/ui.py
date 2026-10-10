@@ -65,7 +65,8 @@ def _assessment(result):
     return text
 
 
-def dashboard_call(call, segments, results, default, length, cache_status="current", extraction_version=None):
+def dashboard_call(call, segments, results, default, length, cache_status="current", extraction_version=None,
+                   model_input=None):
     """Map canonical results (one per threshold preset) to the shape the dashboard renders."""
     base = results[default]
     event = _main_event(base)
@@ -139,6 +140,12 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
                     "actor": e.get("actor", {"role": "unknown", "status": "unknown"})}
                    for e in base["events"]],
         "issues": base["issues"],
+        # What the extraction model read (snippets with hits, scores and bold spans, or the full transcript),
+        # and which of those segments the decision cites as evidence.
+        "modelInput": model_input,
+        "citedSegments": sorted({sid for e in base["events"] for c in e.get("conditions", {}).values()
+                                 for r in c["evidence"] for sid in r["segment_ids"]} |
+                                {sid for e in base["events"] for r in e.get("evidence", []) for sid in r["segment_ids"]}),
     }
 
 
@@ -243,6 +250,43 @@ def save_keyword_config(payload, path):
     return result
 
 
+def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" / "extract"):
+    """Cached extraction for this call, newest input first: (path, status) or (None, None).
+
+    current        extracted with today's input (snippet settings and keyword list)
+    stale_input    extracted with an earlier keyword list or snippet setting; re-run the pipeline to refresh
+    full_transcript extracted from the whole call (before snippet mode, or snippet mode switched off)
+    legacy         an extract-4 cache entry
+    """
+    path = ex.cache_path(segments, policies, chat, cache_dir, view=view)
+    if path.exists():
+        return path, "current"
+    pointer = ex.latest_path(segments, policies, chat, cache_dir)
+    if pointer.exists():
+        path = pointer.parent.parent / json.loads(pointer.read_text(encoding="utf-8"))["cache"]
+        if path.exists():
+            sent = ex.load_json(path).get("_meta", {}).get("input") or {}
+            return path, "stale_input" if sent.get("mode") == "snippets" else "full_transcript"
+    path = ex.cache_path(segments, policies, chat, cache_dir)
+    if path.exists():
+        return path, "full_transcript"
+    path = ex.legacy_cache_path(segments, policies, chat, cache_dir)
+    return (path, "legacy") if path.exists() else (None, None)
+
+
+def model_input(extraction, current_view, segments):
+    """What the model actually read for this extraction, shaped for the dashboard."""
+    sent = extraction.get("_meta", {}).get("input")
+    if sent is None:
+        sent = {"mode": "full_transcript", "reason": "extracted from the whole call (before snippet mode)"}
+    out = {"mode": sent["mode"], "reason": sent.get("reason"), "stats": sent.get("stats"),
+           "version": sent.get("version"), "config": sent.get("config"),
+           "snippets": sent.get("snippets", []), "segmentCount": len(segments)}
+    if current_view and current_view.get("mode") == "snippets" and sent != current_view:
+        out["currentDiffers"] = True     # keyword list or snippet settings changed since this extraction
+    return out
+
+
 def build_data(policies, keywords, profile=None):
     chat = models.resolve("chat", profile)
     presets = policies["escalation"]["presets"]
@@ -254,12 +298,9 @@ def build_data(policies, keywords, profile=None):
             pending.append(wav.stem)
             continue
         segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
-        cached = ex.cache_path(segments, policies, chat)
-        cache_status = "current"
-        if not cached.exists():
-            cached = ex.legacy_cache_path(segments, policies, chat)
-            cache_status = "legacy"
-        if not cached.exists():
+        view = ex.input_view(segments, policies, keywords)
+        cached, cache_status = find_extraction(segments, policies, chat, view)
+        if cached is None:
             pending.append(wav.stem)
             continue
         extraction = ex.load_json(cached)
@@ -269,7 +310,8 @@ def build_data(policies, keywords, profile=None):
         hits = [{**hit, "call": wav.stem} for hit in ex.keyword_hits(segments, keywords)]
         all_hits += hits
         call = dashboard_call(wav.stem, segments, results, default, evidence.duration(wav),
-                              cache_status=cache_status, extraction_version=extraction_version)
+                              cache_status=cache_status, extraction_version=extraction_version,
+                              model_input=model_input(extraction, view, segments))
         call["model"] = chat["model"]
         call["keywordHitCount"] = len(hits)
         calls.append(call)

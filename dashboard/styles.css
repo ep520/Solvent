@@ -307,3 +307,49 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; transform: none !important; }
 }
+
+/* What the model read: snippet view (callguard/snippets.py) */
+.model-input-card { padding: 13px; }
+.model-input-note { margin: 8px 0 0; padding: 7px 9px; border-radius: 6px; background: var(--primary-soft); color: #33505a; font-size: 10.5px; line-height: 1.45; }
+.model-input-note.warn { background: var(--review-soft); color: #7a4a10; }
+.snippet-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 2px; font-size: 9.5px; color: var(--muted); }
+.snippet-card { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.snippet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; background: #f6f9fa; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.snippet-head strong { font: 700 11.5px Manrope, sans-serif; margin-right: 8px; }
+.snippet-head span { color: var(--muted); font-size: 10px; }
+.snippet-actions { display: flex; align-items: center; gap: 8px; }
+.priority { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; color: var(--ink) !important; font-weight: 600; }
+.priority-bar { display: inline-block; width: 46px; height: 5px; border-radius: 3px; background: #e2e9ec; overflow: hidden; }
+.priority-bar i { display: block; height: 100%; background: var(--primary); }
+.hit-row { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 10px 0; }
+.hit-chip { display: inline-block; max-width: 100%; padding: 3px 7px; border-radius: 9px; border: 1px solid var(--line); font-size: 9.5px; line-height: 1.35; background: #fff; overflow-wrap: anywhere; }
+.hit-chip strong { font-weight: 700; }
+.hit-chip .hit-meta { color: var(--muted); }
+.hit-chip.hit-keyword { border-color: #f0c9c9; background: var(--alarm-soft); }
+.hit-chip.hit-digits { border-color: #cfd8f3; background: #f1f4fd; }
+.hit-chip.hit-cue { border-color: #c4e0e4; background: var(--primary-soft); }
+.hit-chip.hit-context { border-color: #dfe5e8; background: #f7f9fa; }
+.cue-hits { padding: 6px 10px 0; }
+.cue-hits summary { cursor: pointer; font-size: 10px; color: var(--muted); }
+.cue-hits .hit-row { padding: 6px 0 0; }
+.snippet-turns { padding: 6px 10px 9px; }
+.snippet-turn { display: grid; grid-template-columns: 14px 48px 1fr; gap: 6px; padding: 6px 0; border-bottom: 1px solid #edf1f3; font-size: 10.5px; line-height: 1.5; }
+.snippet-turn:last-child { border-bottom: 0; }
+.snippet-turn.near { color: #50626b; }
+.snippet-turn.cited { background: linear-gradient(90deg, var(--clear-soft), transparent 70%); border-radius: 4px; }
+.snippet-mark { color: var(--primary); font-weight: 700; text-align: center; }
+.snippet-time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 10px; }
+.snippet-time small { display: block; font-size: 9px; }
+.snippet-turn-meta { display: block; color: var(--muted); font-size: 9px; margin-bottom: 1px; text-transform: capitalize; }
+.snippet-gap { text-align: center; color: #9aaab2; letter-spacing: 3px; font-size: 11px; padding: 2px 0; border-bottom: 1px dashed #e3e9ec; }
+.hit-mark { border-radius: 3px; padding: 0 2px; color: inherit; }
+.hit-mark b { font-weight: 700; }
+.hit-mark.hit-keyword { background: #fde2e2; }
+.hit-mark.hit-digits { background: #e1e8fb; }
+.hit-mark.hit-cue { background: #d9eef1; }
+.hit-mark.hit-context { background: #eef1f3; }
+.cited-badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--clear-soft); color: var(--clear); border: 1px solid #c4e4d2; font-size: 9px; font-weight: 600; white-space: nowrap; }
+@media (max-width: 560px) {
+  .snippet-turn { grid-template-columns: 12px 40px 1fr; }
+  .snippet-head { align-items: flex-start; }
+}
