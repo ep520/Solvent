@@ -29,6 +29,16 @@ class FakeBackend(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def do_GET(self):
+        FakeBackend.requests.append((self.path, dict(self.headers), b""))
+        code, payload = FakeBackend.replies.pop(0)
+        data = json.dumps(payload).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
 
 def chat_reply(content):
     return 200, {"choices": [{"message": {"content": content}}]}
@@ -163,6 +173,13 @@ class RouterTest(unittest.TestCase):
         self.config["profiles"]["a"]["self_hostable"] = False
         with self.assertRaisesRegex(models.ModelError, "not self-hostable"):
             models.check("chat", config=self.config, require_self_hostable=True)
+
+    def test_live_probe_requires_the_exact_configured_model(self):
+        FakeBackend.replies = [(200, {"data": [{"id": "model-a"}]})]
+        self.assertEqual(models.probe("chat", config=self.config, require_self_hostable=True)["model"], "model-a")
+        FakeBackend.replies = [(200, {"data": [{"id": "different-model"}]})]
+        with self.assertRaisesRegex(models.ModelError, "expects model 'model-a'"):
+            models.probe("chat", config=self.config, require_self_hostable=True)
 
 
 FAKE_CLAUDE = """#!/usr/bin/env python3

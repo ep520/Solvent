@@ -6,6 +6,7 @@ private gateways) and "claude_cli" (the local `claude -p` CLI, chat only).
 Another backend is one more entry in ADAPTERS.
 """
 import json
+import argparse
 import os
 import re
 import shutil
@@ -75,6 +76,32 @@ def check(task, profile=None, config=None, require_self_hostable=False):
     if require_self_hostable and not p.get("self_hostable"):
         raise ModelError(f"profile '{p['name']}' is not self-hostable; choose a self-hostable {task} profile")
     ADAPTERS[p.get("api", "openai_compatible")]["check"](p)
+    return p
+
+
+def probe(task, profile=None, config=None, require_self_hostable=False):
+    """Verify that the selected OpenAI-compatible endpoint is live and serves the configured model.
+
+    This deliberately bypasses CallGuard caches. Release acceptance uses it before smoke/full evaluation,
+    so a green cached replay cannot be mistaken for a running self-hosted deployment.
+    """
+    p = check(task, profile, config, require_self_hostable=require_self_hostable)
+    if p.get("api", "openai_compatible") != "openai_compatible":
+        raise ModelError(f"profile '{p['name']}' cannot be live-probed through /models")
+    url = _base_url(p) + "/models"
+    try:
+        req = urllib.request.Request(url, headers=_headers(p))
+        with urllib.request.urlopen(req, timeout=min(p.get("timeout", 120), 15)) as response:
+            payload = json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode(errors="replace")[:500]
+        error.close()
+        raise ModelError(f"{error.code} from {url}: {detail}") from None
+    except (urllib.error.URLError, TimeoutError, ValueError) as error:
+        raise ModelError(f"cannot probe {url}: {error}") from None
+    served = {item.get("id") for item in payload.get("data", []) if isinstance(item, dict)}
+    if p["model"] not in served:
+        raise ModelError(f"profile '{p['name']}' expects model '{p['model']}', served: {', '.join(sorted(x for x in served if x)) or 'none'}")
     return p
 
 
@@ -270,10 +297,17 @@ ADAPTERS = {
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="callguard.models")
+    parser.add_argument("--probe", action="store_true", help="GET /models and require the configured model to be served")
+    parser.add_argument("--require-self-hostable", action="store_true")
+    args = parser.parse_args()
     for task in ("chat", "asr"):
         try:
-            p = check(task)
+            operation = probe if args.probe else check
+            p = operation(task, require_self_hostable=args.require_self_hostable)
             where = p.get("command", "claude") if p.get("api") == "claude_cli" else _base_url(p)
-            print(f"{task}: profile={p['name']} model={p['model']} via {where}")
+            state = "live" if args.probe else "configured"
+            print(f"{task}: {state} profile={p['name']} model={p['model']} via {where}")
         except ModelError as e:
-            print(f"{task}: {e}")
+            print(f"{task}: {e}", file=sys.stderr)
+            sys.exit(1)

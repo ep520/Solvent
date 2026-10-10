@@ -522,8 +522,11 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None, contr
         "mode": "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers",
         "chat": {"profile": chat_profile["name"], "model": chat_profile["model"],
                 "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION,
-                "api": chat_profile.get("api"), "generation": {"temperature": 0, "seed": chat_profile.get("seed", 7), **{k: chat_profile.get(k) for k in
-                    ("max_output_tokens", "json_mode", "strict_schema", "timeout", "retries", "parse_retries") if k in chat_profile}}},
+                "api": chat_profile.get("api"), "generation": {
+                    "temperature": chat_profile.get("temperature", 0), "seed": chat_profile.get("seed", 7),
+                    **({"extra_body": chat_profile["extra_body"]} if chat_profile.get("extra_body") else {}),
+                    **{k: chat_profile.get(k) for k in
+                       ("max_output_tokens", "json_mode", "strict_schema", "timeout", "retries", "parse_retries") if k in chat_profile}}},
         "model_input": {"strategy": "full_transcript_mvp", "snippet_engine": ex.snippets.VERSION,
                         "snippet_config": ex.snippets.load_config(),
                         "routing": "deferred until recall and latency are measured against this baseline"},
@@ -738,10 +741,12 @@ def main(argv=None):
     if args.command == "freeze":
         p = models.check("chat", args.profile)
         mode = "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers"
-        out = ROOT / "tests" / "fixtures" / "replay" / p["model"] / ex.PROMPT_VERSION
+        model_dir = p["model"].replace("/", "--")
+        out = ROOT / "tests" / "fixtures" / "replay" / model_dir / ex.PROMPT_VERSION
         out.mkdir(parents=True, exist_ok=True)
-        for path in sorted((DATA / "Transkript").glob("*.txt")):
-            segs = ex.segments_from_transcript(path, speakers=not args.no_speakers)
+        source = sorted((DATA / "Audio").glob("*.wav")) if args.audio else sorted((DATA / "Transkript").glob("*.txt"))
+        for path in source:
+            segs = audio_segments(path)[0] if args.audio else ex.segments_from_transcript(path, speakers=not args.no_speakers)
             examples = human_feedback.calibration_examples(exclude_call=path.stem)
             src = ex.cache_path(segs, policies, p, view=None,
                                 feedback_examples=examples)

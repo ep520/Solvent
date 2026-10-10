@@ -1,14 +1,18 @@
 # CallGuard MVP — release evaluation
 
-This is a release artefact, not a pitch deck. Every current-candidate number is derived from the canonical per-call JSON and `summary.json` in the cited run. It does not claim development-set generalisation to a hidden set.
+This is a release artefact, not a pitch deck. The numbers below are derived from the canonical per-call JSON and
+`summary.json` in the cited historical development runs. They predate the `extract-7` full-transcript candidate and
+must not be presented as its performance. Final acceptance status and the fail-closed execution gate are in
+`RELEASE_ACCEPTANCE.md`. No development result claims generalisation to a hidden set.
 
 ## Status and evidence hierarchy
 
 | Category | Artefact | Status |
 | --- | --- | --- |
-| Current candidate: audio | `runs/eval-20261010-164409-audio/` | Verified by this release evaluation; cached ASR/extractions and fresh deterministic decisions plus post-decision rationale |
-| Current candidate: scripts with speakers | `runs/eval-20261010-160117-speakers/` | Verified; cached extraction replay |
-| Current candidate: scripts without speakers | `runs/eval-20261010-160120-nospeakers/` | Verified; cached extraction replay |
+| Final self-hosted `extract-7` audio candidate | — | **Pending**: live probe, smoke and full run not yet completed |
+| Historical audio baseline | `runs/eval-20261010-164409-audio/` | Verified cached `extract-6` artifacts; cloud-backed, not final acceptance |
+| Historical scripts with speakers | `runs/eval-20261010-160117-speakers/` | Verified cached extraction replay |
+| Historical scripts without speakers | `runs/eval-20261010-160120-nospeakers/` | Verified cached extraction replay |
 | Historical runs | older `runs/eval-*` folders | Historical comparison only; a run without `manifest.json` is documented, not independently verified |
 | Hidden/challenge set | — | Not supplied / not run; no hidden-set claim |
 
@@ -16,9 +20,9 @@ The candidate manifest records Git revision and dirty state, source/config hashe
 
 All release runs reused matching caches. Labels are valid for manifested cached inputs, but observed milliseconds are cache-read/decision timings, not an uncached end-to-end latency benchmark.
 
-## Candidate configuration
+## Historical baseline configuration
 
-| Field | Audio candidate |
+| Field | Historical audio baseline |
 | --- | --- |
 | Chat | `claude_code` / `claude-sonnet-5`; `extract-6`; temperature 0; seed 7; retry 1 |
 | ASR | `openai` / `whisper-1` |
@@ -47,7 +51,7 @@ split, gold_label, gold_source, family, gold_event, gold_evidence
 
 Questions for dataset authors: meaning of `R01`–`R11` and `M`; who authored/validated gold; whether gold is script-only or audio-verified; whether clean/noisy is contractual; whether a hidden/challenge split exists. No undocumented identifier has been interpreted.
 
-## Current audio baseline: 42 recordings / 21 dialogues
+## Historical audio baseline: 42 recordings / 21 dialogues
 
 Source: `runs/eval-20261010-164409-audio/{summary,manifest}.json`.
 

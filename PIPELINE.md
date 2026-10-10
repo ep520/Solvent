@@ -365,10 +365,10 @@ treated as no alert, or when the threshold is broken.
       calls, suspicious-but-keyword-free calls) and a real listen to a sample of clean/noisy clips. The
       text-level evidence check already done (`EVALUATION.md` §4) is grounded but not independent — it
       was written by the same agent that tuned the prompt, and no audio-playback tool is available to it.
-- [ ] Release run: a final `eval` on scripts and audio with the frozen configuration, and a `freeze` of
-      the extractions into `tests/fixtures/replay/claude-sonnet-5/extract-6/`.
-- [ ] Demo preparation: one call from audio to alarm with clips, a threshold or keyword change with a
-      visible effect, a borderline call (D03: keywords present, no alert), the metrics.
+- [ ] Release run: execute `scripts/release_acceptance.sh` with the final self-hosted chat/ASR profiles.
+      It probes both live services, runs tests plus audio smoke/full evaluation, then freezes the compatible
+      `extract-7` audio extractions. Cached historical replays are backup artifacts, not acceptance evidence.
+- [ ] Rehearse the four scenes in `DEMO_RUNBOOK.md` against the final self-hosted run and record the date.
 - [ ] Hidden test set (30 % of the material, run on Sunday): transcribe, `eval --audio`, report — with the
       configuration and threshold frozen **before** seeing the labels, never calibrated against them.
 - [ ] Optional: Trigger API integration (`POST /triggers` with a link to the passage).

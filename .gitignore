@@ -7,3 +7,6 @@ runs/
 .env
 .playwright-mcp/
 PLAN.md
+CONTEXT_AUDIO_AUDIT.md
+DEMO_RUNBOOK.md
+data/Transcriptions/*.md

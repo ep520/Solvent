@@ -85,6 +85,20 @@ class DatasetAndManifestTest(unittest.TestCase):
         self.assertEqual(manifest["policies"]["default_preset"], "balanced")
         self.assertIn("callguard/extract.py", manifest["code"]["source_sha256"])
 
+    def test_manifest_freezes_actual_qwen_generation_settings(self):
+        policies = ex.load_json(pipeline.ROOT / "config" / "policies.json")
+        keywords = ex.load_json(pipeline.DATA / "Stichwortliste.json")
+        args = SimpleNamespace(audio=True, no_speakers=False, policies=pipeline.ROOT / "config" / "policies.json",
+                               keywords=pipeline.DATA / "Stichwortliste.json")
+        chat = {"name": "qwen3", "model": "Qwen/Qwen3-14B-AWQ", "api": "openai_compatible",
+                "self_hostable": True, "temperature": .6, "seed": 7, "extra_body": {"top_p": .95}}
+        asr_profile = {"name": "whisper_local", "model": "faster-whisper-large-v3",
+                       "asr_model": "faster-whisper-large-v3", "api": "openai_compatible", "self_hostable": True}
+        manifest = pipeline.run_manifest(args, policies, keywords, chat, asr_profile)
+        self.assertEqual(manifest["chat"]["generation"]["temperature"], .6)
+        self.assertEqual(manifest["chat"]["generation"]["extra_body"], {"top_p": .95})
+        self.assertTrue(manifest["self_hostable_compliant"])
+
     def test_interrupted_eval_keeps_per_call_checkpoint_and_partial_summary(self):
         policies = pipeline.ROOT / "config" / "policies.json"
         keywords = pipeline.DATA / "Stichwortliste.json"
@@ -118,6 +132,32 @@ class DatasetAndManifestTest(unittest.TestCase):
             self.assertEqual(summary["artifact_status"], "interrupted")
             self.assertEqual([row["recording_id"] for row in summary["rows"]], ["Stufe1_D02"])
             self.assertTrue((run / "Stufe1_D02.json").is_file())
+
+    def test_audio_freeze_uses_audio_segments_and_sanitizes_model_directory(self):
+        policies = pipeline.ROOT / "config" / "policies.json"
+        keywords = pipeline.DATA / "Stichwortliste.json"
+        profile = {"name": "qwen", "model": "vendor/model", "self_hostable": True, "api": "test"}
+        segments = [{"id": "s001", "start": 0.0, "end": 1.0, "text": "from audio", "speaker": None}]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = root / "data"
+            audio = data / "Audio"
+            audio.mkdir(parents=True)
+            wav = audio / "new-call.wav"
+            wav.write_bytes(b"RIFFfixture")
+            cached = root / "compatible-extraction.json"
+            cached.write_text('{"families": {}}', encoding="utf-8")
+            with patch.object(pipeline, "ROOT", root), patch.object(pipeline, "DATA", data), \
+                    patch.object(pipeline.models, "check", return_value=profile), \
+                    patch.object(pipeline, "audio_segments", return_value=(segments, {})) as audio_segments, \
+                    patch.object(pipeline.ex, "cache_path", return_value=cached), \
+                    patch.object(pipeline.human_feedback, "calibration_examples", return_value=[]), \
+                    redirect_stdout(StringIO()):
+                pipeline.main(["freeze", "--audio", "--profile", "qwen",
+                               "--policies", str(policies), "--keywords", str(keywords)])
+            audio_segments.assert_called_once_with(wav)
+            frozen = root / "tests" / "fixtures" / "replay" / "vendor--model" / ex.PROMPT_VERSION / "new-call.audio.json"
+            self.assertTrue(frozen.is_file())
 
 
 class CanonicalResultEnvelopeTest(unittest.TestCase):

@@ -25,3 +25,16 @@ python3 -m callguard.ui
 
 Open <http://127.0.0.1:8090>. For continuous intake, use `python3 -m callguard.ingest`; it moves WAVs
 from `data/Inbox/`, exports transcripts and updates the same cache/output flow.
+
+## Final acceptance
+
+Cloud profiles are development defaults and do not satisfy release acceptance. Configure the final self-hosted
+chat and ASR profiles from `.env.example`, commit the intended code, then run:
+
+```sh
+bash scripts/release_acceptance.sh
+```
+
+The script probes both live `/models` endpoints and their exact model IDs before tests, audio smoke, full audio
+evaluation and audio-cache freeze. Complete the human listening, new-WAV ingest/UI check and demo rehearsal in
+`RELEASE_ACCEPTANCE.md`; cached replay alone is not an acceptance run.
