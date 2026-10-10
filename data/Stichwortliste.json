@@ -105,7 +105,8 @@
         "Quartalszahlen",
         "Übernahme",
         "Insiderhandel",
-        "Insider Trading"
+        "Insider Trading",
+        "Quantauszahlen"
       ],
       "gsw": [
         "Quartalszahle",
@@ -129,7 +130,8 @@
       "label": "Handeln vor der Meldung",
       "de": [
         "vor der Meldung",
-        "vor der Bekanntgabe"
+        "vor der Bekanntgabe",
+        "von der Meldung"
       ],
       "gsw": [
         "vor de Meldig",

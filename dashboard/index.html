@@ -18,35 +18,21 @@
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8 20 6v5.4c0 4.6-3.1 8.8-8 10-4.9-1.2-8-5.4-8-10V6l8-3.2Z" stroke="currentColor" stroke-width="1.8"/><path d="m8.6 12 2.1 2.1 4.8-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
-        <div><h1>CallGuard</h1><p>Compliance review desk</p></div>
+        <div><h1>CallGuard</h1><p>Compliance review workspace</p></div>
       </div>
       <div class="top-actions">
-        <span id="data-badge" class="badge badge-sm demo-badge"><span class="status status-info" aria-hidden="true"></span><span id="data-badge-text">Demo · Mock data</span></span>
-        <button id="page-guide-button" class="btn btn-sm btn-ghost" type="button" aria-label="Open page guide">
+        <span id="data-badge" class="badge badge-sm demo-badge"><span id="data-badge-text">Demo</span></span>
+        <button id="settings-button" class="btn btn-sm btn-ghost" type="button" aria-expanded="false" aria-controls="settings-drawer">Review settings</button>
+        <button id="page-guide-button" class="btn btn-sm btn-ghost" type="button" aria-label="Open help">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.8.5-1.4 1-1.4 2.1M12 17h.01"/></svg>
-          Page guide
+          Help
         </button>
       </div>
     </header>
 
     <main class="workspace">
-      <section class="control-strip card" aria-label="Queue controls and summary">
+      <section class="control-strip card" aria-label="Review summary">
         <div class="summary-grid" id="summary-counters" aria-label="Call summary"></div>
-        <div class="control-divider" aria-hidden="true"></div>
-        <div id="threshold-section" class="threshold-block guide-target">
-          <div class="control-label-row">
-            <span class="control-label">Escalation threshold</span>
-            <span id="threshold-badge" class="badge badge-ghost badge-xs">Simulated</span>
-          </div>
-          <div id="threshold-control" class="join threshold-join" role="radiogroup" aria-label="Simulated escalation threshold"></div>
-        </div>
-        <div id="keyword-section" class="keyword-block guide-target">
-          <button id="keyword-button" class="btn btn-sm btn-outline keyword-trigger" type="button" aria-expanded="false" aria-controls="keyword-popover">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
-            Keywords <span id="keyword-count" class="badge badge-sm badge-primary"></span>
-          </button>
-          <div id="keyword-popover" class="keyword-popover card" hidden></div>
-        </div>
       </section>
 
       <div class="review-layout">
@@ -59,7 +45,7 @@
             </label>
           </div>
           <div id="classification-filters" class="filter-row" role="group" aria-label="Filter by classification"></div>
-          <div class="queue-columns" aria-hidden="true"><span>Call / time</span><span>Assessment</span><span id="quality-column">Confidence</span><span>Duration</span></div>
+          <div class="queue-columns" aria-hidden="true"><span>Call</span><span>Assessment</span><span>Duration</span></div>
           <div id="call-list" class="call-list" role="listbox" aria-label="Calls"></div>
           <div id="empty-state" class="empty-state" hidden>No calls match these filters.</div>
         </aside>
@@ -67,6 +53,27 @@
         <section id="call-detail" class="detail card" tabindex="-1" aria-live="polite"></section>
       </div>
     </main>
+
+    <div id="settings-backdrop" class="drawer-backdrop" hidden></div>
+    <aside id="settings-drawer" class="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true" hidden>
+      <div class="settings-drawer-head">
+        <div><h2 id="settings-title">Review settings</h2><p>Changes reuse cached results. They do not run models.</p></div>
+        <button id="settings-close" class="btn btn-sm btn-ghost drawer-close" type="button" aria-label="Close review settings">×</button>
+      </div>
+      <div id="threshold-section" class="threshold-block">
+        <div class="control-label-row"><span class="control-label">Escalation threshold</span><span id="threshold-badge" class="badge badge-ghost badge-xs">ASR quality</span></div>
+        <p class="setting-explainer">This threshold routes a supported case to review when its decisive ASR passage is below the selected quality threshold. It is not a fraud score.</p>
+        <div id="threshold-control" class="join threshold-join" role="radiogroup" aria-label="Escalation threshold"></div>
+        <p id="threshold-feedback" class="settings-feedback" aria-live="polite"></p>
+      </div>
+      <div id="keyword-section" class="keyword-block">
+        <div class="keyword-title-row"><div><h3>Keyword highlights</h3><p>Keywords change highlights and counts only, never classifications.</p></div><span id="keyword-count" class="badge badge-sm badge-primary"></span></div>
+        <button id="keyword-button" class="btn btn-sm btn-outline keyword-trigger" type="button" aria-expanded="false" aria-controls="keyword-popover">
+          Manage keywords
+        </button>
+        <div id="keyword-popover" class="keyword-popover card" hidden></div>
+      </div>
+    </aside>
 
     <div id="guide-hint" class="guide-hint card" hidden role="dialog" aria-modal="false" aria-labelledby="guide-title" aria-describedby="guide-copy">
       <div class="guide-meta"><span id="guide-progress"></span><button id="guide-skip" class="btn btn-xs btn-ghost" type="button">Skip</button></div>

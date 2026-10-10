@@ -6,6 +6,11 @@ Handover document. Whoever resumes the work (another person or another Claude Co
 
 Deadline: final submission **Sunday, 2026-10-11 at 08:30**, pitch 09:00–11:00 (see `README.md`).
 
+Sibling docs, each with its own job: [`PIPELINE.md`](PIPELINE.md) (architecture and status),
+[`PIPELINE_FLOW.md`](PIPELINE_FLOW.md) (diagrams), [`EVALUATION.md`](EVALUATION.md) (the single
+evaluation report). This file is the day-by-day log and decisions history; the other three are kept
+current, this one is append-only.
+
 ---
 
 ## 1. Objective (from the README)
@@ -45,7 +50,7 @@ Turn Swiss German call audio into a reasoned **alarm / review / no_alert** decis
 |---|---|---|
 | One LLM request per call, extracting **facts** (true/false/unknown predicates with quotations), not labels | Decisions remain in code: reproducible and explainable | LLM deciding alarm or providing a score |
 | Five families as **configuration** (`config/policies.json`), plus `numbers`, which never generates alarm | Families can be added or changed without code | Five separate models or classifiers |
-| Only **two deterministic techniques**: (1) quotation anchoring (exact, then approximate alignment with a negation check), (2) three-valued rules | Few, strong techniques | Weighted scores, negation lexicons as a decision signal, Luhn/IBAN, statistics |
+| Only **two deterministic techniques**: (1) strict quotation anchoring, (2) three-valued rules | Few, strong techniques | Weighted scores, fuzzy quotation matching, negation lexicons as a decision signal, Luhn/IBAN, statistics |
 | **Every `true` and every `false` must have anchored evidence**, otherwise it becomes `unknown` | Unsupported `false` would close an event as `no_alert` without justification. Checked on 42 real Sonnet extractions: no unsupported `false`, so the rule adds no cost and protects against weaker models | Accepting `false` based on absence |
 | Threshold = **ASR-quality heuristic** (step 5): every decisive condition must have at least one quotation with quality ≥ threshold | Connects the threshold to noise, the point where audio makes evidence uncertain | A "fraud probability"; a more elaborate score before measuring it on audio |
 | The LLM processes **every** call and its entire transcript | Stufe2/3 have no keywords: an upstream filter would miss cases | Keyword filtering, routing classifier |
@@ -71,21 +76,25 @@ data/Transkript/*.txt  (development)    data/Audio/*.wav  (step 5)
         ├── extract.keyword_hits → highlights and counts (Stichwortliste.json), not decisive
         │
         ▼ extract.extract → 1 models.chat_json request (chat profile), JSON schema, cache
-  {"families": {<family>: {"events": [{object_type?, evidence?, conditions: {pred: {state, evidence}}}]}}}
-   ← from step 3: all families required; "events": [] = assessed, nothing to flag
+  {"families": {<enabled family>: {"events": [{actor, object_type?, evidence?, conditions: {pred: {state, evidence}}}]}}}
+   ← all *enabled* families required (a family a bank switched off is left out, not just empty);
+     "events": [] = assessed, nothing to flag; actor = {role: customer|advisor|unknown, status, segment_ids}
         │
         ▼ decide.decide (pure code)
-   1. Anchoring: every quotation must occur in its cited segment (ignoring case and punctuation).
-      Exact match in the cited segment or in the window cited segment + neighbour (before or after);
-      then approximate alignment in the same window (≥ grounding.min_similarity, identical negations),
-      which reports the real transcript words. Record all involved IDs. Never search the entire call.
+   1. Anchoring: every quotation must occur in its cited segment after whitespace normalisation and
+      case-folding, while retaining punctuation. A quote may cross only from the cited segment into the
+      immediate next segment; record both IDs. No aliases, backward-neighbour fallback or approximate
+      alignment. Never search the entire call.
       → "true" or "false" without anchored evidence becomes unknown (downgraded)
    2. Three-valued family rules: any false → absent/no_alert; any unknown → review;
-      all true → present
+      all true → present. A predicate that needs a specific actor and got an unresolved role is also
+      forced to unknown (reason `actor_role_unknown`).
    3. Present: ASR-quality threshold on decisive conditions → alarm, otherwise review
    4. Call label = max(alarm > review > no_alert); template-based explanation
         ▼
-  Canonical JSON per call → UI, metrics, text · (step 5) clips ±10 s from original WAV · (extra) Trigger API
+  Canonical JSON per call (label, status: ok|failed, reasons, events, disabled_families, versions)
+  → runs/<ts>-<mode>/<call>.json + manifest.json (model, hashes, thresholds, self-hostable compliance)
+    + summary.json · UI · (step 5) clips ±10 s from original WAV · (extra) Trigger API
 ```
 
 **Review reasons** (the displayed label is always `review`, but the reason remains distinct):
@@ -93,6 +102,7 @@ data/Transkript/*.txt  (development)    data/Audio/*.wav  (step 5)
 | `reason` | When |
 |---|---|
 | `missing_policy_fact` | A predicate is `unknown` because the call does not establish it (open question = predicate text) |
+| `actor_role_unknown` | A predicate needs a specific actor (customer or advisor) and the role could not be inferred |
 | `technical_uncertainty` | Extraction failed or is incomplete (network, JSON, a family missing from the result), or a predicate was downgraded because its quotation is not anchored |
 | `below_escalation_threshold` | The event is present, but a decisive condition has no quotation with ASR quality ≥ threshold |
 
@@ -125,17 +135,19 @@ Limitations: it cannot detect a confidently mistranscribed negation or a correct
 | `config/policies.json` | ✅ | Families, predicates (text = prompt definition + open question), threshold |
 | `data/Stichwortliste.json` | Unchanged | Keywords (`de` + `gsw`), whole-phrase matching |
 | `callguard/models.py` | ✅ | Router: `check`, `chat_json`, `transcribe`; `openai_compatible` and `claude_cli` adapters; retries; warning for non-self-hostable profiles |
-| `callguard/extract.py` | ✅ (`extract-3`) | Script parser, keywords, prompt + schema (`PROMPT_VERSION`), extraction cache |
-| `callguard/decide.py` | ✅ | Anchoring (exact + approximate alignment), rules, threshold, reasons, canonical result, `explain()` |
-| `callguard/pipeline.py` | ✅ | CLI `text` / `eval` (`--smoke`, `--only A,B`) / `freeze`, three-class metrics, `runs/eval-<ts>-<mode>/<call>.json` + `summary.json` |
+| `callguard/extract.py` | ✅ (`extract-6`) | Script parser, keywords, prompt + schema (`PROMPT_VERSION`), extraction cache; enabled families only (bank config); `numbers` restricted to identifiers, not amounts |
+| `callguard/decide.py` | ✅ | Strict anchoring, rules, threshold, reasons (incl. `actor_role_unknown`), `status: ok\|failed` distinct from the label, canonical result, `explain()` |
+| `callguard/pipeline.py` | ✅ | CLI `text` / `audio` / `eval` (`--smoke`, `--only A,B`, `--audio`, `--require-self-hostable`) / `freeze`, three-class metrics + `elapsed_s` timing, `runs/eval-<ts>-<mode>/<call>.json` + `manifest.json` + `summary.json` |
 | `tests/test_models.py`, `tests/test_decide.py` | ✅ | Router with mock HTTP server and mock `claude` command; rule engine on synthetic cases; keywords compared against all annotations; cache |
 | `tests/test_policies.py` + `tests/fixtures/` | ✅ | Policies on real dataset. (1) **Oracle** = `fixtures/oracle.json`: manually written correct extractions for all 21 scripts, quoting actual turns; must produce expected assessment and cite an evidence turn. (2) **Replay** = `fixtures/replay/<model>/`: real extractions rerun through current rules, with `KNOWN_MISSES` for known errors. (3) Configuration/fixture consistency |
 | `callguard/asr.py` | ✅ | Audio → segments via router (`whisper-1`, verbatim prompt), cache on content hash + profile + format (`cache/asr/`), exports to `data/Transcriptions/` (JSON + Markdown); roles and speakers kept as `UNKNOWN` (no diarization). `python3 -m callguard.asr [path] --workers N` |
 | `data/Transcriptions/` | ✅ | The 42 Whisper transcriptions (verified 2026-10-10, see step 5) |
 | `dashboard/` | ✅ | Review dashboard (DaisyUI/Tailwind from CDN). Live through `callguard/ui.py`; falls back to `mock-data.js` when served statically |
 | `callguard/evidence.py` | ✅ | ±10 s clips from the original WAV with the standard-library `wave` module |
-| `callguard/ui.py` | ✅ | Dashboard server + read-only API over cached results, audio with Range, clip download (`python3 -m callguard.ui`) |
-| `tests/test_ui.py` | ✅ | Clips, mapping to dashboard fields, server routes, path safety |
+| `callguard/ui.py` | ✅ | Dashboard server + read-only API over cached results; audio with Range, clip download; keyword editor (add/edit/remove/enable/disable, validated, atomic save); Pending/Failed shown apart from Alarm/Review/No alert (`python3 -m callguard.ui`) |
+| `tests/test_ui.py` | ✅ | Clips, mapping to dashboard fields per threshold, server routes, path safety, keyword coverage/validation, no-model-call-on-preset-switch |
+| `PIPELINE_FLOW.md` | ✅ | Five mermaid diagrams for §4 above, kept current with the code (rendered and checked with mermaid-cli) |
+| `EVALUATION.md` | ✅ | The single evaluation report: confusion matrix, precision/recall, review rate, clean/noisy and by-family splits, latency, the required caveats, and the ASR/extraction/policy evidence audit |
 
 **Keys and secrets:** in a `.env` file at the root, **never tracked** (`.gitignore` and `.dockerignore`). Run `cp .env.example .env`, then set `OPENAI_API_KEY=...`. The router (`models.load_env`) reads it at startup using only the standard library; existing shell variables take precedence. `.env.example` is the tracked template containing all supported variables.
 
@@ -153,9 +165,15 @@ python3 -m callguard.pipeline eval --smoke --workers 5       # five-call regress
 python3 -m callguard.pipeline eval --only C09,D02            # selected calls
 python3 -m callguard.pipeline audio data/Audio/Stufe1_D02-K1.wav   # one call from audio
 python3 -m callguard.pipeline eval --audio --workers 6       # 42 WAVs (Whisper transcripts are cached)
+python3 -m callguard.pipeline eval --audio --require-self-hostable --workers 6  # fail fast on a non-self-hostable profile
 python3 -m callguard.pipeline freeze [--no-speakers]         # freeze cached extractions as fixtures
+python3 -m callguard.asr data/Audio --workers 4              # (re)transcribe, hash-cached, skips known files
 python3 -m callguard.ui                                       # dashboard on http://127.0.0.1:8090
 ```
+
+Every `eval` run also writes `manifest.json`: model/profile, self-hostability, prompt and policies
+versions and content hashes, thresholds, disabled families. `manifest.json["self_hostable_compliant"]`
+is `false` for the current Claude + OpenAI setup, matching the deliberate team decision above.
 
 **`claude_cli` adapter:** executes `claude -p --model claude-sonnet-5 --output-format json --json-schema <schema> --system-prompt <prompt> --tools "" --no-session-persistence --setting-sources ""`, with the transcript on stdin, in a temporary directory. Thus no tools, user hooks or plugins, CLAUDE.md, or project memory. Reads `structured_output` from the response. Notes:
 - Do not use `--bare`: it requires `ANTHROPIC_API_KEY` and does not work with OAuth login.
@@ -184,12 +202,13 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
 ### Step 3: correctness fixes ✅ (2026-10-10)
 - Implemented: evidence required for `false` as well as `true`; prompt rules ("missing/uncertain → unknown", ambiguous object → unknown, withdrawal or refusal is never evidence of a request, quotations of 3–10 consecutive words copied exactly); contiguous-window anchoring; per-family schema; leaner schema (no `summary`, template summary); synthetic cases trade→review, disclosure→review, documentation→no_alert; three-class metrics; canonical JSON per call; `--smoke`; `--only A,B,C`. Versions: `extract-3`, `policies-0.3`.
 - `concealment_requested` refined: a caller protecting their own unrelated data (masking fields, not sending personal details) does not count (fixed C01).
-- **Approximate quotation alignment** (`decide.Grounder`, `grounding.min_similarity = 0.92`). The model normalises Swiss German while copying ("hundertachtgtuusig" for "hundertachtzgtuusig", "Sie händ" for "händ Sie", dropped words); neither shorter quotations nor stricter prompts removed it, the errors only moved to other calls. The quotation only serves to **locate** the passage:
-  - exact match first, then a word-level alignment (`difflib`) restricted to the cited segment and one neighbour;
-  - rejected below 0.92 or when negations (nöd, nicht, kei, nie…) differ. Measured on 2026-10-10: observed copy slips ≥ 0.943; quotations with a wrong meaning ≤ 0.864, including a flipped negation at 0.864 that the threshold alone would not have stopped;
-  - the evidence shows **the real transcript words**, never the model's paraphrase, with `match` = similarity (`"exact"` otherwise);
-  - result: 6 of 311 quotations aligned approximately (~2%), all correct on reading.
-- `extract-1` fixtures unchanged; the replay showed C12 without speakers is now correct (removed from `KNOWN_MISSES`).
+- **Superseded by strict grounding (2026-10-10):** approximate quotation alignment, punctuation stripping,
+  ID aliases and backward-neighbour fallback were removed. Quotes now match exactly after whitespace
+  normalisation and case-folding, may cross only into the immediate next segment, and preserve the
+  original ASR text for review. A frozen extraction whose wording differs from the ASR is reviewed rather
+  than silently accepted.
+- `extract-1` fixtures remain unchanged; C12 without speakers is a documented strict-grounding replay
+  divergence because its frozen quote changes the ASR spelling.
 - `eval` folders carry the mode (`runs/eval-<ts>-speakers|nospeakers/`), so two evaluations in the same second no longer collide.
 - 63 passing tests.
 
@@ -209,23 +228,26 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
   - Keyword hits drop versus scripts, more on noisy audio (Stufe1, script / clean / noisy): D02 7/6/3, D03 8/5/4, D04 6/5/5, D06 8/5/4, D07 3/3/2, D09 2/2/1. Confirms keywords cannot drive decisions.
   - Quality `exp(avg_logprob)`: average 0.74–0.81 per call, clean and noisy almost identical (e.g. D02 0.77/0.74); minima down to 0.47. The heuristic barely separates noisy from clean audio: measure before relying on it.
 - **Done 2026-10-10:** `pipeline.py audio FILE` and `eval --audio` (expected label from the filename only in eval; run folders `runs/eval-<ts>-audio/`; metrics split clean K1/K3 vs noisy K2/K4; `extraction_errors` counted apart from classification errors). `callguard/evidence.py` cuts ±10 s clips from the original WAV.
-- **Fixes found on audio:** (1) the model cites Whisper ids without leading zeros (`s17` for `s017`): `Grounder.resolve` maps them by prefix and number; (2) "timing alone proves no intent" was read as `false` for `evasion_purpose` (C20 → no_alert): predicate and prompt now say "not proven / not established → unknown" (`extract-4`, `policies-0.4`); (3) an account session limit of the Claude CLI surfaced as `technical_uncertainty` on 10 calls: correct fallback, reported separately as `extraction_errors`.
+- **Fixes found on audio:** (1) the model can cite Whisper IDs without leading zeros (`s17` for `s017`); strict grounding now rejects rather than aliases them, so a refreshed extraction must cite the canonical ID; (2) "timing alone proves no intent" was read as `false` for `evasion_purpose` (C20 → no_alert): predicate and prompt now say "not proven / not established → unknown" (`extract-4`, `policies-0.4`); (3) an account session limit of the Claude CLI surfaced as `technical_uncertainty` on 10 calls: correct fallback, reported separately as `extraction_errors`.
 - **Result:** 42/42 on audio (see section 8). Acceptance met.
 
 ### Step 6: review dashboard ✅ (2026-10-10)
 - **Decision:** keep the existing `dashboard/` (DaisyUI/Tailwind) and connect it; `callguard/ui.py` serves it with the standard library: `python3 -m callguard.ui` → <http://127.0.0.1:8090>.
-- API `GET /api/data`: reads only `data/Transcriptions/` and the extraction cache (never calls a model, no key needed), recomputes `decide` for the three threshold presets in `policies.json` (`escalation.presets`: sensitive 0.5, balanced 0.6, conservative 0.75; `default_preset`), returns calls, keyword groups (from `Stichwortliste.json`) and the calls not analysed yet (`pending`, shown in the header). `GET /audio/<file>.wav` with Range support; `GET /clip/<file>.wav?start=&end=` downloads a ±10 s clip.
-- Dashboard: live data with fallback to `mock-data.js` when the API is absent (the README's static mode still works); real audio player, jump buttons start 10 s before each supporting passage, clip download per passage; threshold buttons show their numeric value; "confidence" replaced by the ASR quality of the decisive passage (labelled as a heuristic, not a probability); review explanations for each reason (open question, threshold routing, technical uncertainty).
+- API `GET /api/data`: reads only `data/Transcriptions/` and the extraction cache (never calls a model, no key needed), recomputes `decide` for the three threshold presets in `policies.json` (`escalation.presets`: sensitive 0.5, balanced 0.6, conservative 0.75; `default_preset`), returns calls, keyword groups (from `Stichwortliste.json`) and the calls not analysed yet (`pending`, shown in the header). `GET /audio/<file>.wav` supports Range requests; `GET /clip/<file>.wav?clip_start=&clip_end=` serves the canonical precomputed ±10 s window.
+- Dashboard: live data with fallback to `mock-data.js` when the API is absent (the README's static mode still works); real audio player, “Play evidence” replays the validated window and download uses the same bounds; threshold buttons show their numeric value; "confidence" replaced by the ASR quality of the decisive passage (labelled as a heuristic, not a probability); review explanations include specific grounding failures where applicable.
 - Keyword toggles change highlights only, never classifications (as the dashboard already stated).
 - Checked in a browser (Playwright): live data, threshold switch D02-K2 Alarm → Review at "conservative", audio playback and seek, layout fix for long evidence lists, mock fallback.
 
 ### Step 7: complete audio evaluation and audit 🟡
-- ✅ `eval --audio` on all 42 WAVs: 42/42.
-- ✅ Threshold sensitivity (2026-10-10, 42 audio calls): sensitive 0.5 and balanced 0.6 give identical results (42/42, 16 alarms); conservative 0.75 moves one call, `Stufe1_D02-K2` (noisy, quality 0.72), from Alarm to Review (41/42). The threshold works but has little leverage, because Whisper's quality score barely separates clean and noisy audio (step 5).
-- **Manual audit** of decisive evidence on demo calls and selected alarm/review clips: every decisive condition must be supported by a passage that actually establishes it. Separate from the automatic metric: `evidence_hit` only measures whether an expected turn is cited, not whether the quotation is correct.
+- ✅ `eval --audio` on all 42 WAVs: 42/42 (current code, `extract-6`/`policies-0.5`: section 8).
+- ✅ Threshold sensitivity (2026-10-10, 42 audio calls): sensitive 0.5 and balanced 0.6 give identical results (42/42, 16 alarms); conservative 0.75 moves one call, `Stufe1_D02-K2` (noisy, quality 0.72), from Alarm to Review (41/42). **Conclusion, not just an open question any more:** the threshold mechanism is correct (never auto-downgrades, never fabricates a score) but is not calibrated on this corpus — Whisper's quality score does not track real transcription correctness here (`PIPELINE.md` §2.3 has the full spot-check: no digit or negation errors found in any of the checked clean/noisy pairs).
+- ✅ **Text-level evidence audit, not independent:** every decisive quote on the 42 audio calls compared against the scripts, split into ASR/extraction/policy layers (`EVALUATION.md` §4). Found and fixed two reproducible noise-induced keyword misses (`PIPELINE.md` §2.6). No case found of a correctly-anchored quote attached to the wrong condition.
+- ⏳ **Independent audit, still needed, not done by this agent on purpose:** a person other than whoever tuned the prompt must write 10–15 blind challenge cases (paraphrases, ambiguous roles, missing facts, innocent-but-keyword calls, suspicious-but-keyword-free calls) and listen to a sample of clean/noisy clips. Doing this myself would not be independent, and no audio-playback tool is available to this agent. This is explicitly a human action item.
+- Bug found by rerunning text eval with current code: `Stufe2_C06` (no speakers) → `review/technical_uncertainty`, a strict-grounding copy-slip rejection, not yet fixed (section 8).
 
 ### Step 8: freeze and demo ⏳
-- Release evaluation (text + audio), one final `freeze`, frozen configuration, results in section 8.
+- `manifest.json` now gives most of "freeze" for free per run (model, versions, hashes, thresholds); still missing: one official `freeze` of the extractions into `tests/fixtures/replay/claude-sonnet-5/extract-6/`, and fixing the `Stufe2_C06` miss first.
+- Release evaluation (text + audio), frozen configuration, results in section 8.
 - Demo (README "Sunday"): one audio-to-alarm call with clips, a threshold or keyword change with visible effect, a borderline case (D03: keywords present but no_alert), and metrics.
 
 ### Extras: only after step 8 or when justified by metrics
@@ -238,15 +260,22 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
 - **Interpretation:** anchoring verifies that a quotation exists, not that it establishes the condition (see D02 T012). Hence the step 7 audit.
 - **ASR:** Whisper tends to produce Standard German, so quotations and `gsw` keywords differ from scripts (`de` keywords cover this), and segments differ from turns.
 - **Swiss German ASR:** `whisper-1` quality on these clean/noisy recordings is not yet measured. Compare against scripts (WER, evaluation only) in step 5.
-- **Threshold:** an unvalidated ASR-quality heuristic; measure on clean/noisy pairs before presenting it.
+- **Threshold:** measured on clean/noisy pairs (step 7); the mechanism is correct but not calibrated on
+  this corpus — treat it as a coarse flag, not a predictor of error.
 - **Reproducibility:** Claude does not expose a temperature setting; model/prompt-version caching makes executions repeatable.
 - **Model change:** another model may perform worse; every change therefore goes through the smoke test.
 - **Current results** come from the development model on scripts, not the complete audio pipeline. The 42 fixtures are 21 dialogues × 2 text configurations, not 42 audio evaluations.
 
 ## 8. Results log
 
+Full numbers, caveats and the evidence audit now live in [`EVALUATION.md`](EVALUATION.md); this log keeps
+the chronological history. Current head: `extract-6`/`policies-0.5`.
+
 | Date | Profile / model | Mode | Accuracy | False alarms | Missed (strict/lenient) | Notes |
 |---|---|---|---|---|---|---|
+| 2026-10-10 | claude_code / claude-sonnet-5, extract-6, policies-0.5 | **Audio, 42 WAVs** | **42/42 (1.000)** | 0/26 | 0/16 · 0/16 | Clean 21/21, noisy 21/21; review 6/42; 0 extraction errors. `numbers` now restricted to identifiers (C01–C04 correctly typed; C05 no longer produces 9 amount events). `runs/eval-20261010-124415-audio/` |
+| 2026-10-10 | claude_code / claude-sonnet-5, extract-6, policies-0.5 | Text, with speakers | 21/21 (1.000) | 0/13 | 0/8 · 0/8 | `runs/eval-20261010-142614-speakers/` |
+| 2026-10-10 | claude_code / claude-sonnet-5, extract-6, policies-0.5 | Text, `--no-speakers` | 20/21 (0.952) | 0/13 | 0/8 · 0/8 | **Known current miss:** `Stufe2_C06` → `review/technical_uncertainty`, a strict-grounding copy-slip rejection on `own_trade_request` (not an ASR or policy error; not yet fixed). `runs/eval-20261010-143021-nospeakers/` |
 | 2026-10-10 | claude_code / claude-sonnet-5 | Text, with speakers | 20/21 (0.952) | 1/13 | 0/8 · 0/8 | Error: C19 (review→alarm). `evidence_hit` 11/11, but D02 T012 quotation is wrong (traceability error). `runs/eval-20261010-021526.json` |
 | 2026-10-10 | claude_code / claude-sonnet-5 + whisper-1, extract-4, policies-0.4 | **Audio, 42 WAVs** | **42/42 (1.000)** | 0/26 | 0/16 · 0/16 | Clean 21/21, noisy 21/21; review 6/42 (C17, C19, C20 × 2); 0 extraction errors. `runs/eval-20261010-090616-audio/` |
 | 2026-10-10 | claude_code / claude-sonnet-5, extract-4, policies-0.4 | Text, with and without speakers | 21/21 · 21/21 | 0/13 | 0/8 · 0/8 | Regression check after the audio fixes. `runs/eval-20261010-090852-speakers/`, `runs/eval-20261010-091145-nospeakers/` |
@@ -276,3 +305,36 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
 | Synthetic cases for missing combinations; three-class metrics | Accepted (step 3.6–3.7) |
 | MVP simplification: frozen adapters, one result per family, lightweight development tests, contiguous-window anchoring, one canonical JSON, immediate UI choice | Accepted. Alternative profiles remain switching options; standard-library UI |
 | ASR selection (open decision) | Closed: OpenAI `whisper-1`, estimated ~USD 1.15 per full pass from USD 75 credits |
+
+### Keyword Coverage checklist (2026-10-10)
+
+| Proposal | Outcome |
+|---|---|
+| Show current coverage (families, enabled keywords, variants, configured vs. observed) | Already implemented (dashboard keyword panel + `keyword_coverage()` in `ui.py`) |
+| Group by family; allow synonyms/DE-Swiss German variants; add real observed phrases first, no speculative lists | Added 2 real `de` terms from Whisper output (Quantauszahlen, von der Meldung), grounded in two independent dialogues; a systematic scan found no other phrase recurring outside scripted-pair duplicates, so nothing speculative was added |
+| Editable in the UI: add/edit/enable/disable, save, block empty/duplicate terms | Already implemented (`validate_keyword_config`, `save_keyword_config`, atomic write) |
+| Verify independence from decisions (innocent call with keyword, suspicious call without) | Already tested (`test_innocent_keyword_occurrence_does_not_change_a_no_alert`, `test_suspicious_event_without_a_keyword_remains_an_alarm`) |
+
+### ASR Quality Threshold checklist (2026-10-10)
+
+| Proposal | Outcome |
+|---|---|
+| Document the real aggregation (max quote per condition, not a global score); label presets as a heuristic | Accepted, documented in `PIPELINE.md` §2.3 and tested (`test_best_of_several_quotes_decides_a_condition_quality`) |
+| Below-threshold must go to review, never silently to no_alert | Already correct; confirmed with `test_threshold_never_changes_unknown_or_excluded_events` |
+| Handle missing scores: scripts → not applicable, audio without a score → "unavailable", never a perfect-score substitute | Already correct; confirmed with `test_missing_quality_is_reported_not_replaced_by_a_perfect_score` |
+| Do a real clean/noisy spot-check on decisive evidence (negations, codes, numbers) before trusting the threshold | Done: 93 decisive quotes checked, every spoken access/confirmation code correct on both takes, no negation flip found; the threshold is correct but not calibrated on this corpus (step 7) |
+| Connect the control to the dashboard: preset switch recomputes instantly from cache, no new inference | Already true; added explicit tests (`test_build_data_never_calls_the_chat_model`, `test_every_preset_is_a_pure_recompute_of_the_same_cached_extraction`) |
+
+### "Classifier and modern techniques" checklist (2026-10-10)
+
+No new classifier, second LLM, agent framework, RAG, diarization or retraining — accepted as-is, nothing to add.
+
+| Proposal | Outcome |
+|---|---|
+| Freeze the final candidate; verify self-hostability; save model/prompt/schema/policy/threshold in a run manifest | Accepted: every `eval` run now writes `manifest.json` (model, profile, `self_hostable` per component, `self_hostable_compliant`, prompt/policies versions and content hashes, thresholds, disabled families); `--require-self-hostable` fails fast instead of silently running a non-compliant profile |
+| Build a small independent challenge set (10–15 cases, a second person, blind to the current prompt) | **Declined by this agent, on purpose:** the same agent that tuned the prompt cannot also author an "independent" test without defeating the point. Logged as a human action item (step 7), not fabricated |
+| Verify Swiss German/noise on decisive facts; separate ASR vs. extraction vs. policy error | Accepted: the ASR/extraction/policy-layered text audit in `EVALUATION.md` §4; explicitly labelled as a non-independent, text-level check, since no audio-playback tool is available here |
+| Make bank configuration explicit: versioned policy profile, enable/disable per check, show which profile produced a result | Accepted: `enabled` flag per family in `policies.json` (§4); `policiesVersion`/`extractionVersion` now shown per call in the dashboard |
+| Close one smooth workflow: one command → canonical result; dashboard never reinvokes a model; separate Pending/Processing/Failed from Alarm/Review/No alert | Accepted, with one adjustment: no "Processing" state — it would need an async job queue, which is overengineering for this synchronous CLI-batch design. Implemented: `status: ok\|failed` on every canonical result, dashboard shows Pending/Failed apart from the three classifications |
+| One defensible evaluation report: 3-class confusion matrix, precision/recall, both escalation directions, review rate and technical failures, clean/noisy and by-family, evidence audit, latency/cost, required caveats | Accepted: `EVALUATION.md`, built only from logged runs, with all four required caveats stated up front |
+| Scalability without overengineering: persistent cache, compact output, bounded concurrency, logged times; don't raise worker counts blindly | Accepted: added `elapsed_s` wall-clock capture per extraction call, aggregated in `summary.json`; no job queue or orchestration layer added |

@@ -18,6 +18,10 @@ KNOWN_MISSES = {
     ("Stufe3_C19", "speakers"): "fact_relevant set true although the customer cannot say which line is meant",
     ("Stufe3_C19", "nospeakers"): "same as above",
     ("Stufe3_C20", "nospeakers"): "evasion_purpose set false from 'I cannot say why' (should be unknown)",
+    # Strict grounding now rejects this frozen model quote: it changes the ASR
+    # spelling 'persönliche' to 'persönleche'.  A fresh extraction must cite
+    # the exact transcript text before it can raise an alarm.
+    ("Stufe2_C12", "nospeakers"): "strict grounding rejects a paraphrased evidence quote",
 }
 
 

@@ -2,7 +2,7 @@
   "use strict";
 
   const decision = window.CallGuardDecision;
-  let calls, keywordGroups, allKeywords, state, live = false, thresholdValues = null;
+  let calls, keywordGroups, keywordConfig, keywordCoverage, allKeywords, state, live = false, thresholdValues = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -19,9 +19,34 @@
     return decision.assessmentFor(call, state.threshold);
   }
 
+  function displayedQuality(call) {
+    return live ? call.asrQuality : call.confidence;
+  }
+
+  function actorLabel(actor) {
+    if (actor && actor.status === "inferred" && (actor.role === "customer" || actor.role === "advisor")) {
+      return `${actor.role[0].toUpperCase()}${actor.role.slice(1)} · Inferred`;
+    }
+    return "Role unknown";
+  }
+
+  function actorTooltip(actor) {
+    return actor && actor.status === "inferred" && (actor.role === "customer" || actor.role === "advisor")
+      ? "Role inferred from transcript context; not independently verified."
+      : "The available evidence does not establish the speaker’s role.";
+  }
+
+  function clipBounds(item, call) {
+    return {
+      start: Number.isFinite(item.clip_start) ? item.clip_start : Math.max(0, item.time - 10),
+      end: Number.isFinite(item.clip_end) ? item.clip_end : Math.min(call.duration, item.end + 10)
+    };
+  }
+
   function statusMarkup(classification) {
-    const statusClass = classification === "Alarm" ? "alarm" : classification === "Review" ? "review" : "no-alert";
-    return `<span class="status-label ${statusClass}"><span class="status status-${classification === "Alarm" ? "error" : classification === "Review" ? "warning" : "success"}" aria-hidden="true"></span>${escapeHtml(classification)}</span>`;
+    const statusClass = classification === "Alarm" ? "alarm" : classification === "Review" ? "review" : classification === "Failed" ? "failed" : "no-alert";
+    const indicator = classification === "Alarm" ? "error" : classification === "Review" ? "warning" : classification === "Failed" ? "neutral" : "success";
+    return `<span class="status-label ${statusClass}"><span class="status status-${indicator}" aria-hidden="true"></span>${escapeHtml(classification)}</span>`;
   }
 
   function icon(name) {
@@ -44,16 +69,12 @@
   }
 
   function renderSummary() {
-    const counts = calls.reduce((acc, call) => { acc[classificationFor(call)]++; return acc; }, { Alarm: 0, Review: 0, "No alert": 0 });
-    const items = [
-      ["Total calls", calls.length, "calls", "calls"],
-      ["Alarms", counts.Alarm, "alarm", "alarm"],
-      ["Reviews", counts.Review, "review", "review"],
-      ["No alerts", counts["No alert"], "clear", "clear"]
-    ];
-    $("#summary-counters").innerHTML = items.map(([label, value, type, iconName]) => `
-      <div class="summary-item ${type}"><span class="summary-icon">${icon(iconName)}</span><span class="summary-copy"><strong class="summary-value">${value}</strong><span class="summary-label">${label}</span></span></div>
-    `).join("");
+    const counts = calls.reduce((acc, call) => { acc[classificationFor(call)]++; return acc; },
+                                { Alarm: 0, Review: 0, "No alert": 0, Failed: 0 });
+    const attention = counts.Alarm + counts.Review;
+    const operationalNote = [state.pendingCount ? `${state.pendingCount} pending` : "", counts.Failed ? `${counts.Failed} failed` : ""].filter(Boolean).join(" · ");
+    const operationalSuffix = operationalNote ? ` · ${operationalNote}` : "";
+    $("#summary-counters").innerHTML = `<div class="attention-summary"><strong>${attention} calls need attention</strong><span><b>${counts.Alarm}</b> alarms · <b>${counts.Review}</b> reviews</span></div><span class="summary-muted">${calls.length + state.pendingCount} total calls · ${counts["No alert"]} no alert${operationalSuffix}</span>`;
   }
 
   function renderThreshold() {
@@ -65,7 +86,9 @@
   }
 
   function renderFilters() {
-    $("#classification-filters").innerHTML = ["All", "Alarm", "Review", "No alert"].map((filter) => `
+    const hasFailed = calls.some((call) => call.runStatus === "failed");
+    const options = ["Needs attention", "All", "Alarm", "Review", "No alert"].concat(hasFailed ? ["Failed"] : []);
+    $("#classification-filters").innerHTML = options.map((filter) => `
       <button type="button" class="btn btn-xs filter-chip ${state.filter === filter ? "active" : ""}" data-filter="${filter}" aria-pressed="${state.filter === filter}">${filter}</button>
     `).join("");
   }
@@ -74,7 +97,7 @@
     const query = state.query.toLowerCase();
     return calls.filter((call) => {
       const classification = classificationFor(call);
-      const matchesFilter = state.filter === "All" || classification === state.filter;
+      const matchesFilter = state.filter === "All" || (state.filter === "Needs attention" && (classification === "Alarm" || classification === "Review")) || classification === state.filter;
       const haystack = `${call.id} ${call.family} ${classification} ${assessmentFor(call)} ${call.date} ${call.time}`.toLowerCase();
       return matchesFilter && haystack.includes(query);
     });
@@ -87,15 +110,34 @@
     $("#call-list").innerHTML = shown.map((call) => {
       const classification = classificationFor(call);
       return `<button type="button" class="call-row ${call.id === state.selectedId ? "selected" : ""}" role="option" aria-selected="${call.id === state.selectedId}" data-call-id="${call.id}">
-        <span class="call-primary"><strong>${escapeHtml(call.id)}</strong><span>${escapeHtml(call.date)} · ${escapeHtml(call.time)}</span></span>
+        <span class="call-primary"><strong>${escapeHtml(shortCallName(call))}</strong><span>${escapeHtml(call.family)}${escapeHtml(recordingVariant(call))}</span></span>
         <span>${statusMarkup(classification)}</span>
-        <span class="confidence-cell" title="${live ? "ASR quality of the decisive passage (exp(avg_logprob)); a heuristic, not a probability" : "Illustrative mock confidence; not a verified probability"}"><span class="confidence-value">${call.confidence === null ? "n/a" : `${call.confidence}%`}</span><span class="confidence-bar" aria-hidden="true"><i style="width:${call.confidence || 0}%"></i></span></span>
         <span class="duration-cell">${formatTime(call.duration)}</span>
       </button>`;
     }).join("");
   }
 
   function selectedCall() { return calls.find((call) => call.id === state.selectedId); }
+
+  function shortCallName(call) {
+    const match = call.id.match(/_([A-Z]\d+)-/i);
+    return match ? `Call ${match[1].toUpperCase()}` : call.id;
+  }
+
+  function recordingVariant(call) {
+    return /^(clean|noisy) audio$/i.test(call.time || "") ? ` · ${call.time.replace(" audio", "")}` : "";
+  }
+
+  function userConditionLabel(label) {
+    const names = {
+      "Own trade request": "A trade was requested", "Information nonpublic": "The information was not public",
+      "Information market relevant": "The information could affect the market", "Request based on information": "The request was linked to that information",
+      "Value spoken": "A value was spoken", "Access secret": "It relates to an access process", "Secret active": "The value was still valid",
+      "Advisor disclosed": "The adviser disclosed information", "Third party detail": "A third party received the detail",
+      "Authority absent": "No authority was established"
+    };
+    return names[label] || label;
+  }
 
   function activeKeywordMatches(text) {
     return [...state.enabledKeywords].filter((keyword) => text.toLowerCase().includes(keyword.toLowerCase()));
@@ -130,7 +172,9 @@
 
   function conditionMarkup(condition) {
     const cls = condition.state.toLowerCase();
-    return `<div class="condition"><span>${escapeHtml(condition.label)}</span><span class="status-label condition-state ${cls}">${escapeHtml(condition.state)}</span></div>`;
+    const symbol = condition.state === "Supported" ? "✓" : condition.state === "Excluded" ? "—" : "?";
+    const stateLabel = condition.state === "Excluded" ? "Explicitly excluded" : condition.state === "Unknown" ? "Not established" : "Supported";
+    return `<div class="condition"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span></div>`;
   }
 
   function liveReasons(call) {
@@ -155,6 +199,13 @@
       <section id="threshold-note-section" class="detail-card threshold-note guide-target">
         <div class="section-head"><div class="section-title"><span class="section-icon">${icon("question")}</span><div><h3>Technical uncertainty</h3><p>Evidence could not be verified</p></div></div></div>
         <p class="assessment-copy">The model's evidence could not be located in the transcript, or the extraction was incomplete. The call is routed to review instead of guessing.</p>
+        ${call.groundingIssues && call.groundingIssues.length ? `<ul class="grounding-issues">${call.groundingIssues.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : ""}
+      </section>`;
+      if (reasons.includes("actor_role_unknown")) html += `
+      <section id="actor-role-section" class="detail-card open-question guide-target">
+        <div class="section-head"><div class="section-title"><span class="section-icon">${icon("question")}</span><div><h3>Review reason</h3><p>Speaker role is unresolved</p></div></div></div>
+        <p class="assessment-copy">A necessary policy condition cannot be established because the actor’s role is unresolved.</p>
+        <strong>${escapeHtml(call.missingFact || "Was the person acting in the required role?")}</strong>
       </section>`;
       return html;
     }
@@ -171,62 +222,68 @@
     return "";
   }
 
+  function operationalNarrative(call, classification) {
+    const family = call.family.toLowerCase();
+    const reasons = liveReasons(call);
+    if (classification === "Review" && reasons.includes("missing_policy_fact")) {
+      if (family === "access") return "An access value was spoken, but the call does not establish whether it was still valid.";
+      return "The call contains relevant information, but it does not establish a fact required to resolve this case.";
+    }
+    if (classification === "Review" && reasons.includes("technical_uncertainty")) return "The available extraction or evidence could not be verified. Review the passage before deciding.";
+    if (classification === "Review" && reasons.includes("below_escalation_threshold")) return "The required facts are supported, but the supporting passage needs a human listen before escalation.";
+    if (classification === "Alarm" && family === "access") return "The caller read a value identified as valid for an active login.";
+    if (classification === "No alert" && family === "access") return "The spoken value was explicitly described as an expired example.";
+    return assessmentFor(call);
+  }
+
+  function caseHeading(call, classification) {
+    if (classification === "Review") return "Review required";
+    if (classification === "Alarm" && call.family.toLowerCase() === "access") return "Access secret disclosed";
+    if (classification === "Alarm") return "Compliance concern detected";
+    return "No alert detected";
+  }
+
   function renderDetail(options = {}) {
     const call = selectedCall();
     const classification = classificationFor(call);
-    const evidence = call.evidence[0];
-    const keywordOccurrences = call.transcript.reduce((sum, line) => sum + activeKeywordMatches(line.text).length, 0);
+    const evidenceIndex = Math.min(state.evidenceIndex || 0, Math.max(0, call.evidence.length - 1));
+    const evidence = call.evidence[evidenceIndex];
+    const bounds = clipBounds(evidence, call);
+    const hasEvidence = evidence.segments.length > 0;
+    const reasons = liveReasons(call);
     const token = ++state.selectionToken;
     stopReveal();
     stopAudio();
     const detail = $("#call-detail");
-    detail.innerHTML = `<div class="detail-inner">
-      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? "Pipeline result" : "Mock call"}</span></div>
+    detail.innerHTML = `<div class="detail-inner detail-change">
+      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? call.cacheStatus === "legacy" ? "Legacy cached extraction" : "Pipeline result" : "Mock call"}</span></div>
       <header id="classification-section" class="detail-header guide-target">
-        <div><div class="eyebrow">${escapeHtml(call.family)} compliance</div><div class="detail-title-line"><h2>${escapeHtml(call.id)}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.date)} · ${escapeHtml(call.time)} · ${formatTime(call.duration)}</p></div>
-        <div class="detail-actions"><button id="replay-guide" class="btn btn-xs btn-ghost replay-guide" type="button">${icon("replay")} Replay guide</button><div class="mock-confidence"><strong>${call.confidence === null ? "n/a" : `${call.confidence}%`}</strong><span>${live ? "ASR quality<br>not a probability" : "Mock confidence<br>not a probability"}</span></div></div>
+        <div><div class="eyebrow">${escapeHtml(call.family)} · ${formatTime(call.duration)}</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.family)} review · automatic transcript</p></div>
       </header>
-      <div class="detail-grid">
-        <div class="detail-column">
-          <section id="assessment-section" class="detail-card guide-target">
-            <div class="section-head"><div class="section-title"><span class="section-icon">${icon("reason")}</span><div><h3>Assessment reason</h3><p>${escapeHtml(call.family)} policy family</p></div></div><span class="badge badge-sm family-tag">${escapeHtml(call.family)}</span></div>
-            <p class="assessment-copy">${escapeHtml(assessmentFor(call))}</p>
-          </section>
-          <section id="evidence-section" class="detail-card guide-target">
-            <div class="section-head"><div class="section-title"><span class="section-icon">${icon("evidence")}</span><div><h3>Evidence preview</h3><p>Supporting passage in context <span class="badge badge-ghost badge-xs keyword-occurrences">${keywordOccurrences} keyword ${keywordOccurrences === 1 ? "match" : "matches"}</span></p></div></div></div>
-            <div class="evidence-window"><div class="evidence-meta"><span><strong>${formatTime(evidence.time)}</strong> · ${escapeHtml(evidence.speaker)}</span><span class="badge badge-xs context-badge">≈10 sec before + after</span></div><p id="evidence-text" class="evidence-text" aria-hidden="true"></p><p class="sr-only">${escapeHtml(evidence.text)}</p></div>
-            <div class="mark-legend"><span><i class="legend-swatch"></i>Policy support</span><span><i class="legend-swatch keyword"></i>Enabled keyword</span></div>
-            <button id="show-full-text" type="button" class="btn btn-xs btn-ghost show-full">Show full text</button>
-          </section>
-          <details class="detail-card transcript-collapse">
-            <summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Compact view · keyword highlights</small></span></span></summary>
-            <div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div>
-          </details>
-        </div>
-        <div class="detail-column">
-          <section id="audio-section" class="detail-card guide-target">
-            <div class="section-head"><div class="section-title"><span class="section-icon">${icon("audio")}</span><div><h3>Audio replay</h3><p>Verify the passage with context</p></div></div><span class="badge badge-xs simulated-tag">${live ? "Original recording" : "Simulated player"}</span></div>
-            ${live ? `<audio id="audio-element" preload="metadata" src="/audio/${encodeURIComponent(call.id)}.wav"></audio>` : ""}
-            <div class="audio-player"><div class="audio-main"><button id="play-button" class="btn btn-primary btn-sm play-button" type="button" aria-label="Play ${live ? "" : "simulated "}audio"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Audio position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>${formatTime(call.duration)}</span></div></div></div><div class="jump-row"><span>Jump to evidence${live ? " (−10 s)" : ""}</span>${call.evidence.map((item, index) => `<button class="btn btn-xs btn-outline jump-evidence" type="button" data-jump="${live ? Math.max(0, item.time - 10) : item.time}" title="${escapeHtml(item.text)}">${index + 1} · ${formatTime(item.time)}</button>`).join("")}</div>${live && call.evidence.some((item) => item.segments.length) ? `<div class="jump-row"><span>Download clip (±10 s)</span>${call.evidence.filter((item) => item.segments.length).map((item, index) => `<a class="btn btn-xs btn-ghost" href="/clip/${encodeURIComponent(call.id)}.wav?start=${item.time}&end=${item.end}" download>${index + 1} · ${formatTime(Math.max(0, item.time - 10))}–${formatTime(item.end + 10)}</a>`).join("")}</div>` : ""}</div>
-          </section>
-          <section id="policy-section" class="detail-card guide-target">
-            <div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>Policy conditions</h3><p>Facts used in this assessment</p></div></div></div>
-            <div class="condition-list">${call.conditions.map(conditionMarkup).join("")}</div>
-          </section>
-          ${unresolvedMarkup(call, classification)}
-        </div>
+      <div class="review-workspace">
+        ${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown") || (!live && call.decisionType === "missing-fact")) ? `<section id="open-question-section" class="review-question guide-target"><span class="eyebrow">Question to resolve</span><h3>${escapeHtml(call.missingFact || "What required fact is still unresolved?")}</h3><p>This answer is required before the case can be resolved.</p></section>` : ""}
+        ${classification === "Review" && reasons.includes("technical_uncertainty") ? `<section class="review-question technical-review"><span class="eyebrow">Technical review</span><h3>Evidence needs verification</h3><p>The extraction or its transcript grounding could not be verified. Listen to the relevant context before making a compliance decision.</p></section>` : ""}
+        <section id="assessment-section" class="main-review-card guide-target"><div class="section-head"><div><span class="eyebrow">${escapeHtml(caseHeading(call, classification))}</span><h3>${escapeHtml(operationalNarrative(call, classification))}</h3></div></div>
+          <div id="evidence-section" class="evidence-window"><div class="evidence-meta"><span><strong>${hasEvidence ? `${formatTime(evidence.evidence_start ?? evidence.time)}–${formatTime(evidence.evidence_end ?? evidence.end)}` : "No supporting passage"}</strong></span><span>${hasEvidence ? `Context ${formatTime(bounds.start)}–${formatTime(bounds.end)}` : ""}</span></div><p class="evidence-context">${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown")) ? "Relevant context — it does not establish the unresolved fact." : hasEvidence ? "Supporting passage in the automatic transcript." : "Audio or grounded evidence is not available."}</p><p id="evidence-text" class="evidence-text passage-change" aria-hidden="true"></p><p class="sr-only">${escapeHtml(evidence.text)}</p></div>
+          ${live ? `<audio id="audio-element" preload="metadata" src="/audio/${encodeURIComponent(call.id)}.wav"></audio>` : ""}
+          <div id="audio-section" class="evidence-audio"><button class="btn btn-primary play-evidence" type="button" ${hasEvidence ? "" : "disabled"} data-clip-start="${bounds.start}" data-clip-end="${bounds.end}">${icon("audio")} Play evidence</button><span>${hasEvidence ? "Includes up to 10 seconds of surrounding audio." : "Audio is not available for this passage."}</span>${live && hasEvidence ? `<a class="btn btn-xs btn-ghost" href="/audio/${encodeURIComponent(call.id)}.wav">Full recording</a><a class="btn btn-xs btn-ghost" href="/clip/${encodeURIComponent(call.id)}.wav?clip_start=${bounds.start}&clip_end=${bounds.end}" download>Download clip</a>` : ""}</div>
+          ${call.evidence.length > 1 ? `<div class="passage-nav">Passage ${evidenceIndex + 1} of ${call.evidence.length}${call.evidence.map((_, index) => `<button class="btn btn-xs ${index === evidenceIndex ? "btn-primary" : "btn-ghost"}" data-evidence-index="${index}" type="button">${index + 1}</button>`).join("")}</div>` : ""}
+          <div class="audio-player secondary-audio"><button id="play-button" class="btn btn-ghost btn-xs play-button" type="button" aria-label="Play full recording" ${live ? "" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Full recording position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>Full recording · ${formatTime(call.duration)}</span></div></div></div>
+        </section>
+        <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.map(conditionMarkup).join("")}</div></section>
+        <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
+        <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
     </div>`;
 
     bindDetailEvents(token);
-    if (options.immediate || reducedMotion()) finishReveal(token, options.startGuide !== false);
-    else startReveal(call, token, options.startGuide !== false);
+    finishReveal(token, false);
   }
 
   function startReveal(call, token, startGuide) {
     const textElement = $("#evidence-text");
     const button = $("#show-full-text");
-    const text = call.evidence[0].text;
+    const text = call.evidence[state.evidenceIndex || 0].text;
     textElement.classList.add("reveal-cursor");
     let index = 0;
     const delay = Math.max(18, Math.min(38, Math.floor(2300 / text.length)));
@@ -236,7 +293,7 @@
       textElement.textContent = text.slice(0, index);
       if (index >= text.length) finishReveal(token, startGuide);
     }, delay);
-    button.hidden = false;
+    if (button) button.hidden = false;
   }
 
   function finishReveal(token, startGuide) {
@@ -246,7 +303,8 @@
     const element = $("#evidence-text");
     if (!element) return;
     element.classList.remove("reveal-cursor");
-    element.innerHTML = markedText(call.evidence[0].text, call.evidence[0].support);
+    const evidence = call.evidence[state.evidenceIndex || 0];
+    element.innerHTML = markedText(evidence.text, evidence.support);
     const button = $("#show-full-text");
     if (button) button.hidden = true;
     if (startGuide && !state.autoGuideUsed) {
@@ -262,9 +320,10 @@
   }
 
   function bindDetailEvents(token) {
-    $("#show-full-text").addEventListener("click", () => finishReveal(token, true));
-    $("#replay-guide").addEventListener("click", () => startCallGuide(false));
-    $("#mobile-back").addEventListener("click", closeMobileDetail);
+    const fullText = $("#show-full-text");
+    if (fullText) fullText.addEventListener("click", () => finishReveal(token, true));
+    const mobileBack = $("#mobile-back");
+    if (mobileBack) mobileBack.addEventListener("click", closeMobileDetail);
     $("#play-button").addEventListener("click", toggleAudio);
     const el = audioElement();
     if (el) {
@@ -277,8 +336,14 @@
       el.addEventListener("pause", () => setIcon(false));
     }
     $("#audio-range").addEventListener("input", (event) => updateAudio(Number(event.target.value)));
-    $$(".jump-evidence").forEach((button) => button.addEventListener("click", () => updateAudio(Number(button.dataset.jump))));
-    $$("#classification-section, #assessment-section, #evidence-section, #audio-section, #policy-section, #open-question-section, #threshold-note-section").forEach((section) => {
+    $$(".play-evidence").forEach((button) => button.addEventListener("click", () => {
+      playEvidence(Number(button.dataset.clipStart), Number(button.dataset.clipEnd));
+    }));
+    $$('[data-evidence-index]').forEach((button) => button.addEventListener("click", () => {
+      state.evidenceIndex = Number(button.dataset.evidenceIndex);
+      renderDetail({ immediate: true, startGuide: false });
+    }));
+    $$("#classification-section, #assessment-section, #evidence-section, #audio-section, #policy-section, #open-question-section").forEach((section) => {
       if (section) section.addEventListener("pointerdown", pauseGuideTimer);
     });
   }
@@ -287,6 +352,7 @@
 
   function toggleAudio() {
     stopGuide();
+    state.evidenceEnd = null;
     const el = audioElement();
     if (el) {
       if (el.paused) el.play(); else el.pause();
@@ -310,6 +376,12 @@
     const call = selectedCall();
     state.audioElapsed = Math.max(0, Math.min(value, call.duration));
     const el = audioElement();
+    if (fromElement && el && state.evidenceEnd !== null && state.audioElapsed >= state.evidenceEnd) {
+      state.audioElapsed = state.evidenceEnd;
+      el.currentTime = state.evidenceEnd;
+      state.evidenceEnd = null;
+      el.pause();
+    }
     if (el && !fromElement) {
       el.currentTime = state.audioElapsed;
       if (el.paused) el.play();
@@ -320,6 +392,12 @@
     if (elapsed) elapsed.textContent = formatTime(state.audioElapsed);
   }
 
+  function playEvidence(start, end) {
+    stopGuide();
+    state.evidenceEnd = end;
+    updateAudio(start);
+  }
+
   function stopAudio() {
     const el = audioElement();
     if (el) el.pause();
@@ -327,24 +405,105 @@
     state.audioTimer = null;
     state.playing = false;
     state.audioElapsed = 0;
+    state.evidenceEnd = null;
   }
 
   function renderKeywordPopover() {
+    if (state.keywordEditor && live) return renderKeywordEditor();
     const query = state.keywordQuery.toLowerCase();
     const groups = Object.entries(keywordGroups).map(([family, keywords]) => {
       const visible = keywords.filter((keyword) => keyword.toLowerCase().includes(query) || family.toLowerCase().includes(query));
       if (!visible.length) return "";
       return `<div class="keyword-group"><h4>${escapeHtml(family)}</h4>${visible.map((keyword) => `<label class="keyword-option"><input class="checkbox checkbox-sm checkbox-primary" type="checkbox" value="${escapeHtml(keyword)}" ${state.enabledKeywords.has(keyword) ? "checked" : ""}><span>${escapeHtml(keyword)}</span></label>`).join("")}</div>`;
     }).join("");
-    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Keyword highlights</h3><p>Highlights only · classifications stay unchanged</p></div><div class="keyword-actions"><button class="btn btn-xs btn-ghost" id="select-all-keywords" type="button">All</button><button class="btn btn-xs btn-ghost" id="clear-keywords" type="button">Clear</button></div></div><label class="input input-sm keyword-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="keyword-search" type="search" value="${escapeHtml(state.keywordQuery)}" placeholder="Find a keyword"></label>${groups || '<p class="empty-state">No keywords found.</p>'}`;
+    const coverage = live && keywordCoverage ? `<div class="keyword-coverage"><strong>${keywordCoverage.families} families · ${keywordCoverage.enabledKeywords} enabled keywords</strong><span>${keywordCoverage.configuredVariants} configured DE / Swiss German variants (${keywordCoverage.distinctTerms} distinct terms) · ${keywordCoverage.occurrences} observed occurrences in ${keywordCoverage.callsWithOccurrences}/${keywordCoverage.transcriptCalls} cached calls</span><div>${keywordCoverage.byFamily.map((row) => `<small>${escapeHtml(row.label)}: ${row.enabledKeywords} keywords · ${row.occurrences} hits</small>`).join("")}</div></div>` : "";
+    const manage = live ? '<button class="btn btn-xs btn-outline" id="manage-keywords" type="button">Manage list</button>' : "";
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Keyword highlights</h3><p>Highlights only · classifications stay unchanged</p></div><div class="keyword-actions"><button class="btn btn-xs btn-ghost" id="select-all-keywords" type="button">All</button><button class="btn btn-xs btn-ghost" id="clear-keywords" type="button">Clear</button></div></div>${coverage}<div class="keyword-manage">${manage}</div><label class="input input-sm keyword-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="keyword-search" type="search" value="${escapeHtml(state.keywordQuery)}" placeholder="Find a keyword"></label>${groups || '<p class="empty-state">No keywords found.</p>'}`;
     $("#keyword-count").textContent = state.enabledKeywords.size;
     $("#keyword-search").addEventListener("input", (event) => { state.keywordQuery = event.target.value; renderKeywordPopover(); $("#keyword-search").focus(); });
     $("#select-all-keywords").addEventListener("click", () => { state.enabledKeywords = new Set(allKeywords); updateKeywords(); });
     $("#clear-keywords").addEventListener("click", () => { state.enabledKeywords.clear(); updateKeywords(); });
+    const manageButton = $("#manage-keywords");
+    if (manageButton) manageButton.addEventListener("click", () => { state.keywordEditor = true; state.keywordSaveError = ""; renderKeywordPopover(); });
     $$(".keyword-option input", $("#keyword-popover")).forEach((checkbox) => checkbox.addEventListener("change", () => {
       if (checkbox.checked) state.enabledKeywords.add(checkbox.value); else state.enabledKeywords.delete(checkbox.value);
       updateKeywords();
     }));
+  }
+
+  function familyForKeyword(id) {
+    return Object.entries(keywordConfig.families).find(([, family]) => family.keywords.includes(id))?.[0] || Object.keys(keywordConfig.families)[0];
+  }
+
+  function editorKeywordMarkup(keyword) {
+    const families = Object.entries(keywordConfig.families).map(([id, family]) =>
+      `<option value="${escapeHtml(id)}" ${familyForKeyword(keyword.id) === id ? "selected" : ""}>${escapeHtml(family.label || id)}</option>`).join("");
+    return `<fieldset class="keyword-editor-row" data-keyword-id="${escapeHtml(keyword.id)}"><div class="keyword-editor-row-head"><strong>${escapeHtml(keyword.id)}</strong><label class="keyword-enabled">Enabled <input data-field="enabled" type="checkbox" ${keyword.enabled !== false ? "checked" : ""}></label><button class="btn btn-xs btn-ghost remove-keyword" type="button">Remove</button></div><label>Label<input class="input input-sm" data-field="label" value="${escapeHtml(keyword.label)}"></label><label>Family<select class="select select-sm" data-field="family">${families}</select></label><label>German variants <textarea data-field="de" rows="2" placeholder="One exact phrase per line">${escapeHtml(keyword.de.join("\n"))}</textarea></label><label>Swiss German variants <textarea data-field="gsw" rows="2" placeholder="One exact phrase per line">${escapeHtml(keyword.gsw.join("\n"))}</textarea></label></fieldset>`;
+  }
+
+  function renderKeywordEditor() {
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts only. Decisions remain unchanged.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
+    $("#close-keyword-editor").addEventListener("click", () => { state.keywordEditor = false; renderKeywordPopover(); });
+    $("#add-keyword").addEventListener("click", () => {
+      keywordConfig = configFromEditor();
+      const taken = new Set(keywordConfig.keywords.map((keyword) => keyword.id));
+      let ordinal = 1; while (taken.has(`NEW${ordinal}`)) ordinal++;
+      keywordConfig.keywords.push({ id: `NEW${ordinal}`, label: "New keyword", de: [], gsw: [], enabled: true });
+      const firstFamily = Object.keys(keywordConfig.families)[0];
+      keywordConfig.families[firstFamily].keywords.push(`NEW${ordinal}`);
+      renderKeywordEditor();
+    });
+    $$(".remove-keyword", $("#keyword-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      keywordConfig = configFromEditor();
+      const id = button.closest("[data-keyword-id]").dataset.keywordId;
+      keywordConfig.keywords = keywordConfig.keywords.filter((keyword) => keyword.id !== id);
+      Object.values(keywordConfig.families).forEach((family) => { family.keywords = family.keywords.filter((keywordId) => keywordId !== id); });
+      renderKeywordEditor();
+    }));
+    $("#keyword-editor-form").addEventListener("submit", saveKeywordConfig);
+  }
+
+  function termsFromEditor(value) { return value.split("\n").map((term) => term.trim()).filter(Boolean); }
+
+  function configFromEditor() {
+    const next = JSON.parse(JSON.stringify(keywordConfig));
+    next.keywords = $$(".keyword-editor-row", $("#keyword-editor-form")).map((row) => ({
+      ...next.keywords.find((keyword) => keyword.id === row.dataset.keywordId),
+      id: row.dataset.keywordId,
+      label: $("[data-field=label]", row).value.trim(),
+      de: termsFromEditor($("[data-field=de]", row).value),
+      gsw: termsFromEditor($("[data-field=gsw]", row).value),
+      enabled: $("[data-field=enabled]", row).checked
+    }));
+    Object.values(next.families).forEach((family) => { family.keywords = []; });
+    $$(".keyword-editor-row", $("#keyword-editor-form")).forEach((row) => next.families[$("[data-field=family]", row).value].keywords.push(row.dataset.keywordId));
+    return next;
+  }
+
+  function applyLiveData(data) {
+    ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
+    thresholdValues = data.thresholds;
+    allKeywords = Object.values(keywordGroups).flat();
+    state.enabledKeywords = new Set(allKeywords);
+    if (!calls.some((call) => call.id === state.selectedId)) state.selectedId = calls[0].id;
+  }
+
+  async function saveKeywordConfig(event) {
+    event.preventDefault();
+    try {
+      const response = await fetch("/api/keywords", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(configFromEditor()) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      const data = await loadData();
+      if (!data) throw new Error("The list was saved, but cached call data could not be reloaded.");
+      state.keywordEditor = false; state.keywordSaveError = "";
+      applyLiveData(data);
+      renderSummary(); renderQueue(); renderKeywordPopover(); renderDetail({ immediate: true, startGuide: false });
+      $("#sr-status").textContent = "Keyword list saved. Matching, highlights and coverage counts were recalculated; classifications are unchanged.";
+    } catch (error) {
+      state.keywordSaveError = error.message;
+      renderKeywordEditor();
+    }
   }
 
   function updateKeywords() {
@@ -360,6 +519,7 @@
     stopReveal();
     stopAudio();
     state.selectedId = id;
+    state.evidenceIndex = 0;
     state.audioElapsed = 0;
     renderQueue();
     renderDetail();
@@ -369,6 +529,39 @@
 
   function openMobileDetail() { $("#call-detail").classList.add("mobile-open"); $("#mobile-backdrop").hidden = false; }
   function closeMobileDetail() { stopGuide(); stopAudio(); $("#call-detail").classList.remove("mobile-open"); $("#mobile-backdrop").hidden = true; }
+
+  function openSettings() {
+    const drawer = $("#settings-drawer");
+    state.settingsOpener = document.activeElement;
+    drawer.hidden = false;
+    drawer.setAttribute("aria-hidden", "false");
+    $("#settings-backdrop").hidden = false;
+    $("#settings-button").setAttribute("aria-expanded", "true");
+    setTimeout(() => $("#settings-close").focus(), 0);
+  }
+
+  function closeSettings({ restoreFocus = true } = {}) {
+    const drawer = $("#settings-drawer");
+    if (drawer.hidden) return;
+    $("#keyword-popover").hidden = true;
+    $("#keyword-button").setAttribute("aria-expanded", "false");
+    drawer.setAttribute("aria-hidden", "true");
+    drawer.hidden = true;
+    $("#settings-backdrop").hidden = true;
+    $("#settings-button").setAttribute("aria-expanded", "false");
+    if (restoreFocus && state.settingsOpener instanceof HTMLElement) state.settingsOpener.focus();
+  }
+
+  function trapSettingsFocus(event) {
+    const drawer = $("#settings-drawer");
+    if (drawer.hidden || event.key !== "Tab") return;
+    const focusable = $$('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])', drawer)
+      .filter((node) => !node.closest("[hidden]"));
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
 
   function callGuideSteps() {
     const call = selectedCall();
@@ -473,6 +666,7 @@
       stopGuide();
       state.threshold = button.dataset.threshold;
       renderThreshold(); renderSummary(); renderQueue(); renderDetail({ immediate: true, startGuide: false });
+      $("#threshold-feedback").textContent = `${button.textContent.trim()} selected. Cached classifications were updated.`;
       $("#sr-status").textContent = `${button.textContent} ${live ? "" : "simulated "}threshold selected. Queue classifications updated.`;
     });
     $("#classification-filters").addEventListener("click", (event) => {
@@ -486,11 +680,12 @@
       const popover = $("#keyword-popover");
       popover.hidden = !popover.hidden;
       $("#keyword-button").setAttribute("aria-expanded", String(!popover.hidden));
-      if (!popover.hidden) $("#keyword-search").focus();
+      const keywordSearch = $("#keyword-search");
+      if (!popover.hidden && keywordSearch) keywordSearch.focus();
     });
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest("#keyword-section")) { $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false"); }
-    });
+    $("#settings-button").addEventListener("click", openSettings);
+    $("#settings-close").addEventListener("click", () => closeSettings());
+    $("#settings-backdrop").addEventListener("click", () => closeSettings());
     $("#page-guide-button").addEventListener("click", startPageGuide);
     $("#guide-next").addEventListener("click", () => { pauseGuideTimer(); advanceGuide(1); });
     $("#guide-back").addEventListener("click", () => { pauseGuideTimer(); advanceGuide(-1); });
@@ -498,7 +693,14 @@
     $("#guide-hint").addEventListener("pointerenter", pauseGuideTimer);
     $("#mobile-backdrop").addEventListener("click", closeMobileDetail);
     addEventListener("resize", () => { if (state.guide) showGuideStep(); if (innerWidth > 760) closeMobileDetail(); });
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape") { stopGuide(); closeMobileDetail(); $("#keyword-popover").hidden = true; } });
+    document.addEventListener("keydown", (event) => {
+      trapSettingsFocus(event);
+      if (event.key === "Escape") {
+        stopGuide(); closeMobileDetail();
+        if (!$("#settings-drawer").hidden) closeSettings();
+        else { $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false"); }
+      }
+    });
   }
 
   function init() {
@@ -521,16 +723,18 @@
     const data = await loadData();
     if (data) {
       live = true;
-      ({ calls, keywordGroups } = data);
+      ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
       thresholdValues = data.thresholds;
-      $("#data-badge-text").textContent = `Live · ${data.calls.length} calls · ${data.meta.chat_model}` + (data.pending.length ? ` · ${data.pending.length} pending` : "");
+      $("#data-badge").hidden = true;
       $("#threshold-badge").textContent = "ASR quality";
-      $("#quality-column").textContent = "ASR quality";
     } else {
       ({ calls, keywordGroups } = window.CallGuardData);
+      keywordConfig = null;
+      keywordCoverage = null;
     }
     allKeywords = Object.values(keywordGroups).flat();
     state = window.CallGuardState.createUiState(calls, allKeywords);
+    state.pendingCount = live ? (data.pending || []).length : 0;
     if (live) state.threshold = data.defaultThreshold;
     init();
   }

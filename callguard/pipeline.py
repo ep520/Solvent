@@ -7,9 +7,11 @@
   python3 -m callguard.pipeline freeze [--no-speakers]   # cached extractions -> tests/fixtures/replay
 """
 import argparse
+import hashlib
 import json
 import re
 import shutil
+import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -73,6 +75,44 @@ def gold(call):
             "evidence": re.findall(r"T\d{3}", field("Prüfpräfix bis T\\d{3}; Belege"))}
 
 
+def file_sha256(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def git_commit():
+    """Best-effort commit hash for the manifest; absent outside a git checkout."""
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True, timeout=5, check=True).stdout.strip()
+    except Exception:
+        return None
+
+
+def run_manifest(args, policies, keywords, chat_profile, asr_profile=None):
+    """What produced this run: model, prompt/schema/policy versions and hashes, thresholds, compliance flags.
+
+    Freezing this alongside a run's results is what makes the run reproducible and auditable: anyone can
+    check, after the fact, exactly which endpoint, prompt and configuration a given alarm came from."""
+    return {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "git_commit": git_commit(),
+        "mode": "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers",
+        "chat": {"profile": chat_profile["name"], "model": chat_profile["model"],
+                "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION},
+        "asr": ({"profile": asr_profile["name"], "model": asr_profile.get("asr_model"),
+                "self_hostable": bool(asr_profile.get("self_hostable"))} if asr_profile else None),
+        "policies": {"version": policies.get("version"), "sha256": file_sha256(args.policies),
+                    "escalation_presets": policies["escalation"]["presets"],
+                    "default_preset": policies["escalation"]["default_preset"],
+                    "grounding": policies.get("grounding", {}).get("quote_matching"),
+                    "disabled_families": [name for name, fam in policies["families"].items()
+                                          if not fam.get("enabled", True)]},
+        "keywords": {"sha256": file_sha256(args.keywords)},
+        "self_hostable_compliant": bool(chat_profile.get("self_hostable")) and
+                                   (asr_profile is None or bool(asr_profile.get("self_hostable"))),
+    }
+
+
 def metrics(rows):
     confusion = {g: {p: 0 for p in LABELS} for g in LABELS}
     for r in rows:
@@ -89,7 +129,14 @@ def metrics(rows):
         "calls": len(rows),
         "extraction_errors (model unavailable, not a classification)": sum(r.get("extraction_error", False) for r in rows),
         "accuracy": round(sum(r["gold"] == r["pred"] for r in rows) / len(rows), 3),
+        "extraction_time_s": {"total": round(sum(r.get("elapsed_s") or 0 for r in rows), 1),
+                              "avg_uncached": (round(sum(t for r in rows if (t := r.get("elapsed_s"))) /
+                                               max(1, sum(1 for r in rows if r.get("elapsed_s"))), 2)
+                                               if any(r.get("elapsed_s") for r in rows) else None),
+                              "cached_calls": sum(1 for r in rows if not r.get("elapsed_s"))},
         "false_alarms": f"{false_alarms}/{n_not_alarm}",
+        "alarm_to_review (missed escalation, still triaged)": f"{confusion['alarm']['review']}/{n_alarm}",
+        "alarm_to_no_alert (missed without triage)": f"{confusion['alarm']['no_alert']}/{n_alarm}",
         "missed_strict (alarm expected, not alarm)": f"{missed_strict}/{n_alarm}",
         "missed_lenient (alarm expected, no_alert)": f"{missed_lenient}/{n_alarm}",
         "alarm_precision": f"{true_alarm}/{pred_alarm}",
@@ -118,13 +165,17 @@ def main(argv=None):
     ap.add_argument("--threshold", type=float, help="override escalation.min_asr_quality")
     ap.add_argument("--only", help="eval only calls whose name contains one of these comma-separated texts")
     ap.add_argument("--smoke", action="store_true", help="eval only the five-call regression set")
+    ap.add_argument("--require-self-hostable", action="store_true",
+                    help="fail unless the selected chat and, for audio, ASR profiles are self-hostable")
     ap.add_argument("--workers", type=int, default=1, help="calls evaluated in parallel")
     ap.add_argument("--policies", default=ROOT / "config" / "policies.json")
     ap.add_argument("--keywords", default=DATA / "Stichwortliste.json")
     args = ap.parse_args(argv)
     policies, keywords = ex.load_json(args.policies), ex.load_json(args.keywords)
     try:
-        models.check("chat", args.profile)
+        models.check("chat", args.profile, require_self_hostable=args.require_self_hostable)
+        if args.require_self_hostable and (args.command == "audio" or args.audio):
+            models.check("asr", require_self_hostable=True)
     except models.ModelError as e:
         sys.exit(f"model not configured: {e}")
     opts = dict(speakers=not args.no_speakers, profile=args.profile, threshold=args.threshold)
@@ -166,16 +217,22 @@ def main(argv=None):
     for result in results:
         g = gold(script_name(result["call"]))
         rows.append({"call": result["call"], "gold": g["label"], "pred": result["label"], "reasons": result["reasons"],
-                     "extraction_error": bool(result.get("error")),
+                     "extraction_error": bool(result.get("error")), "elapsed_s": result.get("meta", {}).get("elapsed_s"),
                      "evidence_hit": None if args.audio else bool(cited_segments(result) & set(g["evidence"]))})
         (out / f"{result['call']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
         mark = "ok  " if g["label"] == result["label"] else "ERR " if result.get("error") else "MISS"
         print(f"{mark} {result['call']:<12} gold={g['label']:<8} pred={result['label']:<8} {','.join(result['reasons'])}")
     m = metrics(rows)
     print(json.dumps(m, indent=1))
+    manifest = run_manifest(args, policies, keywords, models.check("chat", args.profile),
+                            models.check("asr", require_self_hostable=False) if args.audio else None)
+    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "summary.json").write_text(json.dumps({"args": {k: str(v) for k, v in vars(args).items()}, "metrics": m,
                                                   "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"saved {out.relative_to(ROOT)}/ (one canonical JSON per call + summary.json)")
+    if not manifest["self_hostable_compliant"]:
+        print("NOTE: this run used a non-self-hostable endpoint (see manifest.json); the README asks for "
+              "self-hostable models in the submitted pipeline.", file=sys.stderr)
+    print(f"saved {out.relative_to(ROOT)}/ (one canonical JSON per call + manifest.json + summary.json)")
 
 
 if __name__ == "__main__":
