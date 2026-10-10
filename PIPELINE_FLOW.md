@@ -11,20 +11,28 @@ flowchart TD
     WAV["Audio<br/>data/Audio/*.wav"]
     ASR_CACHE{"Transcribed already?<br/>(content hash, profile, model)"}
     INBOX --> WAV
-    ASR["callguard/asr.py<br/>Whisper via the model router"]
+    ASR["callguard/asr.py<br/>Whisper via the model router<br/>cache/asr/&lt;hash&gt;.json"]
     TRANSCRIPT["Segments: id · start · end · text · avg_logprob<br/>no speakers (no diarization)"]
+    EXPORT["asr.export<br/>data/Transcriptions/*.json + .md<br/>(asr CLI or ingest)"]
 
     WAV --> ASR_CACHE
     ASR_CACHE -- No --> ASR --> TRANSCRIPT
     ASR_CACHE -- Yes --> TRANSCRIPT
-    TRANSCRIPT --> TRANSCRIPT_CACHE["data/Transcriptions/*.json"]
+    TRANSCRIPT -- "asr CLI or ingest" --> EXPORT
 
-    TRANSCRIPT_CACHE --> KEYWORDS["extract.keyword_hits<br/>Stichwortliste.json phrases"]
+    TRANSCRIPT --> KEYWORDS["Stichwortliste.json<br/>keyword matchers"]
     KEYWORDS --> HIGHLIGHTS["Highlights + coverage counts<br/>display only, never decisive"]
 
-    TRANSCRIPT_CACHE --> EXTRACT_CACHE{"Extraction cached?<br/>(transcript, model, prompt, policies)"}
+    TRANSCRIPT --> SNIPPETS["snippets.view<br/>keywords + cue words + spoken digits<br/>nearby and linked context, max. 12 snippets"]
+    KEYWORDS --> SNIPPETS
+    SNIPPET_CONFIG["config/snippets.json<br/>enabled · cues · fuzzy · max_snippets<br/>if_no_snippets"] --> SNIPPETS
+    SNIPPETS --> MODEL_INPUT{"Model input"}
+    MODEL_INPUT -- "selected snippets (default)" --> EXTRACT_CACHE
+    MODEL_INPUT -- "no hits or snippets disabled:<br/>full transcript" --> EXTRACT_CACHE
+
+    EXTRACT_CACHE{"Extraction cached?<br/>(model, prompt/schema, policies,<br/>rendered model input)"}
     POLICIES["config/policies.json<br/>families, predicates, enabled flags, threshold"] --> EXTRACT_CACHE
-    EXTRACT_CACHE -- No --> LLM["One LLM request · extract.py<br/>whole transcript, every enabled family"]
+    EXTRACT_CACHE -- No --> LLM["One LLM request · extract.py<br/>model input, every enabled family"]
     EXTRACT_CACHE -- Yes --> FACTS
     LLM --> FACTS["Facts by family: events, actor, conditions<br/>true · false · unknown + segment id + quote"]
 
@@ -38,13 +46,22 @@ flowchart TD
     XAI --> CLIPS["evidence.py: ±10 s clips from the original WAV"]
     WAV --> CLIPS
     XAI --> DASHBOARD["ui.py dashboard / API"]
+    EXPORT --> DASHBOARD
     CLIPS --> DASHBOARD
 ```
 
-Keyword matching never filters the transcript and never changes a decision; the full transcript always
-reaches extraction, and extraction always covers every *enabled* family (§3). `ingest.py` is one way a
-WAV arrives; `pipeline eval --audio` reading `data/Audio/*.wav` directly is the other — both join the
-same path from `WAV` onward.
+The default snippet mode deliberately selects what the extraction model reads: keyword, cue-word and
+spoken-digit matches add neighbouring and linked-context segments. These signals are **not** evidence and
+never directly decide a classification; only quoted transcript text survives grounding and deterministic
+rules (§2). With the shipped `if_no_snippets = full_transcript` setting, a call with no selected passage
+falls back to the whole transcript; setting `enabled = false` also restores full-transcript extraction.
+Every extraction, snippet or full transcript, covers every *enabled* family (§3). A keyword or snippet
+configuration change creates a different extraction-cache entry on the next pipeline run.
+
+`ingest.py` is one way a WAV arrives; `pipeline eval --audio` reading `data/Audio/*.wav` directly is the
+other — both join at `WAV`. The latter uses the ASR cache but does not itself export
+`data/Transcriptions`; run `callguard.asr` or use the watched ingest flow when a dashboard export is
+needed.
 
 ## 2. Evidence anchoring and decision
 
@@ -133,14 +150,17 @@ flowchart TD
     CMD -- "callguard.ingest" --> WATCH["Watch data/Inbox/, process each new WAV,<br/>report alarm/review to the Trigger API"]
     CMD -- "callguard.ui" --> UI["Dashboard, http://127.0.0.1:8090"]
 
-    UI --> PER_CALL{"Per WAV: cached extraction?"}
+    UI --> PER_CALL{"Per WAV: transcript export<br/>and cached extraction?"}
     PER_CALL -- No --> PENDING["Pending"]
-    PER_CALL -- "Yes, with an error" --> FAILED["Failed<br/>(retry — not a compliance read)"]
-    PER_CALL -- "Yes, decided" --> RECOMPUTE["decide() for every threshold preset"]
-    RECOMPUTE --> VIEW["Alarm / Review / No alert<br/>+ evidence, clips, conditions, keywords"]
+    PER_CALL -- "Yes, current input" --> RECOMPUTE["decide() for every threshold preset"]
+    PER_CALL -- "Yes, earlier snippet input" --> STALE["Shown as stale input;<br/>run pipeline again to refresh"]
+    STALE --> RECOMPUTE
+    RECOMPUTE --> VIEW["Alarm / Review / No alert<br/>+ evidence, clips, conditions, keywords,<br/>what the model read"]
 ```
 
-The dashboard never calls a model. A threshold switch only reruns `decide()` over cached facts;
-a keyword-list save only reruns matching and counts over cached transcripts — neither ever changes a
-classification. **Failed** (extraction error) and **Pending** (nothing cached yet) are shown apart from
-Alarm/Review/No alert: a technical gap needs a retry, not a compliance read.
+The dashboard never calls a model. A threshold switch only reruns `decide()` over cached facts. Saving
+the keyword list updates matching, highlights and the *current* snippet view, but does not call a model
+or alter the decision derived from an existing cache entry. Instead, an extraction made with the previous
+keyword/snippet input is marked `stale_input`; a fresh pipeline run creates and uses the new extraction.
+**Pending** means that the transcript export or compatible extraction cache is missing. A failed ASR or
+extraction run is recorded by the CLI/ingest result and must be retried; it is never a compliance read.
