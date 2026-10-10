@@ -1,6 +1,9 @@
 """
 Snippet extractor: long call transcript -> short suspicious snippets with highlighted words.
 
+In CallGuard this decides what the extraction model reads (config/snippets.json): view() turns the
+canonical segments into snippets, and extract.build_messages() renders them instead of the full call.
+
 Sits between transcription and the LLM. Instead of sending a whole call to the LLM, it keeps
 only the passages worth judging, each with the turns, speaker roles, matched words
 highlighted in **bold**, and why it was kept.
@@ -33,7 +36,19 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rapidfuzz import fuzz
+try:                                    # optional speed-up; the standard library gives the same ratio scale
+    from rapidfuzz import fuzz
+except ImportError:                     # pragma: no cover - depends on the environment
+    from difflib import SequenceMatcher
+
+    class fuzz:                         # noqa: N801 - mirrors the rapidfuzz API used below
+        @staticmethod
+        def ratio(a, b):
+            return 100 * SequenceMatcher(None, a, b).ratio()
+
+ROOT = Path(__file__).resolve().parent.parent
+CUES_DIR = ROOT / "config" / "snippets"
+VERSION = "snippets-1"                  # bump when the selection or the rendering for the model changes
 
 EMBED_MODEL = "BAAI/bge-m3"     # multilingual, MIT license, runs locally
 CONTEXT = 1                     # extra turns kept around every hit
@@ -143,9 +158,9 @@ def norm(s: str) -> str:
     return s
 
 
-def load_keywords(path: str) -> list[Keyword]:
-    """Inventx format (families -> keyword IDs -> de/gsw), plus simple {family: [phrases]}."""
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+def load_keywords(path) -> list[Keyword]:
+    """Inventx format (families -> keyword IDs -> de/gsw), plus simple {family: [phrases]}. Path or parsed dict."""
+    data = path if isinstance(path, dict) else json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(data, dict) and isinstance(data.get("keywords"), list):
         fam_of = {kid: fam for fam, f in data.get("families", {}).items() for kid in f.get("keywords", [])}
         out = []
@@ -170,6 +185,7 @@ class Hit:
     span: tuple[int, int]
     how: str      # exact / partial / fuzzy / digits / cue / context
     link: int | None = None   # for context hits: the anchor turn they explain
+    score: float | None = None  # keyword: match quality 0..1; cue/context: cue strength; digits: digit count
 
 
 def find_keywords(turns: list[Turn], keywords: list[Keyword], fuzzy=True) -> list[Hit]:
@@ -183,16 +199,18 @@ def find_keywords(turns: list[Turn], keywords: list[Keyword], fuzzy=True) -> lis
                 n, target = len(nt), " ".join(nt)
                 for i in range(len(words) - n + 1):
                     cand = " ".join(nwords[i:i + n])
-                    how = None
+                    how, score = None, None
                     if cand == target:
-                        how = "exact"
+                        how, score = "exact", 1.0
                     elif kw.partial_ok and n == 1 and len(target) >= 5 and target in cand:
-                        how = "partial"
-                    elif fuzzy and len(target) >= FUZZY_MIN_LEN and fuzz.ratio(cand, target) >= FUZZY_MIN:
-                        how = "fuzzy"
+                        how, score = "partial", round(len(target) / len(cand), 2)   # share of the word matched
+                    elif fuzzy and len(target) >= FUZZY_MIN_LEN:
+                        ratio = fuzz.ratio(cand, target)
+                        if ratio >= FUZZY_MIN:
+                            how, score = "fuzzy", round(ratio / 100, 2)
                     if how:
                         s, e = words[i][1], words[i + n - 1][2]
-                        hits.append(Hit(kw.family, kw.kid, phrase, t.idx, t.text[s:e], (s, e), how))
+                        hits.append(Hit(kw.family, kw.kid, phrase, t.idx, t.text[s:e], (s, e), how, score=score))
     best: dict[tuple, Hit] = {}
     rank = {"exact": 0, "partial": 1, "fuzzy": 2}
     for h in hits:                           # one hit per text span, most specific wins
@@ -216,7 +234,7 @@ def find_digits(turns: list[Turn], min_len=MIN_DIGITS) -> list[Hit]:
         count = sum(len(w) if w.isdigit() else 1 for w, _, _ in run)
         if count >= min_len:
             s, e = run[0][1], run[-1][2]
-            hits.append(Hit("numbers", "DIGITS", f"{count} digits", t.idx, t.text[s:e], (s, e), "digits"))
+            hits.append(Hit("numbers", "DIGITS", f"{count} digits", t.idx, t.text[s:e], (s, e), "digits", score=count))
 
     for t in turns:
         run = []
@@ -240,8 +258,8 @@ MIN_CONTEXT_CUES = 2   # distinct context cues a turn needs to be attached
 
 
 def load_cues(path: str) -> dict:
-    if not Path(path).exists():                       # bare name -> the file next to this module
-        path = Path(__file__).resolve().parent / path
+    if not Path(path).exists():                       # bare name -> config/snippets/<name>
+        path = CUES_DIR / path
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     return {k: v for k, v in data.items() if not k.startswith("_") and v.get("enabled", True)}
 
@@ -309,7 +327,7 @@ def find_cues(turns: list[Turn], cues: dict, digit_hits: list = (), keyword_hits
         spk = c.get("speaker")
         scored = []                                # (strength, turn, matches)
         for t in turns:
-            if spk and t.speaker != spk:
+            if spk and t.speaker not in (spk, "unknown"):   # unknown speaker (raw ASR) never rules a turn out
                 continue
             act = match_phrases(t.text, c.get("action", []))
             req = c.get("request", [])
@@ -329,7 +347,7 @@ def find_cues(turns: list[Turn], cues: dict, digit_hits: list = (), keyword_hits
         anchors = []
         for strength, t, act in scored[:max_anchors]:
             anchors.append(t.idx)
-            hits += [Hit(fam, "CUE", p, t.idx, t.text[a:b], (a, b), "cue") for p, (a, b) in act]
+            hits += [Hit(fam, "CUE", p, t.idx, t.text[a:b], (a, b), "cue", score=strength) for p, (a, b) in act]
         anchors += [h.turn for h in keyword_hits      # official keyword hits are anchors too
                     if h.family == fam and h.turn not in anchors]
         if c.get("anchor_from_digits"):            # read-out numbers are anchors for these families
@@ -339,14 +357,15 @@ def find_cues(turns: list[Turn], cues: dict, digit_hits: list = (), keyword_hits
             cands = [(sc, t, m) for sc, t, m in ctx if sc >= min_ctx and t.idx != a]
             cands.sort(key=lambda x: (-x[0], abs(x[1].idx - a)))
             for sc, t, m in cands[:max_links]:
-                hits += [Hit(fam, "CTX", p, t.idx, t.text[x:y], (x, y), "context", link=a) for p, (x, y) in m]
+                hits += [Hit(fam, "CTX", p, t.idx, t.text[x:y], (x, y), "context", link=a, score=sc)
+                         for p, (x, y) in m]
 
         fi = c.get("first_intent")
         if fi and anchors:                         # the customer's first stated wish, before the anchors
             main = min(anchors)
             first = None
             for t in turns[:main]:
-                if t.speaker != "customer":
+                if t.speaker not in ("customer", "unknown"):
                     continue
                 act = match_phrases(t.text, c.get("action", []))
                 req = match_phrases(t.text, c.get("request", []))
@@ -356,7 +375,7 @@ def find_cues(turns: list[Turn], cues: dict, digit_hits: list = (), keyword_hits
             if first is None:
                 for t in turns[:main]:
                     it = match_phrases(t.text, fi.get("intent", []))
-                    if t.speaker == "customer" and it and (not fi.get("need_amount") or amounts_in(t.text)):
+                    if t.speaker in ("customer", "unknown") and it and (not fi.get("need_amount") or amounts_in(t.text)):
                         first = (t, it)
                         break
             if first:
@@ -368,7 +387,7 @@ def find_cues(turns: list[Turn], cues: dict, digit_hits: list = (), keyword_hits
             main = max(anchors)
             for t in reversed(turns[main + 1:]):
                 m = match_phrases(t.text, li.get("intent", []))
-                if t.speaker == "customer" and m:
+                if t.speaker in ("customer", "unknown") and m:
                     hits += [Hit(fam, "CTX", p, t.idx, t.text[x:y], (x, y), "context", link=main)
                              for p, (x, y) in m]
                     break
@@ -480,7 +499,7 @@ def build_snippets(turns, hits, sem_hits, context=CONTEXT):
     for ids_set, hs, sems in groups:
         ids = sorted(ids_set)
         hit_turns = sorted({h.turn for h in hs} | {i for sm in sems for i in sm["turns"]})
-        lines, prev = [], None
+        lines, prev, turn_rows = [], None, []
         for i in ids:
             if prev is not None and i > prev + 1:
                 lines.append("   ...")
@@ -489,6 +508,11 @@ def build_snippets(turns, hits, sem_hits, context=CONTEXT):
                 any(i in sm["turns"] for sm in sems) else ("+ " if i in hit_turns else "  ")
             ts = f"[{mmss(t.start)}] " if t.start is not None else ""
             lines.append(f"{mark} {t.tid} {ts}{t.speaker}: {highlight(t.text, [h.span for h in hs if h.turn == i])}")
+            turn_rows.append({"idx": i, "tid": t.tid, "mark": {">>": "anchor", "+ ": "context"}.get(mark, "near"),
+                              "gap_before": prev is not None and i > prev + 1, "speaker": t.speaker,
+                              "start": t.start, "end": t.end, "quality": t.quality, "text": t.text,
+                              "spans": [{"start": h.span[0], "end": h.span[1], "how": h.how, "family": h.family}
+                                        for h in hs if h.turn == i]})
             prev = i
         strong = [h for h in hs if h.how in ("exact", "partial", "fuzzy")]
         families = sorted({h.family for h in hs if h.how != "context"})
@@ -511,8 +535,9 @@ def build_snippets(turns, hits, sem_hits, context=CONTEXT):
             "start": min(starts) if starts else None, "end": max(ends) if ends else None,
             "timestamp": mmss(min(starts)) if starts else None,
             "found_by": found_by,
+            "turns": turn_rows,
             "hits": [{"family": h.family, "keyword_id": h.kid, "term": h.term, "matched": h.matched,
-                      "turn": turns[h.turn].tid, "how": h.how,
+                      "turn": turns[h.turn].tid, "how": h.how, "score": h.score,
                       **({"explains": turns[h.link].tid} if h.link is not None else {})} for h in hs],
             "families": families,
             "semantic_check": sem_best["check"] if sem_best else None,
@@ -554,6 +579,125 @@ def extract(transcript, keywords, checks=None, semantic="bge-m3", embedder=None,
                       "cue_hits": sum(h.how in ("cue", "context") for h in hits),
                       "digit_hits": sum(h.how == "digits" for h in hits), "semantic_hits": len(sem)},
             "turns": turns, "snippets": snips}
+
+
+# ---------------- CallGuard adapter: segments -> what the extraction model reads ----------------
+
+CONFIG_PATH = ROOT / "config" / "snippets.json"
+DEFAULTS = {"enabled": True, "cues": "cues_general.json", "fuzzy": True, "max_snippets": 12,
+            "if_no_snippets": "full_transcript"}
+
+
+def load_config(path=CONFIG_PATH):
+    data = json.loads(Path(path).read_text(encoding="utf-8")) if Path(path).is_file() else {}
+    return {**DEFAULTS, **{k: v for k, v in data.items() if not k.startswith("_")}}
+
+
+def turns_from_segments(segments) -> list[Turn]:
+    """Canonical CallGuard segments -> Turns; tid is the segment ID so quotes ground exactly as before."""
+    out = []
+    for i, seg in enumerate(segments):
+        lp = seg.get("avg_logprob")
+        out.append(Turn(i, role(seg.get("speaker") or "unknown"), seg["text"], seg.get("start"), seg.get("end"),
+                        seg["id"], round(math.exp(lp), 3) if lp is not None else None))
+    return out
+
+
+def view(segments, keywords, config=None):
+    """Decide what the model reads for one call. Returns a JSON-serialisable dict:
+    mode "snippets" (with the snippets, hits, scores and stats) or "full_transcript" (with the reason)."""
+    cfg = config or load_config()
+    base = {"version": VERSION, "config": {k: cfg[k] for k in DEFAULTS}}
+    if not cfg["enabled"]:
+        return {**base, "mode": "full_transcript", "reason": "snippet mode is switched off in config/snippets.json"}
+    turns = turns_from_segments(segments)
+    kws = load_keywords(keywords)
+    res = extract(turns, kws, semantic="off", fuzzy=cfg["fuzzy"], cues=cfg["cues"] or None)
+    label = {k.kid: k.label for k in kws}
+    snips = res["snippets"][: cfg["max_snippets"]]           # strongest first, then shown in call order
+    snips.sort(key=lambda sn: sn["turn_ids"][0])
+    for n, sn in enumerate(snips, 1):
+        sn["snippet_id"] = n
+        sn["segment_ids"] = [turns[i].tid for i in sn["turn_ids"]]
+        sn["anchor_segment_ids"] = [turns[i].tid for i in sn["anchor_turns"]]
+        sn["context_segment_ids"] = [turns[i].tid for i in sn["context_turns"]]
+        merged = {}                       # one hit per (segment, word, kind); a context word may explain several anchors
+        for h in sn["hits"]:
+            key = (h["turn"], h["matched"].casefold(), h["how"], h["family"])
+            m = merged.setdefault(key, {**h, "explains": [],
+                                        "label": label.get(h["keyword_id"], {"CUE": "cue word", "CTX": "context cue",
+                                                           "DIGITS": "spoken digits"}.get(h["keyword_id"], h["keyword_id"]))})
+            if h.get("explains") and h["explains"] not in m["explains"]:
+                m["explains"].append(h["explains"])
+            if h.get("score") is not None and (m.get("score") is None or h["score"] > m["score"]):
+                m["score"] = h["score"]
+        sn["hits"] = sorted(merged.values(), key=lambda h: (h["turn"], h["how"] == "context", h["matched"]))
+        for key in ("turn_ids", "turn_labels", "hit_turns", "anchor_turns", "context_turns", "text"):
+            sn.pop(key, None)
+    kept = {sid for sn in snips for sid in sn["segment_ids"]}
+    total = sum(len(t.text) for t in turns) or 1
+    stats = {**res["stats"], "snippets": len(snips), "kept_turns": len(kept),
+             "kept_text_pct": round(100 * sum(len(t.text) for t in turns if t.tid in kept) / total, 1)}
+    if not snips:
+        reason = "no keyword, cue word or spoken digit sequence was found"
+        if cfg["if_no_snippets"] == "full_transcript":
+            return {**base, "mode": "full_transcript", "stats": stats,
+                    "reason": reason + ": the whole call is sent so that nothing is dropped unseen"}
+        return {**base, "mode": "snippets", "stats": stats, "snippets": [], "reason": reason + ": the model is not called"}
+    return {**base, "mode": "snippets", "stats": stats, "snippets": snips}
+
+
+def _hit_lines(hits):
+    """Compact hit summary for the model: one line per segment and kind of finder."""
+    groups = {}
+    for h in hits:
+        kind = ("keyword " + h["keyword_id"] + " " + h["label"]) if h["how"] in ("exact", "partial", "fuzzy") else \
+               {"digits": "spoken digits", "context": "context cues", "cue": f"{h['family']} cues"}[h["how"]]
+        g = groups.setdefault((h["turn"], kind), {"words": [], "scores": [], "explains": []})
+        word = f"\"{h['matched']}\"" + (f" {h['how']} {h['score']}" if h["how"] in ("partial", "fuzzy", "exact") else "")
+        if word not in g["words"]:
+            g["words"].append(word)
+        if h.get("score") is not None:
+            g["scores"].append(h["score"])
+        g["explains"] += [e for e in h.get("explains", []) if e not in g["explains"]]
+    out = []
+    for (turn, kind), g in groups.items():
+        extra = []
+        if kind in ("context cues",) or kind.endswith(" cues"):
+            extra.append(f"strength {max(g['scores'])}" if g["scores"] else "")
+        if kind == "spoken digits" and g["scores"]:
+            extra.append(f"{max(g['scores'])} digits")
+        if g["explains"]:
+            extra.append("explains " + ", ".join(g["explains"]))
+        extra = [x for x in extra if x]
+        out.append(f"- {turn}: {kind}: {', '.join(g['words'])}" + (f" ({'; '.join(extra)})" if extra else ""))
+    return out
+
+
+def render(v):
+    """The user message for the extraction model in snippet mode."""
+    st = v["stats"]
+    out = [f"Selected passages of the call: {st['snippets']} snippets, {st['kept_turns']} of {st['turns']} segments "
+           f"({st['kept_text_pct']}% of the text).",
+           "Segments that are not shown were not selected. Markers: >> anchor segment (keyword, cue or digits found), "
+           "+ linked context segment, no marker = neighbouring segment, ... = segments skipped, **bold** = matched words.",
+           "ASR = transcription quality 0..1 (absent for scripts). Priority = how strongly the finders fired."]
+    for sn in v["snippets"]:
+        span = f" · {mmss(sn['start'])}–{mmss(sn['end'])}" if sn.get("start") is not None else ""
+        fams = f" · families: {', '.join(sn['families'])}" if sn["families"] else ""
+        out += ["", f"### Snippet {sn['snippet_id']}{span} · priority {sn['priority']} · found by "
+                    f"{'+'.join(sn['found_by'])}{fams}",
+                "Hits:", *_hit_lines(sn["hits"])]
+        for t in sn["turns"]:
+            if t["gap_before"]:
+                out.append("   ...")
+            mark = {"anchor": ">> ", "context": "+  "}.get(t["mark"], "   ")
+            meta = [x for x in (mmss(t["start"]) if t["start"] is not None else None,
+                                t["speaker"] if t["speaker"] != "unknown" else None,
+                                f"ASR {t['quality']}" if t["quality"] is not None else None) if x]
+            text = highlight(t["text"], [(sp["start"], sp["end"]) for sp in t["spans"]])
+            out.append(f"{mark}[{t['tid']}] {('(' + ', '.join(meta) + ') ') if meta else ''}{text}")
+    return "\n".join(out)
 
 
 if __name__ == "__main__":

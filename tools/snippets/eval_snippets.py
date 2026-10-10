@@ -15,11 +15,12 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # repo root: the engine lives in callguard/
+from callguard import snippets as S  # noqa: E402
+
 try:
-    from . import snippets as S
     from .expected import load_expected
 except ImportError:
-    import snippets as S
     from expected import load_expected
 
 
