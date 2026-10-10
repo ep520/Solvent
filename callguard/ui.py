@@ -65,6 +65,24 @@ def _assessment(result):
     return text
 
 
+def _condition_reason(condition):
+    """Short, operator-facing rationale for a dashboard fact; never a new model judgement."""
+    state = condition["state"]
+    refs = condition.get("evidence", [])
+    if refs:
+        ref = refs[0]
+        at = f" at {ref['start']:.0f}s" if isinstance(ref.get("start"), (int, float)) else ""
+        quote = ref.get("quote", "").strip()
+        prefix = ("The transcript says" if state == "true" else
+                  "The transcript explicitly says" if state == "false" else "Relevant transcript context")
+        return f'{prefix}: “{quote}”{at}.'
+    if condition.get("grounding_issues"):
+        return "Not established: the cited passage could not be found in the transcript."
+    if condition.get("downgraded"):
+        return "Not established: there is no usable supporting passage."
+    return "Not established: the transcript neither confirms nor excludes this fact."
+
+
 def dashboard_call(call, segments, results, default, length, cache_status="current", extraction_version=None):
     """Map canonical results (one per threshold preset) to the shape the dashboard renders."""
     base = results[default]
@@ -94,10 +112,12 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
 
     items = [evidence_item(ref) for ref in refs]
     if event is not None and event["conditions"]:
-        conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]]}
+        conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]],
+                       "reason": _condition_reason(c), "hasEvidence": bool(c.get("evidence"))}
                       for n, c in event["conditions"].items()]
     elif event is not None:
-        conditions = [{"label": f"Object type: {event.get('object_type', 'unknown').replace('_', ' ')}", "state": "Supported"}]
+        conditions = [{"label": f"Object type: {event.get('object_type', 'unknown').replace('_', ' ')}", "state": "Supported",
+                       "reason": "Classification-only identifier rule; this policy family never generates an alarm.", "hasEvidence": bool(event.get("evidence"))}]
     else:
         conditions = []
     open_questions = [q for e in base["events"] if e.get("reason") == "missing_policy_fact" for q in e["open_questions"]]
@@ -115,6 +135,9 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
         "runStatus": base.get("status", "ok"), "policiesVersion": base.get("policies_version"),
         "disabledFamilies": base.get("disabled_families", []),
         "family": event["family"].capitalize() if event else "None",
+        "noCandidateEvent": event is None,
+        "factsReason": ("No candidate event was extracted for any enabled policy family. This no-alert is an absence of extracted policy facts, not a guarantee that the recording is safe."
+                        if event is None else None),
         "actor": {"role": actor.get("role", "unknown"), "status": actor.get("status", "unknown")},
         # This is an ASR heuristic for the supporting passage, not a calibrated
         # probability or a compliance-decision confidence score.
@@ -237,6 +260,76 @@ def save_keyword_config(payload, path):
     return result
 
 
+_POLICY_ID = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def validate_policy_config(payload):
+    """Validate editable policy CRUD data before atomically replacing the local file.
+
+    Policy changes alter extraction/decision semantics.  They intentionally do
+    not reuse an old extraction cache: callers must run a fresh evaluation.
+    """
+    if not isinstance(payload, dict) or not isinstance(payload.get("families"), dict):
+        raise ValueError("policies need a families object")
+    result = json.loads(json.dumps(payload))
+    if not isinstance(result.get("version"), str) or not result["version"].strip():
+        raise ValueError("policies need a non-empty version")
+    escalation = result.get("escalation")
+    if not isinstance(escalation, dict) or not isinstance(escalation.get("min_asr_quality"), (int, float)):
+        raise ValueError("escalation.min_asr_quality must be numeric")
+    if not 0 <= escalation["min_asr_quality"] <= 1:
+        raise ValueError("escalation.min_asr_quality must be between 0 and 1")
+    presets = escalation.get("presets")
+    if not isinstance(presets, dict) or not presets:
+        raise ValueError("escalation needs one or more presets")
+    for name, value in presets.items():
+        if not isinstance(name, str) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+            raise ValueError("each escalation preset must be a number between 0 and 1")
+    if escalation.get("default_preset") not in presets:
+        raise ValueError("escalation.default_preset must name a preset")
+    if not result["families"]:
+        raise ValueError("at least one policy family is required")
+    for family_id, family in result["families"].items():
+        if not isinstance(family_id, str) or not _POLICY_ID.fullmatch(family_id):
+            raise ValueError("policy IDs must use lowercase letters, digits and underscores")
+        if not isinstance(family, dict) or not isinstance(family.get("title"), str) or not family["title"].strip():
+            raise ValueError(f"policy {family_id!r} needs a title")
+        family["title"] = " ".join(family["title"].split())
+        family["enabled"] = bool(family.get("enabled", True))
+        family["can_alarm"] = bool(family.get("can_alarm", True))
+        conditions = family.get("conditions", {})
+        if not isinstance(conditions, dict):
+            raise ValueError(f"policy {family_id!r} conditions must be an object")
+        if family["can_alarm"] and not conditions:
+            raise ValueError(f"alarm-capable policy {family_id!r} needs at least one condition")
+        for condition_id, explanation in conditions.items():
+            if not isinstance(condition_id, str) or not _POLICY_ID.fullmatch(condition_id):
+                raise ValueError(f"policy {family_id!r} has an invalid condition ID")
+            if not isinstance(explanation, str) or not explanation.strip():
+                raise ValueError(f"condition {family_id}.{condition_id} needs an explanation")
+            conditions[condition_id] = " ".join(explanation.split())
+        roles = family.get("role_requirements", {})
+        if not isinstance(roles, dict) or set(roles) - set(conditions):
+            raise ValueError(f"policy {family_id!r} has a role requirement for an unknown condition")
+        for condition_id, role in roles.items():
+            if role not in ("customer", "advisor"):
+                raise ValueError(f"role requirement {family_id}.{condition_id} must be customer or advisor")
+        object_types = family.get("object_types", [])
+        if object_types and (not isinstance(object_types, list) or any(not isinstance(value, str) or not value.strip() for value in object_types)):
+            raise ValueError(f"policy {family_id!r} object_types must be non-empty strings")
+    return result
+
+
+def save_policy_config(payload, path):
+    """Atomically persist validated local policy CRUD data."""
+    result = validate_policy_config(payload)
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+    return result
+
+
 def build_data(policies, keywords, profile=None):
     chat = models.resolve("chat", profile)
     presets = policies["escalation"]["presets"]
@@ -269,6 +362,7 @@ def build_data(policies, keywords, profile=None):
         calls.append(call)
     return {"source": "pipeline", "calls": calls, "pending": pending, "thresholds": presets, "defaultThreshold": default,
             "keywordGroups": keyword_groups(keywords), "keywordConfig": keywords,
+            "policyConfig": policies,
             "keywordCoverage": keyword_coverage(keywords, all_hits, len(calls)),
             "meta": {"chat_model": chat["model"], "current_prompt_version": ex.PROMPT_VERSION,
                      "extraction_versions": sorted(set(versions)), "legacy_cache_calls": sum(v != ex.PROMPT_VERSION for v in versions),
@@ -332,17 +426,21 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlparse(self.path)
-        if url.path != "/api/keywords":
+        if url.path not in ("/api/keywords", "/api/policies"):
             return self.send(404, b'{"error": "not found"}')
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > 512_000:
                 raise ValueError("request body must be between 1 and 512000 bytes")
             payload = json.loads(self.rfile.read(length))
-            saved = save_keyword_config(payload, self.keywords_path)
+            if url.path == "/api/keywords":
+                saved = save_keyword_config(payload, self.keywords_path)
+            else:
+                saved = save_policy_config(payload, self.policies_path)
         except (ValueError, json.JSONDecodeError) as error:
             return self.send(400, json.dumps({"error": str(error)}).encode())
-        return self.send(200, json.dumps({"ok": True, "keywords": saved}, ensure_ascii=False).encode())
+        key = "keywords" if url.path == "/api/keywords" else "policies"
+        return self.send(200, json.dumps({"ok": True, key: saved}, ensure_ascii=False).encode())
 
     def send_wav(self, wav):
         size = wav.stat().st_size

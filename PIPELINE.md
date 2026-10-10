@@ -25,6 +25,7 @@ facts: {"families": {<enabled family>: {"events": [{conditions: {<predicate>: {s
    2. three-valued rules per family
    3. ASR-quality escalation threshold
    4. call label = max(alarm > review > no_alert), reason codes, template explanation
+   5. post-decision rationale = short deterministic template pointing to the deciding conditions and grounded evidence
    ▼
 one canonical JSON per call → metrics (pipeline.py) · dashboard (ui.py) · ±10 s clips (evidence.py)
 ```
@@ -135,12 +136,32 @@ unusually clean even when "noisy") would be needed to calibrate or replace it.
 
 - `python3 -m callguard.pipeline eval [--audio]` writes one canonical result per call — label, `status`
   (`ok` or `failed`, so a model/network failure is never confused with a genuine review), reasons,
-  events, conditions, quotes with times and quality, keyword hits, disabled families, model, prompt and
-  policies versions — to `runs/eval-<timestamp>-<mode>/<call>.json`, plus `summary.json` with the metrics
-  and `manifest.json` with what produced the run (`EVALUATION.md` §1).
+  events, conditions, quotes with segment IDs/times/quality and clamped clip bounds, keyword hits and
+  disabled families — to `runs/eval-<timestamp>-<mode>/<call>.json`. New release artefacts also add a
+  backward-compatible traceability envelope: `schema_version`, `run_id`, `policy_version`, recording
+  ID/hash, deterministic readable explanation, a short post-decision `rationale`, evaluated policy-rule
+  outcomes, actual alarm-generating rules, and separate missing-fact / extraction / grounding / provider
+  uncertainty. `rationale` never asks a model for prose or adds facts: alarm points to supported
+  conditions; no-alert points to an excluded condition or no candidate event; review points to the
+  missing fact or technical blocker. See
+  `CANONICAL_RESULT_SCHEMA.md`; legacy cached results without the envelope remain readable.
+  The run folder also contains:
+  `summary.json` (three-class metrics, unresolved and technical counts, paired clean/noisy analysis and
+  threshold comparison), `manifest.json` (release identity/configuration/cache contract/audio hashes),
+  `recordings.csv`, `errors.json`, and an intentionally unfilled `human-audit-checklist.md`.
+  Cached values are not presented as uncached latency.
 - `callguard/evidence.py` cuts ±10 s clips from the **original** WAV (standard library `wave`).
 - `callguard/ui.py` serves the dashboard over cached results (see §2.6). Its local `POST /api/keywords`
   endpoint validates and atomically saves the keyword configuration; it never calls ASR or an LLM.
+  `POST /api/policies` supports local add/edit/delete of policy families and conditions, with schema
+  validation and atomic writes. A policy edit deliberately invalidates old extraction caches and requires
+  a fresh evaluation; it is never applied retrospectively to old results.
+
+**Keyword provenance.** `data/Stichwortliste.json` has 11 configurable keyword IDs, 58 DE/Swiss-German
+spellings and 47 distinct normalised terms. The file is based on the public Outcept list (the former
+`Outcept/trigger-api` URL redirects to `Outcept/inventx-case-study`); comparison on 2026-10-10 found its
+45 upstream distinct terms plus two local, documented additions: `K03.de: Quantauszahlen` and
+`K04.de: von der Meldung`. Keywords only support highlighting/counting; they never decide a classification.
 
 ### 2.5 Model router (`callguard/models.py`, `config/models.json`)
 
@@ -227,7 +248,7 @@ python3 -m callguard.ui                                # dashboard on http://127
 ```
 
 
-## 5. Tests (106)
+## 5. Tests
 
 | Suite | What it guards |
 |---|---|
@@ -235,7 +256,8 @@ python3 -m callguard.ui                                # dashboard on http://127
 | `test_policies.py` | hand-written **oracle** extractions for all 21 scripts must give the expected assessment and cite an expected turn; **replay** of 42 real Sonnet extractions (`extract-1`) through the current rules; config/fixture consistency |
 | `test_models.py` | router with a fake HTTP server and a fake `claude` command, `.env` loading, retries, compact-schema skeleton and context-window guard for local models |
 | `test_asr.py` | segment annotation, exports, timestamp validation |
-| `test_ui.py` | clips, mapping to dashboard fields per threshold, server routes, Range requests, path safety, keyword coverage/validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes never change one |
+| `test_ui.py` | clips, mapping to dashboard fields (including deterministic supported/excluded fact reasons), server routes, Range requests, path safety, keyword and policy CRUD validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes never change one |
+| `test_evaluation.py` | three-class metrics, unresolved/failure accounting, dataset contract, manifest identity, and the release-result envelope / legacy-reader compatibility |
 
 Mutation checks confirmed the policy tests fail when a condition is removed, when "undetermined" is
 treated as no alert, or when the threshold is broken.

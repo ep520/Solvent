@@ -2,7 +2,7 @@
   "use strict";
 
   const decision = window.CallGuardDecision;
-  let calls, keywordGroups, keywordConfig, keywordCoverage, allKeywords, state, live = false, thresholdValues = null;
+  let calls, keywordGroups, keywordConfig, keywordCoverage, policyConfig, allKeywords, state, live = false, thresholdValues = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -71,10 +71,23 @@
   function renderSummary() {
     const counts = calls.reduce((acc, call) => { acc[classificationFor(call)]++; return acc; },
                                 { Alarm: 0, Review: 0, "No alert": 0, Failed: 0 });
+    const dialogues = new Map();
+    calls.forEach((call) => {
+      const id = call.id.replace(/-K\d+$/, "");
+      dialogues.set(id, [...(dialogues.get(id) || []), classificationFor(call)]);
+    });
+    const dialogueCounts = { Alarm: 0, Review: 0, "No alert": 0, Failed: 0 }, discordantPairs = [];
+    dialogues.forEach((labels, id) => {
+      if (new Set(labels).size === 1) dialogueCounts[labels[0]]++;
+      else discordantPairs.push(id);
+    });
     const attention = counts.Alarm + counts.Review;
     const operationalNote = [state.pendingCount ? `${state.pendingCount} pending` : "", counts.Failed ? `${counts.Failed} failed` : ""].filter(Boolean).join(" · ");
     const operationalSuffix = operationalNote ? ` · ${operationalNote}` : "";
-    $("#summary-counters").innerHTML = `<div class="attention-summary"><strong>${attention} calls need attention</strong><span><b>${counts.Alarm}</b> alarms · <b>${counts.Review}</b> reviews</span></div><span class="summary-muted">${calls.length + state.pendingCount} total calls · ${counts["No alert"]} no alert${operationalSuffix}</span>`;
+    const dialogueSummary = discordantPairs.length
+      ? `${dialogues.size} dialogues · ${discordantPairs.length} clean/noisy pair${discordantPairs.length === 1 ? "" : "s"} disagree`
+      : `${dialogues.size} dialogues: ${dialogueCounts.Alarm} alarms · ${dialogueCounts.Review} reviews · ${dialogueCounts["No alert"]} no alert`;
+    $("#summary-counters").innerHTML = `<div class="attention-summary"><strong>${attention} recordings need attention</strong><span><b>${counts.Alarm}</b> alarms · <b>${counts.Review}</b> reviews · <b>${counts["No alert"]}</b> no alert</span></div><span class="summary-muted">${calls.length + state.pendingCount} recordings · ${dialogueSummary}${operationalSuffix}</span>`;
   }
 
   function renderThreshold() {
@@ -174,7 +187,8 @@
     const cls = condition.state.toLowerCase();
     const symbol = condition.state === "Supported" ? "✓" : condition.state === "Excluded" ? "—" : "?";
     const stateLabel = condition.state === "Excluded" ? "Explicitly excluded" : condition.state === "Unknown" ? "Not established" : "Supported";
-    return `<div class="condition"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span></div>`;
+    const reason = condition.reason || "No rationale is available for this fact.";
+    return `<div class="condition" tabindex="0" title="${escapeHtml(reason)}" aria-label="${escapeHtml(`${userConditionLabel(condition.label)}. ${stateLabel}. ${reason}`)}"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span><span class="condition-reason" role="tooltip">${escapeHtml(reason)}</span></div>`;
   }
 
   function liveReasons(call) {
@@ -270,7 +284,7 @@
           ${call.evidence.length > 1 ? `<div class="passage-nav">Passage ${evidenceIndex + 1} of ${call.evidence.length}${call.evidence.map((_, index) => `<button class="btn btn-xs ${index === evidenceIndex ? "btn-primary" : "btn-ghost"}" data-evidence-index="${index}" type="button">${index + 1}</button>`).join("")}</div>` : ""}
           <div class="audio-player secondary-audio"><button id="play-button" class="btn btn-ghost btn-xs play-button" type="button" aria-label="Play full recording" ${live ? "" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Full recording position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>Full recording · ${formatTime(call.duration)}</span></div></div></div>
         </section>
-        <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.map(conditionMarkup).join("")}</div></section>
+        <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.length ? call.conditions.map(conditionMarkup).join("") : `<p class="facts-empty">${escapeHtml(call.factsReason || "No policy facts are available for this result.")}</p>`}</div></section>
         <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
         <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
@@ -481,7 +495,7 @@
   }
 
   function applyLiveData(data) {
-    ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
+    ({ calls, keywordGroups, keywordConfig, keywordCoverage, policyConfig } = data);
     thresholdValues = data.thresholds;
     allKeywords = Object.values(keywordGroups).flat();
     state.enabledKeywords = new Set(allKeywords);
@@ -503,6 +517,89 @@
     } catch (error) {
       state.keywordSaveError = error.message;
       renderKeywordEditor();
+    }
+  }
+
+  function policyConditionMarkup(conditionId, description, requiredRole) {
+    return `<fieldset class="policy-condition-row"><div class="policy-condition-head"><label>Condition ID<input class="input input-xs" data-field="condition-id" value="${escapeHtml(conditionId)}"></label><label>Required role<select class="select select-xs" data-field="role"><option value="" ${requiredRole ? "" : "selected"}>None</option><option value="customer" ${requiredRole === "customer" ? "selected" : ""}>Customer</option><option value="advisor" ${requiredRole === "advisor" ? "selected" : ""}>Advisor</option></select></label><button class="btn btn-xs btn-ghost remove-policy-condition" type="button">Remove</button></div><label>Deterministic condition description<textarea data-field="condition-description" rows="2">${escapeHtml(description)}</textarea></label></fieldset>`;
+  }
+
+  function policyFamilyMarkup(id, family) {
+    const conditions = Object.entries(family.conditions || {}).map(([conditionId, description]) => policyConditionMarkup(conditionId, description, (family.role_requirements || {})[conditionId])).join("");
+    return `<fieldset class="policy-editor-row" data-policy-original-id="${escapeHtml(id)}"><div class="policy-editor-row-head"><strong>${escapeHtml(id)}</strong><label class="keyword-enabled">Enabled <input data-field="enabled" type="checkbox" ${family.enabled !== false ? "checked" : ""}></label><button class="btn btn-xs btn-ghost remove-policy" type="button">Delete policy</button></div><label>Policy ID<input class="input input-sm" data-field="policy-id" value="${escapeHtml(id)}"></label><label>Title<input class="input input-sm" data-field="title" value="${escapeHtml(family.title || "")}"></label><div class="policy-options"><label><input data-field="can-alarm" type="checkbox" ${family.can_alarm !== false ? "checked" : ""}> Can generate alarms</label><label>Object types (classification-only)<input class="input input-sm" data-field="object-types" value="${escapeHtml((family.object_types || []).join(", "))}" placeholder="account_or_iban, other"></label></div><div class="policy-conditions"><div class="policy-condition-title"><strong>Conditions</strong><button class="btn btn-xs btn-ghost add-policy-condition" type="button">Add condition</button></div>${conditions || '<p class="policy-empty-conditions">No conditions. An alarm-capable policy needs one before it can be saved.</p>'}</div></fieldset>`;
+  }
+
+  function renderPolicyPopover() {
+    if (!live || !policyConfig) return;
+    if (!state.policyEditor) {
+      const note = state.policyConfigChanged ? '<p class="policy-save-note" role="status">Policy file saved. Existing call results use the previous policy; run a fresh evaluation before review.</p>' : "";
+      $("#policy-popover").innerHTML = `<div class="keyword-head"><div><h3>Policy rules</h3><p>${Object.keys(policyConfig.families).length} policy families · edits change future extraction and decisions</p></div><button id="manage-policies" class="btn btn-xs btn-outline" type="button">Edit policies</button></div>${note}`;
+      $("#manage-policies").addEventListener("click", () => { state.policyEditor = true; state.policySaveError = ""; renderPolicyPopover(); });
+      return;
+    }
+    $("#policy-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage policy rules</h3><p>Changes are validated and saved atomically. They require a fresh evaluation; old extraction caches are never reused.</p></div><button id="close-policy-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.policySaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.policySaveError)}</p>` : ""}<form id="policy-editor-form" class="policy-editor">${Object.entries(policyConfig.families).map(([id, family]) => policyFamilyMarkup(id, family)).join("")}<div class="keyword-editor-actions"><button id="add-policy" class="btn btn-xs btn-ghost" type="button">Add policy</button><button class="btn btn-xs btn-primary" type="submit">Save policies</button></div></form>`;
+    $("#close-policy-editor").addEventListener("click", () => { state.policyEditor = false; renderPolicyPopover(); });
+    $("#add-policy").addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      let index = 1; while (policyConfig.families[`new_policy_${index}`]) index++;
+      policyConfig.families[`new_policy_${index}`] = { title: "New policy", enabled: true, can_alarm: false, conditions: {}, role_requirements: {}, object_types: [] };
+      renderPolicyPopover();
+    });
+    $$(".remove-policy", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      delete policyConfig.families[$("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim()];
+      renderPolicyPopover();
+    }));
+    $$(".add-policy-condition", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      const id = $("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim(), family = policyConfig.families[id];
+      let index = 1; while (family.conditions[`new_condition_${index}`]) index++;
+      family.conditions[`new_condition_${index}`] = "Describe the fact this policy needs to establish.";
+      renderPolicyPopover();
+    }));
+    $$(".remove-policy-condition", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      const familyId = $("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim();
+      const conditionId = $("[data-field=condition-id]", button.closest(".policy-condition-row")).value.trim();
+      delete policyConfig.families[familyId].conditions[conditionId];
+      delete policyConfig.families[familyId].role_requirements[conditionId];
+      renderPolicyPopover();
+    }));
+    $("#policy-editor-form").addEventListener("submit", savePolicyConfig);
+  }
+
+  function policyConfigFromEditor() {
+    const next = JSON.parse(JSON.stringify(policyConfig));
+    next.families = {};
+    $$(".policy-editor-row", $("#policy-editor-form")).forEach((row) => {
+      const originalId = row.dataset.policyOriginalId, id = $("[data-field=policy-id]", row).value.trim();
+      const previous = policyConfig.families[originalId] || {}, conditions = {}, roles = {};
+      $$(".policy-condition-row", row).forEach((conditionRow) => {
+        const conditionId = $("[data-field=condition-id]", conditionRow).value.trim();
+        conditions[conditionId] = $("[data-field=condition-description]", conditionRow).value.trim();
+        const role = $("[data-field=role]", conditionRow).value;
+        if (role) roles[conditionId] = role;
+      });
+      next.families[id] = { ...previous, title: $("[data-field=title]", row).value.trim(), enabled: $("[data-field=enabled]", row).checked,
+        can_alarm: $("[data-field=can-alarm]", row).checked, conditions, role_requirements: roles,
+        object_types: $("[data-field=object-types]", row).value.split(",").map((value) => value.trim()).filter(Boolean) };
+    });
+    return next;
+  }
+
+  async function savePolicyConfig(event) {
+    event.preventDefault();
+    try {
+      const response = await fetch("/api/policies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(policyConfigFromEditor()) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      policyConfig = result.policies;
+      state.policyEditor = false; state.policySaveError = ""; state.policyConfigChanged = true;
+      renderPolicyPopover();
+      $("#sr-status").textContent = "Policy configuration saved. Run a fresh evaluation before using the updated policy; current call results are historical.";
+    } catch (error) {
+      state.policySaveError = error.message;
+      renderPolicyPopover();
     }
   }
 
@@ -545,6 +642,8 @@
     if (drawer.hidden) return;
     $("#keyword-popover").hidden = true;
     $("#keyword-button").setAttribute("aria-expanded", "false");
+    $("#policy-popover").hidden = true;
+    $("#policy-button").setAttribute("aria-expanded", "false");
     drawer.setAttribute("aria-hidden", "true");
     drawer.hidden = true;
     $("#settings-backdrop").hidden = true;
@@ -683,6 +782,12 @@
       const keywordSearch = $("#keyword-search");
       if (!popover.hidden && keywordSearch) keywordSearch.focus();
     });
+    $("#policy-button").addEventListener("click", () => {
+      const popover = $("#policy-popover");
+      popover.hidden = !popover.hidden;
+      $("#policy-button").setAttribute("aria-expanded", String(!popover.hidden));
+      if (!popover.hidden) renderPolicyPopover();
+    });
     $("#settings-button").addEventListener("click", openSettings);
     $("#settings-close").addEventListener("click", () => closeSettings());
     $("#settings-backdrop").addEventListener("click", () => closeSettings());
@@ -698,7 +803,10 @@
       if (event.key === "Escape") {
         stopGuide(); closeMobileDetail();
         if (!$("#settings-drawer").hidden) closeSettings();
-        else { $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false"); }
+        else {
+          $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false");
+          $("#policy-popover").hidden = true; $("#policy-button").setAttribute("aria-expanded", "false");
+        }
       }
     });
   }
@@ -724,6 +832,7 @@
     if (data) {
       live = true;
       ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
+      policyConfig = data.policyConfig;
       thresholdValues = data.thresholds;
       $("#data-badge").hidden = true;
       $("#threshold-badge").textContent = "ASR quality";
@@ -731,6 +840,8 @@
       ({ calls, keywordGroups } = window.CallGuardData);
       keywordConfig = null;
       keywordCoverage = null;
+      policyConfig = null;
+      $("#policy-settings-section").hidden = true;
     }
     allKeywords = Object.values(keywordGroups).flat();
     state = window.CallGuardState.createUiState(calls, allKeywords);
