@@ -26,6 +26,40 @@ needed for the component styling on first load.
 | The CallGuard pipeline: design, results, open items | [`PIPELINE.md`](PIPELINE.md) |
 | Calls and transcripts | [`data/`](data/README.md) |
 | Trigger API (optional) | [`server.py`](server.py), described [below](#trigger-api-optional) |
+| Self-hosted Qwen3 + Whisper, RunPod, watched folder, counterfactuals | [below](#self-hosted-run-qwen3-whisper-watched-folder) and [`runpod/README.md`](runpod/README.md) |
+
+### Self-hosted run: Qwen3, Whisper, watched folder
+
+The submitted pipeline must use self-hostable models only. `config/models.json` has these profiles:
+
+| Profile | Task | What |
+|---|---|---|
+| `qwen3` | chat | Qwen3 Thinking on vLLM (`Qwen/Qwen3-30B-A3B-Thinking-2507`, or whatever `QWEN_MODEL` says) |
+| `qwen3_fast` | chat | hybrid Qwen3 (8B/14B/32B, AWQ ok) with thinking off: faster |
+| `ollama_qwen3` | chat | `qwen3:8b` on Ollama, laptop development only |
+| `whisper_local` | asr | any self-hosted OpenAI-compatible Whisper server at `WHISPER_URL` |
+
+```sh
+# GPU pod: start vLLM (picks the model by GPU memory), then evaluate on the transcripts
+bash runpod/setup.sh && bash runpod/run_eval.sh --smoke
+
+# any machine with a model server: choose profiles by environment, no code change
+export CALLGUARD_CHAT=qwen3 QWEN_URL=http://localhost:8000/v1 QWEN_KEY=local QWEN_MODEL=Qwen/Qwen3-14B-AWQ
+export CALLGUARD_ASR=whisper_local WHISPER_URL=http://localhost:8001/v1
+python3 -m callguard.pipeline eval --require-self-hostable --workers 8
+python3 -m callguard.ingest --trigger-url http://localhost:8080/triggers   # drop WAVs into data/Inbox/
+python3 -m callguard.ui                                                     # same env, so it reads the qwen3 cache
+```
+
+- **No manual step per call:** `callguard.ingest` watches `data/Inbox/`, transcribes, extracts, decides,
+  saves `runs/ingest/<call>.json`, reports alarms and reviews to the Trigger API, and the dashboard shows the call.
+- **Counterfactuals (XAI):** every event in a decision carries `counterfactuals`, computed by
+  [`callguard/counterfactual.py`](callguard/counterfactual.py) with the same three-valued rule as `decide.py`
+  ("if *the information was not public* were supported instead of not established, the decision would be ALARM";
+  "with the conservative preset this would be REVIEW"). The dashboard shows them under *What would change the decision*,
+  and `pipeline text` prints them as `WHAT-IF` lines.
+- **Snippet tool:** [`tools/snippets/`](tools/snippets/README.md) measures how much a keyword prefilter would
+  miss (95 % evidence recall with general cues vs 33 % random). It is analysis only: the extractor reads the whole call.
 
 ## The problem today
 
