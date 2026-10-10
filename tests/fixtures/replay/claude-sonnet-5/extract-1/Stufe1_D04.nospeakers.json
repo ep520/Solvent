@@ -1,0 +1,128 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "Customer requests buying Furka Medizintechnik shares (funded by selling fund units) based on nonpublic takeover information from a friend working in the target company's finance department, ahead of next week's public announcement.",
+   "evidence": [
+    {
+     "segment_id": "T022",
+     "quote": "Grad wäge dem Priis, wo mini Kollegin mir zeigt het, wett ich die Aktie hüt chaufe, vor der Bekanntgabe. Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik, bevor de Priis nach de Meldig stiigt."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T022",
+       "quote": "Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik"
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Die Sache isch nöd öffentlich. D Bekanntgab isch erst nächste Wuche."
+      },
+      {
+       "segment_id": "T014",
+       "quote": "Nei, es git no kei Artikel. Si het mirs uf ihrem Laptop zeigt, ich ha kei Datei."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Si het am Mäntig vo ere Übernahme verzellt. En grössere Konzern wett d Firma chaufe."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T022",
+       "quote": "Grad wäge dem Priis, wo mini Kollegin mir zeigt het, wett ich die Aktie hüt chaufe, vor der Bekanntgabe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "documentation",
+   "summary": "Customer asks the advisor to keep the order's subject limited to the stock name only, omitting the insider-tip reason from the order record, which the advisor refuses.",
+   "evidence": [
+    {
+     "segment_id": "T020",
+     "quote": "Mir chönd ja im Betreff vom Auftrag nume de Name vo de Aktie haa. Da muess ja nöd jede ghöre, was ich bim Mittag gredt ha."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T020",
+       "quote": "Mir chönd ja im Betreff vom Auftrag nume de Name vo de Aktie haa."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T021",
+       "quote": "Ich cha de Grund nöd eifach mit em Betreff verschwinde lah. Ihre Erklärig ghört zum Vorgang."
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T019",
+       "quote": "Für de Aktieauftrag bliibt d Quelle, wo Sie mir gnennt händ, aber zum Vorgang ghörig."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the original investment amount of ten thousand francs made into the fund position last year.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Ich ha damals zehntuusig Franke inegeh und weiss nöd, öb ich en Teil use näh cha oder alles verkaufe muess."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer specifies an amount of about twelve thousand francs she wants made available for the stock purchase, repeating this figure when giving the order.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "Öppe zwölftuusig. Ich weiss, das isch meh als ich damals iizahlt ha."
+    },
+    {
+     "segment_id": "T022",
+     "quote": "Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

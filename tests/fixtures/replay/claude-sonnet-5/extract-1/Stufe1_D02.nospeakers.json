@@ -1,0 +1,81 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "Customer asks the advisor to buy Rigi Sensorik shares today, before Friday's quarterly results announcement, based on non-public information her sister shared from the finance department.",
+   "evidence": [
+    {
+     "segment_id": "T002",
+     "quote": "Es gaht um d Rigi Sensorik."
+    },
+    {
+     "segment_id": "T004",
+     "quote": "Mini Schwöschter schaffet det i de Finanzabteilig. Sie het mir gester gseit, d Quartalszahle sind viel besser als erwartet. Die sind no nöd publiziert; die Mediemeldig chunnt erst am Friitig."
+    },
+    {
+     "segment_id": "T008",
+     "quote": "Grad drum möcht ich die Aktie jetzt chaufe, vor de Meldig."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T008",
+       "quote": "Grad drum möcht ich die Aktie jetzt chaufe, vor de Meldig. Wenn alli am Friitig d Quartalszahle gsehnd, isch de Priis doch scho obe. Chönd Sie de Kauf hüt für mich mache?"
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Die sind no nöd publiziert; die Mediemeldig chunnt erst am Friitig."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "Ja. Sie het gseit, ich sölls vertraulich behandle."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Sie het mir gester gseit, d Quartalszahle sind viel besser als erwartet."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T008",
+       "quote": "Grad drum möcht ich die Aktie jetzt chaufe, vor de Meldig."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "Customer states an intended investment amount of about CHF 8000 for the planned share purchase.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Öppe achttuusig Franke."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

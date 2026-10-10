@@ -1,0 +1,76 @@
+{
+ "events": [
+  {
+   "family": "splitting",
+   "summary": "The caller asks the service employee to go ahead and prepare two separate amounts (4000 today, 5000 tomorrow) to the same supplier even though she cannot yet say why they are split or whether the underlying invoices belong together, while the advisor refuses to treat this as a confirmed order pending proof of the connection.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Chönd Sie die viertuusig für hüt und die füünftuusig für morn trotzdem scho vorbereite? Ich kann Ihnen no nöd säge, warum das getrennt plant isch oder weli Beleg zämeghöred."
+    }
+   ],
+   "conditions": {
+    "split_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Chönd Sie die viertuusig für hüt und die füünftuusig für morn trotzdem scho vorbereite?"
+      }
+     ]
+    },
+    "movements_connected": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Das cha zur gliiche Baustell ghöre, muess aber nöd d gliichi Lieferung sii. Ich ha d Originalrechnige grad nöd vor mir."
+      }
+     ]
+    },
+    "evasion_purpose": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Ich kann Ihnen no nöd säge, warum das getrennt plant isch oder weli Beleg zämeghöred."
+      },
+      {
+       "segment_id": "T011",
+       "quote": "de Ziitpunkt allein beweist kei Absicht."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer reads out the two partial amounts (4000 for today and 5000 for tomorrow) from her payment list to the same supplier.",
+   "evidence": [
+    {
+     "segment_id": "T002",
+     "quote": "In minere Liste sind viertuusig für hüt und füünftuusig für morn."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The advisor states the internal approval threshold amount of eight thousand for connected transactions.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "Bi eus muess en zämeghörende Vorgang über achttuusig an d interne Freigabstell."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

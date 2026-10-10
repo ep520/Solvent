@@ -1,0 +1,56 @@
+{
+ "events": [
+  {
+   "family": "documentation",
+   "summary": "The customer confirms her wish to have a line removed from the housing-financing document so that the internal financing office does not see that content, even though she cannot yet identify with certainty which of two lines (the repayable obligation to her father or an unrelated private appointment) the comment refers to.",
+   "evidence": [
+    {
+     "segment_id": "T001",
+     "quote": "Sie händ im Entwurf für d Wohnigsfinanzierung e Randnotiz gmacht. De Kommentar lautet nume «die Zeile use»."
+    },
+    {
+     "segment_id": "T018",
+     "quote": "Min Wunsch bliibt: Die Zeile, wo min Pfeil meint, söll use, damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T018",
+       "quote": "Die Zeile, wo min Pfeil meint, söll use, damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Uf em eine Blatt staht s Geld vo mim Vater, woni zruggzahle muess und wo zur Finanzierung ghört."
+      },
+      {
+       "segment_id": "T018",
+       "quote": "damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt"
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T005",
+       "quote": "D Rückzahlungsverpflichtig muess vollständig an üsi Finanzierungsstell."
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

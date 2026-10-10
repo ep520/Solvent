@@ -1,0 +1,68 @@
+{
+ "events": [
+  {
+   "family": "access",
+   "summary": "The customer read out a six-digit code from a field she had earlier described as an expired sample in the instructions, despite the advisor repeatedly asking her not to speak any number.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Wart, ich läse Ihne die sechs Stelle us dem Feld vor: acht, drü, sechs, eins, sibe, vier."
+    }
+   ],
+   "conditions": {
+    "value_spoken": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Wart, ich läse Ihne die sechs Stelle us dem Feld vor: acht, drü, sechs, eins, sibe, vier."
+      }
+     ]
+    },
+    "access_secret": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T007",
+       "quote": "Mir teile kei geheime Werte."
+      },
+      {
+       "segment_id": "T003",
+       "quote": "Bitte säged Sie kei Zahl."
+      }
+     ]
+    },
+    "secret_active": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha de Zugang no gar nöd gstartet. Ich luege s abglaufene Muster i de Aaleitig aa; s echte Aameldefenster isch zue. Es git da kei Countdown. Die Zahl cha nöd bruuucht werde, und ich bliibe jetzt bi genau dem Feld."
+      },
+      {
+       "segment_id": "T008",
+       "quote": "S Feld, wo ich meine, isch immer no s gliiche."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "A six-digit code tied to a login/authentication field was read out loud during the call.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Wart, ich läse Ihne die sechs Stelle us dem Feld vor: acht, drü, sechs, eins, sibe, vier."
+    }
+   ],
+   "conditions": {},
+   "object_type": "other"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

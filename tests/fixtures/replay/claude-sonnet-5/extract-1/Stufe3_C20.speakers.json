@@ -1,0 +1,97 @@
+{
+ "events": [
+  {
+   "family": "splitting",
+   "summary": "The customer asks whether two amounts for the same supplier, listed for consecutive days, can be entered as separate bookings instead of one combined amount that would exceed the internal approval threshold.",
+   "evidence": [
+    {
+     "segment_id": "T002",
+     "quote": "In minere Liste sind viertuusig für hüt und füünftuusig für morn."
+    },
+    {
+     "segment_id": "T010",
+     "quote": "Chönd Sie die viertuusig für hüt und die füünftuusig für morn trotzdem scho vorbereite?"
+    }
+   ],
+   "conditions": {
+    "split_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T002",
+       "quote": "In minere Liste sind viertuusig für hüt und füünftuusig für morn."
+      },
+      {
+       "segment_id": "T010",
+       "quote": "Chönd Sie die viertuusig für hüt und die füünftuusig für morn trotzdem scho vorbereite?"
+      }
+     ]
+    },
+    "movements_connected": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Das cha zur gliiche Baustell ghöre, muess aber nöd d gliichi Lieferung sii. Ich ha d Originalrechnige grad nöd vor mir."
+      }
+     ]
+    },
+    "evasion_purpose": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_id": "T011",
+       "quote": "Ich bestätige den Plan nöd als Auftrag. Ich nehme d offeni Frage uf und warte uf d zugehörige Unterlage; de Ziitpunkt allein beweist kei Absicht."
+      },
+      {
+       "segment_id": "T003",
+       "quote": "Bi eus muess en zämeghörende Vorgang über achttuusig an d interne Freigabstell."
+      }
+     ]
+    }
+   },
+   "object_type": "unknown"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer reads out an amount of four thousand for today's booking.",
+   "evidence": [
+    {
+     "segment_id": "T002",
+     "quote": "In minere Liste sind viertuusig für hüt und füünftuusig für morn."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer reads out an amount of five thousand for tomorrow's booking.",
+   "evidence": [
+    {
+     "segment_id": "T002",
+     "quote": "In minere Liste sind viertuusig für hüt und füünftuusig für morn."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The advisor states the internal approval threshold amount of eight thousand.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "Bi eus muess en zämeghörende Vorgang über achttuusig an d interne Freigabstell."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

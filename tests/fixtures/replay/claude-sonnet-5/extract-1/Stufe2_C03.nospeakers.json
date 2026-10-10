@@ -1,0 +1,25 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out the last four digits of her payment card to help the advisor identify the correct reference field for a hotel confirmation.",
+   "evidence": [
+    {
+     "segment_id": "T019",
+     "quote": "D letschte vier sind: vier, zwei, vier, zwei."
+    },
+    {
+     "segment_id": "T004",
+     "quote": "das sind die letschte vier Stelle vo minere Charte, woni online mit zahlt ha"
+    }
+   ],
+   "conditions": {},
+   "object_type": "masked_payment_card_digits"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

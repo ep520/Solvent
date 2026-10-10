@@ -1,0 +1,25 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out a 16-digit number from an order confirmation that she and the bank explicitly identify as an invoice reference tied to her order, not a payment card number.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Im Formular isch das d Rechnigsreferenz gsi. Ich ha die Nummere usem Rechnigsfeld vom Händler übernoh. Es isch de Bezug zu dere Bestellig, nöd zu minere Charte."
+    },
+    {
+     "segment_id": "T011",
+     "quote": "Da staht: vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei."
+    }
+   ],
+   "conditions": {},
+   "object_type": "invoice_reference"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

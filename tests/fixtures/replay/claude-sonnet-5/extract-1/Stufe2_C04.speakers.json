@@ -1,0 +1,21 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out the last four digits of her hotel reservation reference number so the advisor can match it to the correct field.",
+   "evidence": [
+    {
+     "segment_id": "T019",
+     "quote": "D letschte vier sind: vier, zwei, vier, zwei."
+    }
+   ],
+   "conditions": {},
+   "object_type": "reservation_reference"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

@@ -4,9 +4,26 @@ The case of **Inventx AG** and **Outcept** at the sprintd Innovation Sprint, Zur
 
 This repository holds everything a team needs: the brief, the data package and a small test API.
 
+## CallGuard dashboard demo
+
+The compliance-review dashboard shows the pipeline's results for the 42 calls: assessment, policy
+conditions, supporting passages, the original audio with jumps to each passage, downloadable ±10 s
+clips, threshold presets and keyword highlights. Run it from the repository root:
+
+```sh
+python3 -m callguard.ui
+```
+
+Then open <http://127.0.0.1:8090>. The server only reads cached transcripts and extractions; fill them
+with `python3 -m callguard.pipeline eval --audio`. Served statically
+(`python3 -m http.server 4173 --directory dashboard`), the page falls back to clearly labelled mock
+data. DaisyUI and Tailwind are loaded from their official CDN setup, so an internet connection is
+needed for the component styling on first load.
+
 | What | Where |
 |---|---|
 | The brief | this page |
+| The CallGuard pipeline: design, results, open items | [`PIPELINE.md`](PIPELINE.md) |
 | Calls and transcripts | [`data/`](data/README.md) |
 | Trigger API (optional) | [`server.py`](server.py), described [below](#trigger-api-optional) |
 

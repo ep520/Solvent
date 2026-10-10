@@ -1,0 +1,64 @@
+{
+ "events": [
+  {
+   "family": "access",
+   "summary": "Despite repeated instructions not to, the customer reads out a six-digit confirmation value from a screenshot of an online-banking notification whose current validity remains unclear.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Ich ha sie jetzt scho vor mir: zwei, nüün, sechs, vier, acht, eins."
+    }
+   ],
+   "conditions": {
+    "value_spoken": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "zwei, nüün, sechs, vier, acht, eins"
+      }
+     ]
+    },
+    "access_secret": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T007",
+       "quote": "Für de Support bruuched mir d Fehlermeldig, nöd en Bestätigungswert."
+      }
+     ]
+    },
+    "secret_active": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Ob sie jetzt oder damals gültig isch, chani nöd säge."
+      },
+      {
+       "segment_id": "T004",
+       "quote": "De obere Rand isch abgschnitte, und ich cha nöd läse, ob es no gültig gsi isch."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "A six-digit sequence from the online-access confirmation screenshot is read out over the phone.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "zwei, nüün, sechs, vier, acht, eins"
+    }
+   ],
+   "conditions": {},
+   "object_type": "other"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

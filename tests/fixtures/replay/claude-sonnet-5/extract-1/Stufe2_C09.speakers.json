@@ -1,0 +1,64 @@
+{
+ "events": [
+  {
+   "family": "access",
+   "summary": "During a technical support call about a login screen, the customer read aloud a six-digit value from an active, unexpired login field despite being repeatedly instructed not to.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Wart, ich läse Ihne die sechs Stelle us dem Feld vor: acht, drü, sechs, eins, sibe, vier."
+    }
+   ],
+   "conditions": {
+    "value_spoken": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Wart, ich läse Ihne die sechs Stelle us dem Feld vor: acht, drü, sechs, eins, sibe, vier."
+      }
+     ]
+    },
+    "access_secret": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha grad selber d Aameldig gstartet. Im echte Fenster staht, de Wert gilt, bis ich die Aameldig abschliesse oder abbreche."
+      },
+      {
+       "segment_id": "T003",
+       "quote": "Händ Sie grad selber en Aameldung gstartet, oder lueged Sie nume es Hilfebild aa?"
+      }
+     ]
+    },
+    "secret_active": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Es git da kei Countdown. Ich ha keis vo beidem gmacht und bliibe jetzt bi genau dem Feld."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer read out a six-digit login/confirmation value from the authentication screen.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "acht, drü, sechs, eins, sibe, vier"
+    }
+   ],
+   "conditions": {},
+   "object_type": "other"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out the last four digits of her payment card (the rest of the card number being masked) so the advisor can match it to the correct field for a hotel deposit reconciliation.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "De Rest vo de lange Nummere isch verdeckt; die vier am Schluss gseht mer."
+    },
+    {
+     "segment_id": "T018",
+     "quote": "Die vier Stelle, wo mir am Afang besproche händ, chani Ihne no säge. S übrige isch verdeckt."
+    },
+    {
+     "segment_id": "T019",
+     "quote": "D letschte vier sind: vier, zwei, vier, zwei."
+    }
+   ],
+   "conditions": {},
+   "object_type": "masked_payment_card_digits"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

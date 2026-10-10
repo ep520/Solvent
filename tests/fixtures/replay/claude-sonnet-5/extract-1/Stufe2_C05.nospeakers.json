@@ -1,0 +1,133 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "Customer requests to buy CHF 6000 of Seerain Systeme shares, explicitly motivated by a report on a large order that she herself describes as published on the company website and identical in content to what all other investors have access to.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe. Nehmed Sie de Kaufwunsch bitte entgege"
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T006",
+       "quote": "De Grossauftrag isch am letschte Friitig veröffentlicht worde, und jede cha ihn det läse. Si schaffet nöd bi dere Firma. Ich weiss nüt zusätzlich und ha de gliiche Inhalt wie alli andere Anleger."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha letschti Wuche en Bericht über de neue Grossauftrag gseh."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The intended trade amount of CHF 6000 for the Seerain Systeme purchase is spoken twice.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "höchstens sechstuusig Franke"
+    },
+    {
+     "segment_id": "T032",
+     "quote": "wett hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The reserved deposit (Kaution) amount of CHF 4000 is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution und zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The reserved moving-company cost amount of CHF 2000 is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution und zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The new rent amount of CHF 1560 due from 1 November is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "Tuusigfüüfhundertsechzg am erschte November."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The old rent amount of CHF 1320 is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "D alti Mieti isch tuusigdrühundertzwänzg."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The moving company's advance payment amount of CHF 800 due by end of September is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T024",
+     "quote": "Achtshundert Franke bis Endi September."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CallGuard bank-call compliance review dashboard demo">
+  <title>CallGuard · Compliance review</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#call-detail">Skip to call detail</a>
+  <div id="app" class="app-shell">
+    <header class="topbar navbar" aria-label="Application header">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8 20 6v5.4c0 4.6-3.1 8.8-8 10-4.9-1.2-8-5.4-8-10V6l8-3.2Z" stroke="currentColor" stroke-width="1.8"/><path d="m8.6 12 2.1 2.1 4.8-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div><h1>CallGuard</h1><p>Compliance review desk</p></div>
+      </div>
+      <div class="top-actions">
+        <span id="data-badge" class="badge badge-sm demo-badge"><span class="status status-info" aria-hidden="true"></span><span id="data-badge-text">Demo · Mock data</span></span>
+        <button id="page-guide-button" class="btn btn-sm btn-ghost" type="button" aria-label="Open page guide">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.8.5-1.4 1-1.4 2.1M12 17h.01"/></svg>
+          Page guide
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="control-strip card" aria-label="Queue controls and summary">
+        <div class="summary-grid" id="summary-counters" aria-label="Call summary"></div>
+        <div class="control-divider" aria-hidden="true"></div>
+        <div id="threshold-section" class="threshold-block guide-target">
+          <div class="control-label-row">
+            <span class="control-label">Escalation threshold</span>
+            <span id="threshold-badge" class="badge badge-ghost badge-xs">Simulated</span>
+          </div>
+          <div id="threshold-control" class="join threshold-join" role="radiogroup" aria-label="Simulated escalation threshold"></div>
+        </div>
+        <div id="keyword-section" class="keyword-block guide-target">
+          <button id="keyword-button" class="btn btn-sm btn-outline keyword-trigger" type="button" aria-expanded="false" aria-controls="keyword-popover">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
+            Keywords <span id="keyword-count" class="badge badge-sm badge-primary"></span>
+          </button>
+          <div id="keyword-popover" class="keyword-popover card" hidden></div>
+        </div>
+      </section>
+
+      <div class="review-layout">
+        <aside class="queue card" aria-labelledby="queue-title">
+          <div class="queue-head">
+            <div><h2 id="queue-title">Call queue</h2><p id="result-count"></p></div>
+            <label class="input input-sm search-box">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input id="call-search" type="search" placeholder="Search calls" autocomplete="off">
+            </label>
+          </div>
+          <div id="classification-filters" class="filter-row" role="group" aria-label="Filter by classification"></div>
+          <div class="queue-columns" aria-hidden="true"><span>Call / time</span><span>Assessment</span><span id="quality-column">Confidence</span><span>Duration</span></div>
+          <div id="call-list" class="call-list" role="listbox" aria-label="Calls"></div>
+          <div id="empty-state" class="empty-state" hidden>No calls match these filters.</div>
+        </aside>
+
+        <section id="call-detail" class="detail card" tabindex="-1" aria-live="polite"></section>
+      </div>
+    </main>
+
+    <div id="guide-hint" class="guide-hint card" hidden role="dialog" aria-modal="false" aria-labelledby="guide-title" aria-describedby="guide-copy">
+      <div class="guide-meta"><span id="guide-progress"></span><button id="guide-skip" class="btn btn-xs btn-ghost" type="button">Skip</button></div>
+      <h3 id="guide-title"></h3><p id="guide-copy"></p>
+      <div class="guide-actions"><button id="guide-back" class="btn btn-xs btn-ghost" type="button">Back</button><button id="guide-next" class="btn btn-xs btn-primary" type="button">Next</button></div>
+    </div>
+
+    <div id="mobile-backdrop" class="mobile-backdrop" hidden></div>
+    <div id="sr-status" class="sr-only" aria-live="polite"></div>
+  </div>
+  <script src="mock-data.js"></script>
+  <script src="decision-simulation.js"></script>
+  <script src="ui-state.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+{
+ "events": [
+  {
+   "family": "splitting",
+   "summary": "Customer asks the advisor to prepare two supplier payments of 4500 each on consecutive days, but states these reflect two independent invoices for different deliveries with distinct due dates and insists both documents and their connection stay fully visible in the system, rather than an attempt to evade the 8000-franc internal approval threshold.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt. Chönd Sie mir die zwei Erfassige so vorbereite?"
+    }
+   ],
+   "conditions": {
+    "split_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt."
+      }
+     ]
+    },
+    "movements_connected": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Es sind zwei unabhängigi Rechnige für verschiedeni Lieferige, zäme nüüntuusig."
+      }
+     ]
+    },
+    "evasion_purpose": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich will die richtige Fälligkeit erfasse."
+      },
+      {
+       "segment_id": "T004",
+       "quote": "Beidi Beleg und de Zusammenhang sötted im System vollständig sichtbar bliibe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The advisor states the internal approval threshold amount of 8000 Franken for connected transactions.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "über achttuusig Franke"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the combined total of the two supplier invoices as 9000 Franken.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "zäme nüüntuusig"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the amount of 4500 Franken to be booked today.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "hüt viertuusigfüüfhundert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the amount of 4500 Franken to be booked tomorrow.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "morn viertuusigfüüfhundert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

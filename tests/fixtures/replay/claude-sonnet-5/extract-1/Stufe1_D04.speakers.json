@@ -1,0 +1,128 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "The customer explicitly requests buying shares of Furka Medizintechnik using proceeds from a fund sale, based on non-public takeover information obtained from a friend working in the target company's finance department, ahead of the public announcement.",
+   "evidence": [
+    {
+     "segment_id": "T022",
+     "quote": "Grad wäge dem Priis, wo mini Kollegin mir zeigt het, wett ich die Aktie hüt chaufe, vor der Bekanntgabe. Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik, bevor de Priis nach de Meldig stiigt."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T022",
+       "quote": "Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik, bevor de Priis nach de Meldig stiigt."
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Die Sache isch nöd öffentlich. D Bekanntgab isch erst nächste Wuche."
+      },
+      {
+       "segment_id": "T014",
+       "quote": "Nei, es git no kei Artikel. Si het mirs uf ihrem Laptop zeigt, ich ha kei Datei."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Si het am Mäntig vo ere Übernahme verzellt. En grössere Konzern wett d Firma chaufe. Si schaffet i de Finanzabteilig und het mir interne Zahlen und de vorgsehni Priis zeigt."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T022",
+       "quote": "Grad wäge dem Priis, wo mini Kollegin mir zeigt het, wett ich die Aktie hüt chaufe, vor der Bekanntgabe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "documentation",
+   "summary": "The customer asks the advisor to record the order with only the security name in the subject, omitting the insider-tip source, but the advisor refuses and insists the explanation belongs to the file.",
+   "evidence": [
+    {
+     "segment_id": "T020",
+     "quote": "Mir chönd ja im Betreff vom Auftrag nume de Name vo de Aktie haa. Da muess ja nöd jede ghöre, was ich bim Mittag gredt ha."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T020",
+       "quote": "Mir chönd ja im Betreff vom Auftrag nume de Name vo de Aktie haa."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T021",
+       "quote": "Ich cha de Grund nöd eifach mit em Betreff verschwinde lah. Ihre Erklärig ghört zum Vorgang."
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T019",
+       "quote": "Für de Aktieauftrag bliibt d Quelle, wo Sie mir gnennt händ, aber zum Vorgang ghörig."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the amount of ten thousand francs originally invested in the fund position.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Ich ha damals zehntuusig Franke inegeh und weiss nöd, öb ich en Teil use näh cha oder alles verkaufe muess."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer and advisor discuss an amount of about twelve thousand francs to be freed up from the fund and used to buy shares.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "Öppe zwölftuusig. Ich weiss, das isch meh als ich damals iizahlt ha."
+    },
+    {
+     "segment_id": "T022",
+     "quote": "Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik"
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

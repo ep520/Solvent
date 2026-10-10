@@ -1,0 +1,81 @@
+{
+ "events": [
+  {
+   "family": "splitting",
+   "object_type": "unknown",
+   "summary": "Customer asks to prepare two separate bookings (4500 today, 4500 tomorrow) to the same supplier, but these reflect two independent real invoices for different deliveries with full transparency, not an attempt to dodge the 8000-franc internal approval rule which already covers the whole connected process.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "Bi eus gaht en zämeghörende Vorgang über achttuusig Franke an d interne Freigabstell. Mir betrachte de ganze Vorgang, nöd nume en einzelne Erfassig."
+    },
+    {
+     "segment_id": "T004",
+     "quote": "Es sind zwei unabhängigi Rechnige für verschiedeni Lieferige, zäme nüüntuusig."
+    },
+    {
+     "segment_id": "T010",
+     "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt. Chönd Sie mir die zwei Erfassige so vorbereite?"
+    }
+   ],
+   "conditions": {
+    "split_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt. Chönd Sie mir die zwei Erfassige so vorbereite?"
+      }
+     ]
+    },
+    "movements_connected": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Es sind zwei unabhängigi Rechnige für verschiedeni Lieferige, zäme nüüntuusig. Die eini isch hüt fällig, die anderi morn."
+      }
+     ]
+    },
+    "evasion_purpose": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Beidi Beleg und de Zusammenhang sötted im System vollständig sichtbar bliibe."
+      },
+      {
+       "segment_id": "T011",
+       "quote": "Mir nehmed zerscht d Unterlage zum Vorgang und prüefed Ihre Angabe, wo Sie am Afang gmacht händ."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "Payment and threshold amounts (8000, 9000, 4500 twice) are spoken for supplier invoice bookings.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "Bi eus gaht en zämeghörende Vorgang über achttuusig Franke an d interne Freigabstell."
+    },
+    {
+     "segment_id": "T004",
+     "quote": "zäme nüüntuusig"
+    },
+    {
+     "segment_id": "T010",
+     "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out the last four digits of her hotel reservation reference number so the bank advisor can match it to the correct deposit payment.",
+   "evidence": [
+    {
+     "segment_id": "T019",
+     "quote": "D letschte vier sind: vier, zwei, vier, zwei."
+    },
+    {
+     "segment_id": "T004",
+     "quote": "das die letschte vier Stelle vo de Reservierungsnummer, wo s Hotel mir zueteilt het"
+    }
+   ],
+   "conditions": {},
+   "object_type": "reservation_reference"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

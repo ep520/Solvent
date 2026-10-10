@@ -1,0 +1,161 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "Customer requests to buy Seerain Systeme shares for CHF 6000 based on a non-public tip about a large order shown to her privately by an insider contact before the Friday team presentation.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T006",
+       "quote": "Si het mir de unterschriebene Grossauftrag persönlich zeigt, will mir eus privat kenne."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "Ich ha ihn vor de andere Anleger erfahre, und ich ha kei frei zugängliche Quelle defür."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha letschti Wuche en Bericht über de neue Grossauftrag gseh."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "De Inhalt bliibt bis zur Präsentation am Friitig im Projektteam."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer mentions a possible maximum investment amount of CHF 6000 for a potential share purchase.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "Falls ich mi später für en Kauf entscheide, höchstens sechstuusig Franke."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states CHF 4000 reserved for the deposit (Kaution).",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states CHF 2000 reserved for the moving company costs.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the new rent amount of CHF 1560 due on November 1st.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "Tuusigfüüfhundertsechzg am erschte November."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the old rent amount of CHF 1320.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "D alti Mieti isch tuusigdrühundertzwänzg."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states a confirmed advance payment of CHF 800 due by end of September for the moving company.",
+   "evidence": [
+    {
+     "segment_id": "T024",
+     "quote": "Achtshundert Franke bis Endi September."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer restates the CHF 6000 amount in connection with the actual share purchase order for Seerain Systeme.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "other",
+   "summary": "The customer mentions a previously calculated quantity of 40 units (shares), not a monetary amount.",
+   "evidence": [
+    {
+     "segment_id": "T020",
+     "quote": "Ich ha mal vierzig usgrechnet"
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}
