@@ -170,6 +170,76 @@
     return output + escapeHtml(text.slice(cursor));
   }
 
+  // ---- What the model read: snippets with hits, scores and bold spans (callguard/snippets.py) ----
+  const HIT_RANK = { exact: 0, partial: 0, fuzzy: 0, digits: 1, cue: 2, context: 3 };
+  const HIT_CLASS = { exact: "keyword", partial: "keyword", fuzzy: "keyword", digits: "digits", cue: "cue", context: "context" };
+
+  function snippetTextMarkup(text, spans) {
+    // Merge overlapping spans; where they overlap the stronger finder (keyword > digits > cue > context) wins.
+    const sorted = [...(spans || [])].sort((a, b) => a.start - b.start || HIT_RANK[a.how] - HIT_RANK[b.how]);
+    const merged = [];
+    for (const span of sorted) {
+      const last = merged[merged.length - 1];
+      if (last && span.start < last.end) {
+        last.end = Math.max(last.end, span.end);
+        if (HIT_RANK[span.how] < HIT_RANK[last.how]) last.how = span.how;
+      } else merged.push({ ...span });
+    }
+    let html = "", pos = 0;
+    for (const span of merged) {
+      html += escapeHtml(text.slice(pos, span.start));
+      html += `<mark class="hit-mark hit-${HIT_CLASS[span.how] || "cue"}"><b>${escapeHtml(text.slice(span.start, span.end))}</b></mark>`;
+      pos = span.end;
+    }
+    return html + escapeHtml(text.slice(pos));
+  }
+
+  function hitChipMarkup(hit) {
+    const kind = HIT_CLASS[hit.how] || "cue";
+    const what = kind === "keyword" ? `${hit.keyword_id} · ${hit.label}` : kind === "digits" ? "Spoken digits" : kind === "context" ? "Context cue" : `${hit.family} cue`;
+    const score = hit.score === null || hit.score === undefined ? "" : kind === "keyword" ? `${hit.how} ${Number(hit.score).toFixed(2)}` : kind === "digits" ? `${hit.score} digits` : `strength ${hit.score}`;
+    const explains = hit.explains?.length ? ` → explains ${hit.explains.join(", ")}` : "";
+    return `<span class="hit-chip hit-${kind}" title="${escapeHtml(`${what}: "${hit.matched}" in ${hit.turn}${explains}`)}"><strong>${escapeHtml(what)}</strong> “${escapeHtml(hit.matched)}” <span class="hit-meta">${escapeHtml([score, hit.turn].filter(Boolean).join(" · "))}${escapeHtml(explains)}</span></span>`;
+  }
+
+  function snippetMarkup(snippet, cited) {
+    const hasTime = snippet.start !== null && snippet.start !== undefined;
+    const keywordHits = snippet.hits.filter((hit) => HIT_CLASS[hit.how] === "keyword" || hit.how === "digits");
+    const cueHits = snippet.hits.filter((hit) => hit.how === "cue" || hit.how === "context");
+    const rows = snippet.turns.map((turn) => {
+      const isCited = cited.has(turn.tid);
+      const meta = [turn.speaker && turn.speaker !== "unknown" ? turn.speaker : "", turn.quality === null || turn.quality === undefined ? "" : `ASR ${Math.round(turn.quality * 100)}%`].filter(Boolean).join(" · ");
+      return `${turn.gap_before ? `<div class="snippet-gap" aria-label="Segments skipped">···</div>` : ""}<div class="snippet-turn ${turn.mark}${isCited ? " cited" : ""}">
+        <span class="snippet-mark" title="${turn.mark === "anchor" ? "Anchor: a keyword, cue or digit sequence was found here" : turn.mark === "context" ? "Linked context from elsewhere in the call" : "Neighbouring segment"}">${turn.mark === "anchor" ? "▶" : turn.mark === "context" ? "+" : ""}</span>
+        <span class="snippet-time">${turn.start === null || turn.start === undefined ? "" : formatTime(turn.start)}<small>${escapeHtml(turn.tid)}</small></span>
+        <span class="snippet-text">${meta ? `<small class="snippet-turn-meta">${escapeHtml(meta)}</small>` : ""}${snippetTextMarkup(turn.text, turn.spans)}${isCited ? `<span class="cited-badge" title="The decision quotes this segment as evidence">cited as evidence</span>` : ""}</span>
+      </div>`;
+    }).join("");
+    return `<article class="snippet-card">
+      <header class="snippet-head">
+        <div><strong>Snippet ${snippet.snippet_id}</strong><span>${hasTime ? `${formatTime(snippet.start)}–${formatTime(snippet.end)} · ` : ""}${escapeHtml(snippet.segment_ids.length)} segments · found by ${escapeHtml(snippet.found_by.join(" + "))}${snippet.families.length ? ` · ${escapeHtml(snippet.families.join(", "))}` : ""}</span></div>
+        <div class="snippet-actions"><span class="priority" title="How strongly the finders fired (0–1); not a fraud probability"><span class="priority-bar"><i style="width:${Math.round(snippet.priority * 100)}%"></i></span>${Number(snippet.priority).toFixed(2)}</span>${live && hasTime ? `<button class="btn btn-xs btn-ghost play-evidence" type="button" data-clip-start="${snippet.start}" data-clip-end="${snippet.end}">${icon("audio")} Play</button>` : ""}</div>
+      </header>
+      ${keywordHits.length ? `<div class="hit-row">${keywordHits.map(hitChipMarkup).join("")}</div>` : ""}
+      ${cueHits.length ? `<details class="cue-hits"><summary>${cueHits.length} cue word${cueHits.length === 1 ? "" : "s"}</summary><div class="hit-row">${cueHits.map(hitChipMarkup).join("")}</div></details>` : ""}
+      <div class="snippet-turns">${rows}</div>
+    </article>`;
+  }
+
+  function modelInputMarkup(call) {
+    const input = call.modelInput;
+    if (!live || !input) return "";
+    const cited = new Set(call.citedSegments || []);
+    const stats = input.stats;
+    const head = `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>What the model read</h3><p>${input.mode === "snippets" && stats ? `${stats.snippets} snippet${stats.snippets === 1 ? "" : "s"} · ${stats.kept_turns} of ${stats.turns} segments · ${stats.kept_text_pct}% of the text · ${stats.keyword_hits} keyword, ${stats.digit_hits} digit, ${stats.cue_hits} cue hits` : `Full transcript · ${input.segmentCount} segments`}</p></div></div></div>`;
+    const notes = [
+      input.reason ? `<p class="model-input-note">${escapeHtml(input.reason[0].toUpperCase() + input.reason.slice(1))}.</p>` : "",
+      input.currentDiffers ? `<p class="model-input-note warn">The keyword list or snippet settings changed after this extraction. Run the pipeline again to update the decision.</p>` : "",
+    ].join("");
+    const legend = input.mode === "snippets" && input.snippets.length ? `<div class="snippet-legend"><span><mark class="hit-mark hit-keyword"><b>keyword</b></mark></span><span><mark class="hit-mark hit-digits"><b>digits</b></mark></span><span><mark class="hit-mark hit-cue"><b>cue</b></mark></span><span><mark class="hit-mark hit-context"><b>context</b></mark></span><span>▶ anchor</span><span>+ linked context</span><span>··· skipped</span></div>` : "";
+    return `<section id="model-input-section" class="detail-card model-input-card">${head}${notes}${legend}${input.mode === "snippets" ? input.snippets.map((snippet) => snippetMarkup(snippet, cited)).join("") : ""}</section>`;
+  }
+
   function counterfactualMarkup(call) {
     // XAI: counterfactuals computed by callguard/counterfactual.py with the same rule as the decision.
     const items = live ? (call.counterfactualsByThreshold?.[state.threshold] || []) : [];
@@ -263,7 +333,7 @@
     stopAudio();
     const detail = $("#call-detail");
     detail.innerHTML = `<div class="detail-inner detail-change">
-      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? call.cacheStatus === "legacy" ? "Legacy cached extraction" : "Pipeline result" : "Mock call"}</span></div>
+      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
       <header id="classification-section" class="detail-header guide-target">
         <div><div class="eyebrow">${escapeHtml(call.family)} · ${formatTime(call.duration)}</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.family)} review · automatic transcript</p></div>
       </header>
@@ -279,6 +349,7 @@
         </section>
         <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.map(conditionMarkup).join("")}</div></section>
         ${counterfactualMarkup(call)}
+        ${modelInputMarkup(call)}
         <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
         <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
@@ -426,7 +497,7 @@
     }).join("");
     const coverage = live && keywordCoverage ? `<div class="keyword-coverage"><strong>${keywordCoverage.families} families · ${keywordCoverage.enabledKeywords} enabled keywords</strong><span>${keywordCoverage.configuredVariants} configured DE / Swiss German variants (${keywordCoverage.distinctTerms} distinct terms) · ${keywordCoverage.occurrences} observed occurrences in ${keywordCoverage.callsWithOccurrences}/${keywordCoverage.transcriptCalls} cached calls</span><div>${keywordCoverage.byFamily.map((row) => `<small>${escapeHtml(row.label)}: ${row.enabledKeywords} keywords · ${row.occurrences} hits</small>`).join("")}</div></div>` : "";
     const manage = live ? '<button class="btn btn-xs btn-outline" id="manage-keywords" type="button">Manage list</button>' : "";
-    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Keyword highlights</h3><p>Highlights only · classifications stay unchanged</p></div><div class="keyword-actions"><button class="btn btn-xs btn-ghost" id="select-all-keywords" type="button">All</button><button class="btn btn-xs btn-ghost" id="clear-keywords" type="button">Clear</button></div></div>${coverage}<div class="keyword-manage">${manage}</div><label class="input input-sm keyword-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="keyword-search" type="search" value="${escapeHtml(state.keywordQuery)}" placeholder="Find a keyword"></label>${groups || '<p class="empty-state">No keywords found.</p>'}`;
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Keyword highlights</h3><p>Highlights update now · snippets and decisions on the next pipeline run</p></div><div class="keyword-actions"><button class="btn btn-xs btn-ghost" id="select-all-keywords" type="button">All</button><button class="btn btn-xs btn-ghost" id="clear-keywords" type="button">Clear</button></div></div>${coverage}<div class="keyword-manage">${manage}</div><label class="input input-sm keyword-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="keyword-search" type="search" value="${escapeHtml(state.keywordQuery)}" placeholder="Find a keyword"></label>${groups || '<p class="empty-state">No keywords found.</p>'}`;
     $("#keyword-count").textContent = state.enabledKeywords.size;
     $("#keyword-search").addEventListener("input", (event) => { state.keywordQuery = event.target.value; renderKeywordPopover(); $("#keyword-search").focus(); });
     $("#select-all-keywords").addEventListener("click", () => { state.enabledKeywords = new Set(allKeywords); updateKeywords(); });
@@ -450,7 +521,7 @@
   }
 
   function renderKeywordEditor() {
-    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts only. Decisions remain unchanged.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts now. The keywords also choose the snippets the model reads, so decisions change only after the pipeline runs again.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
     $("#close-keyword-editor").addEventListener("click", () => { state.keywordEditor = false; renderKeywordPopover(); });
     $("#add-keyword").addEventListener("click", () => {
       keywordConfig = configFromEditor();

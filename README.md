@@ -58,8 +58,18 @@ python3 -m callguard.ui                                                     # sa
   ("if *the information was not public* were supported instead of not established, the decision would be ALARM";
   "with the conservative preset this would be REVIEW"). The dashboard shows them under *What would change the decision*,
   and `pipeline text` prints them as `WHAT-IF` lines.
-- **Snippet tool:** [`tools/snippets/`](tools/snippets/README.md) measures how much a keyword prefilter would
-  miss (95 % evidence recall with general cues vs 33 % random). It is analysis only: the extractor reads the whole call.
+- **Snippets are the model input** ([`config/snippets.json`](config/snippets.json), engine in
+  [`callguard/snippets.py`](callguard/snippets.py)). Instead of the whole call, the model reads the passages found by
+  the official keyword list, spoken digit sequences and cue words, with linked context from anywhere in the call,
+  the matched words in **bold**, each hit's score, the snippet priority and the ASR quality per segment. Segment IDs
+  are unchanged, so quotes still ground exactly. A call where no finder fires is read in full (`if_no_snippets`), and
+  `"enabled": false` restores the full-transcript prompt. On the test scripts the snippets keep 21/22 expected
+  evidence turns with speaker labels and 20/22 without (raw ASR), with 38 % of the text; measure with
+  [`tools/snippets/eval_snippets.py`](tools/snippets/README.md).
+- **Dashboard: "What the model read"** shows, per call, exactly what was sent (stored with the extraction):
+  each snippet with time range, priority, finders, keyword hits with IDs and scores, cue words, highlighted words,
+  ASR quality per segment, a play button for the snippet audio, and the segments the decision cites as evidence.
+  If the keyword list or snippet settings changed since, the card says so until the pipeline runs again.
 
 ## The problem today
 
