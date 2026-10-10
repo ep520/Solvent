@@ -195,7 +195,9 @@
     const symbol = condition.state === "Supported" ? "✓" : condition.state === "Excluded" ? "—" : "?";
     const stateLabel = condition.state === "Excluded" ? "Explicitly excluded" : condition.state === "Unknown" ? "Not established" : "Supported";
     const reason = condition.reason || "No rationale is available for this fact.";
-    return `<div class="condition" tabindex="0" title="${escapeHtml(reason)}" aria-label="${escapeHtml(`${userConditionLabel(condition.label)}. ${stateLabel}. ${reason}`)}"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span><span class="condition-reason" role="tooltip">${escapeHtml(reason)}</span></div>`;
+    // Explainability: the policy wording being checked, then the evidence that decided it.
+    const tooltip = condition.policy ? `Policy: ${condition.policy}\n${reason}` : reason;
+    return `<div class="condition" tabindex="0" title="${escapeHtml(tooltip)}" aria-label="${escapeHtml(`${userConditionLabel(condition.label)}. ${stateLabel}. ${tooltip}`)}"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span><span class="condition-reason" role="tooltip">${condition.policy ? `<strong>Policy:</strong> ${escapeHtml(condition.policy)}<br>` : ""}${escapeHtml(reason)}</span></div>`;
   }
 
   function liveReasons(call) {
