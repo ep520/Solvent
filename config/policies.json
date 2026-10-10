@@ -1,0 +1,76 @@
+{
+  "version": "policies-0.4",
+  "escalation": {
+    "min_asr_quality": 0.6,
+    "_note": "ASR-quality escalation heuristic, not a probability. An established event becomes an alarm only if every decisive condition has at least one quote whose segments reach this exp(avg_logprob). Below it: review / below_escalation_threshold. When the source gives no score (scripts), quality is reported as unavailable and nothing is downgraded.",
+    "presets": {
+      "sensitive": 0.5,
+      "balanced": 0.6,
+      "conservative": 0.75
+    },
+    "default_preset": "balanced"
+  },
+  "grounding": {
+    "min_similarity": 0.92,
+    "_note": "Quotes are matched exactly; otherwise by word-level approximate alignment within the cited segment and one neighbour. Accepted only at or above this similarity and when negations match; the evidence then shows the real transcript words."
+  },
+  "families": {
+    "trade": {
+      "title": "Own trade on non-public information",
+      "conditions": {
+        "own_trade_request": "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
+        "information_nonpublic": "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
+        "information_market_relevant": "The information could move the price (results, takeover, large order or similar).",
+        "request_based_on_information": "The trade request is explicitly or clearly linked to that information."
+      }
+    },
+    "access": {
+      "title": "Disclosure of an active access secret",
+      "conditions": {
+        "value_spoken": "A concrete value (digits or characters) is actually read out or spoken, not just named, asked for or refused.",
+        "access_secret": "The value is an access secret: PIN, password, TAN, one-time, confirmation or login code.",
+        "secret_active": "The value belongs to a current, still valid access process. False if it is explicitly an expired sample, help image or old code. Unknown if origin or validity is not established."
+      }
+    },
+    "disclosure": {
+      "title": "Unauthorised disclosure to a third party",
+      "conditions": {
+        "advisor_disclosed": "The bank side actually reveals a concrete protected detail. Asking for it or refusing does not count.",
+        "third_party_detail": "The detail concerns a person other than the caller (balance, loan, interest date, personal data).",
+        "authority_absent": "It was established that the caller lacks authority for that information. False if authority was confirmed and checked. Unknown if never established."
+      }
+    },
+    "documentation": {
+      "title": "Concealing a relevant fact from its record",
+      "conditions": {
+        "concealment_requested": "Someone asks the bank to leave out or hide a fact from a bank record, note or internal recipient. A caller protecting their own unrelated data (masking fields, not sending personal details) does not count.",
+        "fact_relevant": "The fact matters for the record's purpose (for example a repayable obligation for a credit decision). False if it is an unrelated private detail or the correction of a wrong entry.",
+        "designated_recipient": "The fact is meant for a designated internal record or recipient (credit office, dossier, file note)."
+      }
+    },
+    "splitting": {
+      "title": "Splitting to avoid an internal control",
+      "conditions": {
+        "split_requested": "Someone asks to divide a payment or booking into several partial movements or entries.",
+        "movements_connected": "The parts belong together (one invoice, one transaction). False if they are independent real invoices.",
+        "evasion_purpose": "The stated purpose is to avoid an internal approval, limit or control. False only if a passage gives a different, explicit purpose. If the purpose is not stated, or someone only says that timing or due dates do not prove an intent, it is unknown, not false."
+      }
+    },
+    "numbers": {
+      "title": "Number read out (classification only, never an alarm)",
+      "can_alarm": false,
+      "object_types": [
+        "full_payment_card_number",
+        "masked_payment_card_digits",
+        "invoice_reference",
+        "reservation_reference",
+        "account_or_iban",
+        "amount",
+        "phone",
+        "other",
+        "unknown"
+      ],
+      "conditions": {}
+    }
+  }
+}

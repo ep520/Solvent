@@ -1,0 +1,64 @@
+{
+ "events": [
+  {
+   "family": "numbers",
+   "summary": "The customer reads out a long digit sequence that both parties identify as an invoice/order reference from the merchant's confirmation, not a card number.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Im Formular isch das d Rechnigsreferenz gsi. Ich ha die Nummere usem Rechnigsfeld vom Händler übernoh."
+    },
+    {
+     "segment_id": "T011",
+     "quote": "Da staht: vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei."
+    }
+   ],
+   "conditions": {},
+   "object_type": "invoice_reference"
+  },
+  {
+   "family": "documentation",
+   "summary": "The customer offers to cover up the unrelated card-related fields on the document and send only the necessary invoice-reference part to the bank's secure channel, tagged with the callback reference.",
+   "evidence": [
+    {
+     "segment_id": "T013",
+     "quote": "Ich werde im Dokument d andere Felder abdecke und nume d nötige Stelle schicke."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T013",
+       "quote": "Ich werde im Dokument d andere Felder abdecke und nume d nötige Stelle schicke."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Es isch de Bezug zu dere Bestellig, nöd zu minere Charte. D Charte-Angabe stönd separat uf em andere Blatt."
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T014",
+       "quote": "Ja, mit de Rückrufreferenz, damit es zum richtige Vorgang chunnt."
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

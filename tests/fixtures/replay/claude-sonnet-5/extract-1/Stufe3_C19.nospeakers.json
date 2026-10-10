@@ -1,0 +1,52 @@
+{
+ "events": [
+  {
+   "family": "documentation",
+   "summary": "The customer insists that a line disclosing a repayable debt to her father be removed from the financing document so the financing office never sees it, while the advisor refuses to delete anything until the exact line is identified.",
+   "evidence": [
+    {
+     "segment_id": "T018",
+     "quote": "Min Wunsch bliibt: Die Zeile, wo min Pfeil meint, söll use, damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T018",
+       "quote": "Min Wunsch bliibt: Die Zeile, wo min Pfeil meint, söll use, damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Uf em eine Blatt staht s Geld vo mim Vater, woni zruggzahle muess und wo zur Finanzierung ghört."
+      },
+      {
+       "segment_id": "T005",
+       "quote": "D Rückzahlungsverpflichtig muess vollständig an üsi Finanzierungsstell."
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T005",
+       "quote": "D Rückzahlungsverpflichtig muess vollständig an üsi Finanzierungsstell."
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

@@ -1,0 +1,150 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "object_type": "unknown",
+   "summary": "The customer explicitly asks the advisor to record a buy order for CHF 6000 of Seerain Systeme shares, linking it to a report she states was publicly published and contained nothing beyond what any other investor could read.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe. Nehmed Sie de Kaufwunsch bitte entgege"
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T006",
+       "quote": "De Grossauftrag isch am letschte Friitig veröffentlicht worde, und jede cha ihn det läse."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "Ich weiss nüt zusätzlich und ha de gliiche Inhalt wie alli andere Anleger."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha letschti Wuche en Bericht über de neue Grossauftrag gseh."
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the amount she is considering (and then confirms) investing in the stock purchase, CHF 6000, having first considered CHF 10000.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "Falls ich mi später für en Kauf entscheide, höchstens sechstuusig Franke. Ich ha zuerst zehntuusig überleit"
+    },
+    {
+     "segment_id": "T032",
+     "quote": "wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the amount reserved for the rental deposit, CHF 4000.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution und zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the amount reserved for the moving company, CHF 2000.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution und zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the new rent amount due on 1 November, CHF 1560.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "Tuusigfüüfhundertsechzg am erschte November."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the old rent amount, CHF 1320.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "D alti Mieti isch tuusigdrühundertzwänzg."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the confirmed advance payment for the moving company invoice, CHF 800 due end of September.",
+   "evidence": [
+    {
+     "segment_id": "T024",
+     "quote": "Achtshundert Franke bis Endi September."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "other",
+   "summary": "The customer mentions a previously calculated share quantity of forty, unrelated to any monetary amount field.",
+   "evidence": [
+    {
+     "segment_id": "T020",
+     "quote": "Ich ha mal vierzig usgrechnet, aber de Priis ändert sich ja."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

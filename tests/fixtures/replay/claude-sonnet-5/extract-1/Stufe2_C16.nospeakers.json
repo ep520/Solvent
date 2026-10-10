@@ -1,0 +1,101 @@
+{
+ "events": [
+  {
+   "family": "splitting",
+   "object_type": "unknown",
+   "summary": "The customer asks to split a single CHF 9000 invoice into two CHF 4500 bookings on consecutive days to the same supplier so the connected process stays below the CHF 8000 internal approval threshold.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Es isch e einzigi Rechnig über nüüntuusig für e einzigi Lieferig. Ich will verhindre, dass de ganze Vorgang bi dere Freigabstell landet; suscht gahts mir z lang."
+    },
+    {
+     "segment_id": "T010",
+     "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt. Chönd Sie mir die zwei Erfassige so vorbereite?"
+    }
+   ],
+   "conditions": {
+    "split_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt. Chönd Sie mir die zwei Erfassige so vorbereite?"
+      }
+     ]
+    },
+    "movements_connected": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Es isch e einzigi Rechnig über nüüntuusig für e einzigi Lieferig."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "De Name isch bi beidne Erfassige de gliich, drum ha ich überhaupt gfröget."
+      },
+      {
+       "segment_id": "T010",
+       "quote": "an die gliichi Werkstatt"
+      }
+     ]
+    },
+    "evasion_purpose": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich will verhindre, dass de ganze Vorgang bi dere Freigabstell landet; suscht gahts mir z lang. Das isch de Grund, warum ich überhaupt über en andere Erfassig nachdenke."
+      },
+      {
+       "segment_id": "T003",
+       "quote": "Bi eus gaht en zämeghörende Vorgang über achttuusig Franke an d interne Freigabstell."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The advisor states the CHF 8000 internal approval threshold for a connected transaction.",
+   "evidence": [
+    {
+     "segment_id": "T003",
+     "quote": "en zämeghörende Vorgang über achttuusig Franke an d interne Freigabstell"
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the CHF 9000 amount of the single underlying invoice.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Es isch e einzigi Rechnig über nüüntuusig für e einzigi Lieferig."
+    }
+   ],
+   "conditions": {}
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the two planned CHF 4500 booking amounts intended to split the invoice.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Denn mach ich hüt viertuusigfüüfhundert und morn viertuusigfüüfhundert an die gliichi Werkstatt."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

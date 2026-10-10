@@ -1,0 +1,49 @@
+{
+  "defaults": {
+    "chat": "claude_code",
+    "asr": "openai"
+  },
+  "profiles": {
+    "claude_code": {
+      "api": "claude_cli",
+      "command": "claude",
+      "chat_model": "claude-sonnet-5",
+      "timeout": 300,
+      "retries": 1,
+      "self_hostable": false
+    },
+    "openai": {
+      "api": "openai_compatible",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "chat_model": "gpt-4o-mini",
+      "asr_model": "whisper-1",
+      "json_mode": "json_schema",
+      "self_hostable": false
+    },
+    "private": {
+      "api": "openai_compatible",
+      "base_url_env": "PRIVATE_LLM_URL",
+      "api_key_env": "PRIVATE_LLM_KEY",
+      "chat_model": "qwen2.5-7b-instruct",
+      "asr_model": "whisper-large-v3-turbo",
+      "json_mode": "json_schema",
+      "self_hostable": true
+    },
+    "ollama": {
+      "api": "openai_compatible",
+      "base_url": "http://localhost:11434/v1",
+      "chat_model": "qwen2.5:7b-instruct",
+      "json_mode": "json_object",
+      "timeout": 600,
+      "self_hostable": true
+    },
+    "speaches": {
+      "api": "openai_compatible",
+      "base_url": "http://localhost:8000/v1",
+      "asr_model": "Systran/faster-whisper-large-v3",
+      "timeout": 900,
+      "self_hostable": true
+    }
+  }
+}

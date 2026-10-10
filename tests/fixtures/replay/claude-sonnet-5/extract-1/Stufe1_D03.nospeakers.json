@@ -1,0 +1,68 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "Customer asks about discrepancies between a newspaper article and the published factsheet for Limmat Energie, references a podcast's mention of 'insider trading' as an example, but explicitly states she has no non-public information and does not want to place any order today.",
+   "evidence": [
+    {
+     "segment_id": "T006",
+     "quote": "Im Podcast händ si vo interne Zahlen us de Finanzabteilung gredt. Und eine het als Beispiel gseit: «Vor der Bekanntgabe handle wär Insider Trading.»"
+    },
+    {
+     "segment_id": "T014",
+     "quote": "Mir gahts um de öffentlichi Bericht, nöd um en Auftrag."
+    },
+    {
+     "segment_id": "T020",
+     "quote": "Ich werde hüt kei Auftrag erteile, ich läse zerscht de Bericht fertig."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Ich will hüt au gar nüt bestelle."
+      },
+      {
+       "segment_id": "T020",
+       "quote": "Ich werde hüt kei Auftrag erteile, ich läse zerscht de Bericht fertig."
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T008",
+       "quote": "De isch sit gester Morge für alli abruefbar. Ich kenne niemert det und ha kei andere Information als de Bericht und d Ziitig."
+      },
+      {
+       "segment_id": "T014",
+       "quote": "ha au kei Information, wo no nöd publiziert wär"
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "unknown",
+     "evidence": []
+    },
+    "request_based_on_information": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T014",
+       "quote": "Mir gahts um de öffentlichi Bericht, nöd um en Auftrag."
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

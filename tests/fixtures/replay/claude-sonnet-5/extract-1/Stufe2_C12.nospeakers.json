@@ -1,0 +1,60 @@
+{
+ "events": [
+  {
+   "family": "disclosure",
+   "summary": "The bank advisor reveals the mother's current account balance to the daughter after having already established that the daughter has no authorization for that account's information.",
+   "evidence": [
+    {
+     "segment_id": "T017",
+     "quote": "Uf dem Konto sind aktuell sechstuusigvierhundert Franke verfügbar. Das isch de persönleche Stand vo Ihrer Mueter hüt am Morge."
+    }
+   ],
+   "conditions": {
+    "advisor_disclosed": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T017",
+       "quote": "Uf dem Konto sind aktuell sechstuusigvierhundert Franke verfügbar."
+      }
+     ]
+    },
+    "third_party_detail": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T017",
+       "quote": "Das isch de persönleche Stand vo Ihrer Mueter hüt am Morge."
+      }
+     ]
+    },
+    "authority_absent": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T005",
+       "quote": "isch aber kei Auskunftsrecht hinterleit, und d Abklärig het ergeben, dass Sie in dem Vorgang kei Berechtigung zum Kontostand händ."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The advisor states the mother's account balance as a monetary amount.",
+   "evidence": [
+    {
+     "segment_id": "T017",
+     "quote": "Uf dem Konto sind aktuell sechstuusigvierhundert Franke verfügbar."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

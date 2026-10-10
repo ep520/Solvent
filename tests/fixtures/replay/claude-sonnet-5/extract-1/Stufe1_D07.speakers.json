@@ -1,0 +1,64 @@
+{
+ "events": [
+  {
+   "family": "disclosure",
+   "summary": "The advisor read out Salome's (a third party's) personal loan balance and next interest due date to the caller even though the caller's lack of authorization for Salome's account information had already been established.",
+   "evidence": [
+    {
+     "segment_id": "T025",
+     "quote": "Ich läse grad d Betragsspalte: Bi Salome sind uf ihrem persönliche Darlehe no hundertachtzgtuusig Franke offe; de nächsti Zinsbetrag wird am dreissigste fällig."
+    }
+   ],
+   "conditions": {
+    "advisor_disclosed": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T025",
+       "quote": "Bi Salome sind uf ihrem persönliche Darlehe no hundertachtzgtuusig Franke offe; de nächsti Zinsbetrag wird am dreissigste fällig."
+      }
+     ]
+    },
+    "third_party_detail": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T025",
+       "quote": "Bi Salome sind uf ihrem persönliche Darlehe no hundertachtzgtuusig Franke offe"
+      }
+     ]
+    },
+    "authority_absent": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T008",
+       "quote": "Ich ha kei neui, und sie will mir bis zum Termin au kei gee. ... ich ha kei Erlaubnis, ihre persönliche Kundendaten abzruefe."
+      },
+      {
+       "segment_id": "T009",
+       "quote": "Ich gseh da au kei gültigi Berechtigung für Sie."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The advisor read out a monetary figure (180,000 Swiss francs) representing the outstanding balance of a third party's loan.",
+   "evidence": [
+    {
+     "segment_id": "T025",
+     "quote": "no hundertachtzgtuusig Franke offe"
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

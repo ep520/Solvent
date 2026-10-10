@@ -1,0 +1,161 @@
+{
+ "events": [
+  {
+   "family": "trade",
+   "summary": "The customer explicitly requests to buy CHF 6'000 worth of Seerain Systeme shares, motivated by a confidential, not-yet-public large-order report she received personally from an insider contact before other investors knew of it.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+    }
+   ],
+   "conditions": {
+    "own_trade_request": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+      }
+     ]
+    },
+    "information_nonpublic": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T006",
+       "quote": "Ich ha ihn vor de andere Anleger erfahre, und ich ha kei frei zugängliche Quelle defür."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "De Inhalt bliibt bis zur Präsentation am Friitig im Projektteam."
+      }
+     ]
+    },
+    "information_market_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T004",
+       "quote": "Ich ha letschti Wuche en Bericht über de neue Grossauftrag gseh."
+      },
+      {
+       "segment_id": "T006",
+       "quote": "Si het mir de unterschriebene Grossauftrag persönlich zeigt"
+      }
+     ]
+    },
+    "request_based_on_information": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T032",
+       "quote": "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states a hypothetical maximum amount of CHF 6'000 she might invest, before deciding to actually place the order.",
+   "evidence": [
+    {
+     "segment_id": "T008",
+     "quote": "höchstens sechstuusig Franke."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The confirmed purchase order amount of CHF 6'000 for the share trade is spoken.",
+   "evidence": [
+    {
+     "segment_id": "T032",
+     "quote": "wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the amount reserved for the deposit (Kaution) as CHF 4'000.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Ich ha viertuusig für d Kaution und zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the amount reserved for the moving company as CHF 2'000.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "zweituusig fürs Zügeln reserviert"
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the new rent amount of CHF 1'560 due on 1 November.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "Tuusigfüüfhundertsechzg am erschte November."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the old rent amount of CHF 1'320.",
+   "evidence": [
+    {
+     "segment_id": "T014",
+     "quote": "D alti Mieti isch tuusigdrühundertzwänzg."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer mentions an earlier self-calculated share quantity of 40, unrelated to a monetary amount.",
+   "evidence": [
+    {
+     "segment_id": "T020",
+     "quote": "Ich ha mal vierzig usgrechnet, aber de Priis ändert sich ja."
+    }
+   ],
+   "conditions": {},
+   "object_type": "other"
+  },
+  {
+   "family": "numbers",
+   "summary": "The customer states the confirmed moving-company advance payment amount of CHF 800 due by end of September.",
+   "evidence": [
+    {
+     "segment_id": "T024",
+     "quote": "Achtshundert Franke bis Endi September."
+    }
+   ],
+   "conditions": {},
+   "object_type": "amount"
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

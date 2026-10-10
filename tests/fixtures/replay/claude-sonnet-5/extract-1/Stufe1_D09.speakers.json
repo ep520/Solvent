@@ -1,0 +1,60 @@
+{
+ "events": [
+  {
+   "family": "documentation",
+   "summary": "The customer asks the advisor to leave the CHF 20,000 loan from her aunt and the related repayment obligation out of the note for the credit office, which the advisor refuses to do.",
+   "evidence": [
+    {
+     "segment_id": "T012",
+     "quote": "Denn bitte nöd protokolliere, dass ich die zwanzigtuusig zruggzahle muess. Nähmed s Darlehe nöd i d Notiz für d Kreditstell."
+    }
+   ],
+   "conditions": {
+    "concealment_requested": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Nähmed s Darlehe nöd i d Notiz für d Kreditstell. Ich will, dass sie nume Eigenmittel gseht und die Vereinbarig vo minere Tante gar nöd erfahrt."
+      }
+     ]
+    },
+    "fact_relevant": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T003",
+       "quote": "Üsi Kreditstell muess d tatsächliche Herkunft und d Rückzahlungsverpflichtig kenne."
+      }
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T012",
+       "quote": "Nähmed s Darlehe nöd i d Notiz für d Kreditstell."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "amount",
+   "summary": "The customer states the amount of CHF 20,000 that she received as a loan from her aunt.",
+   "evidence": [
+    {
+     "segment_id": "T004",
+     "quote": "Es sind zwanzigtuusig Franke vo minere Tante."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

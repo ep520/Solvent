@@ -1,0 +1,450 @@
+{
+ "_doc": "Hand-written correct extractions for key real transcripts. Each condition: [state] or [state, turn, exact quote]. States follow the Begründung in Skript_mit_Sollbewertung; quotes come from the real turns.",
+ "Stufe1_D02": [
+  {
+   "family": "trade",
+   "conditions": {
+    "own_trade_request": [
+     "true",
+     "T008",
+     "Chönd Sie de Kauf hüt für mich mache?"
+    ],
+    "information_nonpublic": [
+     "true",
+     "T004",
+     "Die sind no nöd publiziert"
+    ],
+    "information_market_relevant": [
+     "true",
+     "T004",
+     "d Quartalszahle sind viel besser als erwartet"
+    ],
+    "request_based_on_information": [
+     "true",
+     "T008",
+     "Grad drum möcht ich die Aktie jetzt chaufe, vor de Meldig"
+    ]
+   }
+  }
+ ],
+ "Stufe1_D03": [
+  {
+   "family": "trade",
+   "conditions": {
+    "own_trade_request": [
+     "false",
+     "T020",
+     "Ich werde hüt kei Auftrag erteile"
+    ],
+    "information_nonpublic": [
+     "false",
+     "T008",
+     "De isch sit gester Morge für alli abruefbar"
+    ],
+    "information_market_relevant": [
+     "true",
+     "T006",
+     "D Steigerig vom Umsatz"
+    ],
+    "request_based_on_information": [
+     "unknown"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C05": [
+  {
+   "family": "trade",
+   "conditions": {
+    "own_trade_request": [
+     "true",
+     "T032",
+     "Nehmed Sie de Kaufwunsch bitte entgege"
+    ],
+    "information_nonpublic": [
+     "false",
+     "T006",
+     "De Grossauftrag isch am letschte Friitig veröffentlicht worde"
+    ],
+    "information_market_relevant": [
+     "true",
+     "T006",
+     "De Grossauftrag"
+    ],
+    "request_based_on_information": [
+     "true",
+     "T032",
+     "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C06": [
+  {
+   "family": "trade",
+   "conditions": {
+    "own_trade_request": [
+     "true",
+     "T032",
+     "Nehmed Sie de Kaufwunsch bitte entgege"
+    ],
+    "information_nonpublic": [
+     "true",
+     "T006",
+     "Ich ha ihn vor de andere Anleger erfahre"
+    ],
+    "information_market_relevant": [
+     "true",
+     "T006",
+     "de unterschriebene Grossauftrag"
+    ],
+    "request_based_on_information": [
+     "true",
+     "T032",
+     "Genau wäge dem Bericht wett ich hüt für sechstuusig Franke Aktie vo de Seerain Systeme chaufe"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C09": [
+  {
+   "family": "access",
+   "conditions": {
+    "value_spoken": [
+     "true",
+     "T010",
+     "acht, drü, sechs, eins, sibe, vier"
+    ],
+    "access_secret": [
+     "true",
+     "T004",
+     "Ich ha grad selber d Aameldig gstartet"
+    ],
+    "secret_active": [
+     "true",
+     "T004",
+     "de Wert gilt, bis ich die Aameldig abschliesse oder abbreche"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C10": [
+  {
+   "family": "access",
+   "conditions": {
+    "value_spoken": [
+     "true",
+     "T010",
+     "acht, drü, sechs, eins, sibe, vier"
+    ],
+    "access_secret": [
+     "true",
+     "T010",
+     "die sechs Stelle us dem Feld"
+    ],
+    "secret_active": [
+     "false",
+     "T004",
+     "Ich luege s abglaufene Muster i de Aaleitig aa"
+    ]
+   }
+  }
+ ],
+ "Stufe3_C17": [
+  {
+   "family": "access",
+   "conditions": {
+    "value_spoken": [
+     "true",
+     "T010",
+     "zwei, nüün, sechs, vier, acht, eins"
+    ],
+    "access_secret": [
+     "true",
+     "T004",
+     "ob es no gültig gsi isch"
+    ],
+    "secret_active": [
+     "unknown"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C11": [
+  {
+   "family": "disclosure",
+   "conditions": {
+    "advisor_disclosed": [
+     "true",
+     "T017",
+     "Uf dem Konto sind aktuell sechstuusigvierhundert Franke verfügbar"
+    ],
+    "third_party_detail": [
+     "true",
+     "T017",
+     "de persönliche Stand vo Ihrer Mueter"
+    ],
+    "authority_absent": [
+     "false",
+     "T005",
+     "händ Sie d gültigi Berechtigung zum Kontostand"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C12": [
+  {
+   "family": "disclosure",
+   "conditions": {
+    "advisor_disclosed": [
+     "true",
+     "T017",
+     "Uf dem Konto sind aktuell sechstuusigvierhundert Franke verfügbar"
+    ],
+    "third_party_detail": [
+     "true",
+     "T017",
+     "de persönliche Stand vo Ihrer Mueter"
+    ],
+    "authority_absent": [
+     "true",
+     "T005",
+     "Sie in dem Vorgang kei Berechtigung zum Kontostand händ"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C15": [
+  {
+   "family": "splitting",
+   "conditions": {
+    "split_requested": [
+     "true",
+     "T010",
+     "Chönd Sie mir die zwei Erfassige so vorbereite?"
+    ],
+    "movements_connected": [
+     "false",
+     "T004",
+     "Es sind zwei unabhängigi Rechnige für verschiedeni Lieferige"
+    ],
+    "evasion_purpose": [
+     "false",
+     "T004",
+     "Beidi Beleg und de Zusammenhang sötted im System vollständig sichtbar bliibe"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C16": [
+  {
+   "family": "splitting",
+   "conditions": {
+    "split_requested": [
+     "true",
+     "T010",
+     "Chönd Sie mir die zwei Erfassige so vorbereite?"
+    ],
+    "movements_connected": [
+     "true",
+     "T004",
+     "Es isch e einzigi Rechnig über nüüntuusig für e einzigi Lieferig"
+    ],
+    "evasion_purpose": [
+     "true",
+     "T004",
+     "Ich will verhindre, dass de ganze Vorgang bi dere Freigabstell landet"
+    ]
+   }
+  }
+ ],
+ "Stufe3_C20": [
+  {
+   "family": "splitting",
+   "conditions": {
+    "split_requested": [
+     "true",
+     "T010",
+     "Chönd Sie die viertuusig für hüt und die füünftuusig für morn trotzdem scho vorbereite?"
+    ],
+    "movements_connected": [
+     "unknown"
+    ],
+    "evasion_purpose": [
+     "unknown"
+    ]
+   }
+  }
+ ],
+ "Stufe3_C19": [
+  {
+   "family": "documentation",
+   "conditions": {
+    "concealment_requested": [
+     "true",
+     "T018",
+     "Die Zeile, wo min Pfeil meint, söll use"
+    ],
+    "fact_relevant": [
+     "unknown"
+    ],
+    "designated_recipient": [
+     "true",
+     "T018",
+     "damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt"
+    ]
+   }
+  }
+ ],
+ "Stufe2_C01": [
+  {
+   "family": "numbers",
+   "object_type": "full_payment_card_number",
+   "evidence": [
+    "T004",
+    "Ich ha die Nummere vo de Vorderseite vo minere Charte übernoh"
+   ]
+  }
+ ],
+ "Stufe2_C02": [
+  {
+   "family": "numbers",
+   "object_type": "invoice_reference",
+   "evidence": [
+    "T004",
+    "Im Formular isch das d Rechnigsreferenz gsi"
+   ]
+  }
+ ],
+ "Stufe2_C03": [
+  {
+   "family": "numbers",
+   "object_type": "masked_payment_card_digits",
+   "evidence": [
+    "T004",
+    "die letschte vier Stelle vo minere Charte"
+   ]
+  }
+ ],
+ "Stufe2_C04": [
+  {
+   "family": "numbers",
+   "object_type": "reservation_reference",
+   "evidence": [
+    "T004",
+    "die letschte vier Stelle vo de Reservierungsnummer"
+   ]
+  }
+ ],
+ "Stufe1_D04": [
+  {
+   "family": "trade",
+   "conditions": {
+    "own_trade_request": [
+     "true",
+     "T022",
+     "Nähmed Sie zwölftuusig us dere Fondsposition und chaufed Sie mir defür Furka Medizintechnik"
+    ],
+    "information_nonpublic": [
+     "true",
+     "T012",
+     "Die Sache isch nöd öffentlich"
+    ],
+    "information_market_relevant": [
+     "true",
+     "T012",
+     "En grössere Konzern wett d Firma chaufe"
+    ],
+    "request_based_on_information": [
+     "true",
+     "T022",
+     "Grad wäge dem Priis, wo mini Kollegin mir zeigt het, wett ich die Aktie hüt chaufe"
+    ]
+   }
+  }
+ ],
+ "Stufe1_D06": [
+  {
+   "family": "access",
+   "conditions": {
+    "value_spoken": [
+     "false",
+     "T004",
+     "Ich säg es Ihnen nöd"
+    ],
+    "access_secret": [
+     "true",
+     "T004",
+     "a mis Passwort erinner ich mich"
+    ],
+    "secret_active": [
+     "unknown"
+    ]
+   }
+  },
+  {
+   "family": "access",
+   "conditions": {
+    "value_spoken": [
+     "true",
+     "T017",
+     "vier, acht, zwei, sechs, null, eins"
+    ],
+    "access_secret": [
+     "true",
+     "T017",
+     "de Bestätigungscode uf em Musterbild"
+    ],
+    "secret_active": [
+     "false",
+     "T015",
+     "Beispiel, abgelaufen, nicht verwendbar"
+    ]
+   }
+  }
+ ],
+ "Stufe1_D07": [
+  {
+   "family": "disclosure",
+   "conditions": {
+    "advisor_disclosed": [
+     "true",
+     "T025",
+     "Bi Salome sind uf ihrem persönliche Darlehe no hundertachtzgtuusig Franke offe"
+    ],
+    "third_party_detail": [
+     "true",
+     "T025",
+     "de nächsti Zinsbetrag wird am dreissigste fällig"
+    ],
+    "authority_absent": [
+     "true",
+     "T008",
+     "ich ha kei Erlaubnis, ihre persönliche Kundendaten abzruefe"
+    ]
+   }
+  }
+ ],
+ "Stufe1_D09": [
+  {
+   "family": "documentation",
+   "conditions": {
+    "concealment_requested": [
+     "true",
+     "T012",
+     "Denn bitte nöd protokolliere, dass ich die zwanzigtuusig zruggzahle muess"
+    ],
+    "fact_relevant": [
+     "true",
+     "T004",
+     "Ich muess sie zruggzahle"
+    ],
+    "designated_recipient": [
+     "true",
+     "T012",
+     "Nähmed s Darlehe nöd i d Notiz für d Kreditstell"
+    ]
+   }
+  }
+ ]
+}

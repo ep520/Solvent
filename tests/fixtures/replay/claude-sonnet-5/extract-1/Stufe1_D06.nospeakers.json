@@ -1,0 +1,65 @@
+{
+ "events": [
+  {
+   "family": "access",
+   "object_type": "other",
+   "summary": "The customer read aloud a six-digit confirmation code, but it was an explicitly labeled expired sample from a help-screen screenshot, not her own active code.",
+   "evidence": [
+    {
+     "segment_id": "T017",
+     "quote": "Und de Bestätigungscode uf em Musterbild isch vier, acht, zwei, sechs, null, eins."
+    }
+   ],
+   "conditions": {
+    "value_spoken": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T017",
+       "quote": "isch vier, acht, zwei, sechs, null, eins"
+      }
+     ]
+    },
+    "access_secret": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T017",
+       "quote": "Bestätigungscode uf em Musterbild isch vier, acht, zwei, sechs, null, eins"
+      }
+     ]
+    },
+    "secret_active": {
+     "state": "false",
+     "evidence": [
+      {
+       "segment_id": "T015",
+       "quote": "Drunder staht «Beispiel, abgelaufen, nicht verwendbar». Es isch kei Wert us mim Zugang."
+      },
+      {
+       "segment_id": "T017",
+       "quote": "Das isch die abglaufeni Beispielzahl, nöd mini. Ich ha kei aktuelle Code zum Teile."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "object_type": "other",
+   "summary": "A six-digit example confirmation code was read out during the call for clarification of a help-screen screenshot.",
+   "evidence": [
+    {
+     "segment_id": "T017",
+     "quote": "Und de Bestätigungscode uf em Musterbild isch vier, acht, zwei, sechs, null, eins."
+    }
+   ],
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}

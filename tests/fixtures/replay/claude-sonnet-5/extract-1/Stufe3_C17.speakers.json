@@ -1,0 +1,69 @@
+{
+ "events": [
+  {
+   "family": "access",
+   "summary": "The customer reads out a six-digit value from a screenshot that the advisor treats as a possible confirmation value, despite repeated instructions not to share it, and its current validity is left unresolved.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "Ich ha sie jetzt scho vor mir: zwei, nüün, sechs, vier, acht, eins."
+    }
+   ],
+   "object_type": "unknown",
+   "conditions": {
+    "value_spoken": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Ich ha sie jetzt scho vor mir: zwei, nüün, sechs, vier, acht, eins."
+      }
+     ]
+    },
+    "access_secret": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_id": "T007",
+       "quote": "Für de Support bruuched mir d Fehlermeldig, nöd en Bestätigungswert."
+      },
+      {
+       "segment_id": "T001",
+       "quote": "Sie händ um Hilf mit ere Anzeige im Onlinezugang bätte."
+      }
+     ]
+    },
+    "secret_active": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_id": "T010",
+       "quote": "Ob sie jetzt oder damals gültig isch, chani nöd säge."
+      },
+      {
+       "segment_id": "T004",
+       "quote": "De obere Rand isch abgschnitte, und ich cha nöd läse, ob es no gültig gsi isch."
+      }
+     ]
+    }
+   }
+  },
+  {
+   "family": "numbers",
+   "summary": "A six-digit value tied to an online-access confirmation screenshot is read out by the customer, classified here only as a number occurrence.",
+   "evidence": [
+    {
+     "segment_id": "T010",
+     "quote": "zwei, nüün, sechs, vier, acht, eins"
+    }
+   ],
+   "object_type": "other",
+   "conditions": {}
+  }
+ ],
+ "_meta": {
+  "profile": "claude_code",
+  "model": "claude-sonnet-5",
+  "prompt_version": "extract-1"
+ }
+}
