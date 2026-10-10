@@ -146,6 +146,11 @@ Limitations: it cannot detect a confidently mistranscribed negation or a correct
 | `callguard/evidence.py` | ✅ | ±10 s clips from the original WAV with the standard-library `wave` module |
 | `callguard/ui.py` | ✅ | Dashboard server + read-only API over cached results; audio with Range, clip download; keyword editor (add/edit/remove/enable/disable, validated, atomic save); Pending/Failed shown apart from Alarm/Review/No alert (`python3 -m callguard.ui`) |
 | `tests/test_ui.py` | ✅ | Clips, mapping to dashboard fields per threshold, server routes, path safety, keyword coverage/validation, no-model-call-on-preset-switch |
+| `callguard/counterfactual.py` | ✅ (step 9) | Deterministic "what would change this decision" explanations, re-applying `decide()`'s own rule |
+| `callguard/ingest.py` | ✅ (step 9) | Watches `data/Inbox/`: transcribe → extract → decide → report, no manual step at all (`python3 -m callguard.ingest`) |
+| `tools/snippets/` | ✅ (step 9) | Standalone, analysis-only estimate of keyword-prefilter recall; not wired into decisions |
+| `runpod/` | ✅ (step 9) | GPU deployment scripts for the self-hosted `qwen3`/`qwen3_fast` profiles; not yet run against the dataset |
+| `tests/test_counterfactual.py` | ✅ (step 9) | 13 tests: counterfactual rule equivalence, `ingest.py`, the Qwen3 router additions |
 | `PIPELINE_FLOW.md` | ✅ | Five mermaid diagrams for §4 above, kept current with the code (rendered and checked with mermaid-cli) |
 | `EVALUATION.md` | ✅ | The release report: current candidate vs. historical runs vs. hidden status; three-class confusion, unresolved and technical-failure counts, paired clean/noisy analysis, cache-qualified timing, configuration freeze, and a pending human audio/evidence audit. Family metrics are omitted until gold attribution semantics are documented. |
 
@@ -253,6 +258,41 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
 ### Extras: only after step 8 or when justified by metrics
 - **Trigger API** (`server.py`, `POST /triggers`) with clip links.
 - **Targeted verifier** for contradictory alarms; **targeted retranscription** of low-quality decisive segments; **diarization**; **cross-call patterns**; **notifications**.
+
+### Step 9: integrate `ep520/Solvent#2` (teammate PR, 2026-10-10) ✅
+- A teammate's PR ("Adding the snippets and running on runpod GPU") was reviewed and integrated on a new
+  branch `integrate/pr2-counterfactual-ingest`, from `dev`, per explicit instruction: keep the current
+  structure, bring in the incoming changes, do not touch `dev` directly.
+- **Real content, taken in:**
+  - `callguard/counterfactual.py` + hooks in `decide.py`/`ui.py`/`app.js`: deterministic counterfactual
+    explanations ("what would change this decision"), re-applying `decide()`'s own rule so they can
+    never disagree with the actual decision (`PIPELINE.md` §2.7).
+  - `callguard/ingest.py`: watched-folder automation (`data/Inbox/` → transcribe → extract → decide →
+    report), closing the README's "no manual step per call" requirement end to end, not just inside
+    `eval` (`PIPELINE.md` §2.8).
+  - `config/models.json` + `models.py`: self-hostable `qwen3`/`qwen3_fast`/`ollama_qwen3`/
+    `whisper_local` profiles, `<think>` stripping, `extra_body`, env-resolved model names, per-profile
+    temperature; `runpod/` deployment scripts (`PIPELINE.md` §2.5). **Not yet run against the dataset**:
+    the profiles exist, nobody has executed `eval --audio --require-self-hostable` against a live
+    deployment (step 8's "to evaluate").
+  - `tools/snippets/`: a standalone, analysis-only tool estimating keyword-prefilter recall; not wired
+    into the decision path.
+  - `tests/test_counterfactual.py` (13 tests, all green).
+- **Deliberately excluded**, per instruction to keep the current structure: the PR's `.gitignore` change
+  and its deletion of `data/Transkript`, `data/Transcriptions`, `data/Audio` (it stops tracking the case
+  data in git, "not ours to publish in a public repo" — a real concern, but not what was asked for here).
+  `data/` stays tracked exactly as on `dev`.
+- **Merge mechanics:** the merge-base (`709a017`) predates most of `dev`'s own recent work, so the PR's
+  branch shows as deleting ~34,000 lines when diffed naively — almost all of that is `data/` simply
+  missing on the PR's branch combined with the `.gitignore` change above, not a real conflict. The one
+  genuine three-way conflict was in `dashboard/app.js` (`dev`'s empty-conditions handling vs. the PR's
+  counterfactual panel in the same spot): resolved by keeping both. Verified: `git diff --stat dev` on
+  the integration branch shows 2,280 insertions, 5 deletions (all 5 inside `decide.py`'s rewritten
+  `return` statement, not data loss), and `data/` untouched. 131/132 tests pass; the one failure
+  (`test_build_data_never_calls_the_chat_model`, empty cache) reproduces identically on bare `dev`, so it
+  predates this integration.
+- **Not yet done:** push the branch (holding for explicit confirmation — pushing is a visible, shared
+  action); opening the PR against `dev`.
 
 ## 7. Known risks
 
