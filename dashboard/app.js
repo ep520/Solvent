@@ -183,6 +183,13 @@
     return output + escapeHtml(text.slice(cursor));
   }
 
+  function counterfactualMarkup(call) {
+    // XAI: counterfactuals computed by callguard/counterfactual.py with the same rule as the decision.
+    const items = live ? (call.counterfactualsByThreshold?.[state.threshold] || []) : [];
+    if (!items.length) return "";
+    return `<section id="whatif-section" class="detail-card facts-card"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What would change the decision</h3><p>Counterfactuals from the same decision rule</p></div></div></div><div class="condition-list">${items.map((item) => `<div class="condition"><span>${escapeHtml(item.kind === "condition" ? `If “${userConditionLabel(item.condition)}” were ${item.to === "Excluded" ? "excluded" : item.to === "Supported" ? "supported" : "unknown"} instead of ${item.from === "Excluded" ? "excluded" : item.from === "Supported" ? "supported" : "not established"}` : item.text)}</span><span class="badge badge-sm condition-state ${item.label === "Alarm" ? "unknown" : item.label === "No alert" ? "excluded" : "supported"}">${escapeHtml(item.label)}</span></div>`).join("")}</div></section>`;
+  }
+
   function conditionMarkup(condition) {
     const cls = condition.state.toLowerCase();
     const symbol = condition.state === "Supported" ? "✓" : condition.state === "Excluded" ? "—" : "?";
@@ -285,6 +292,7 @@
           <div class="audio-player secondary-audio"><button id="play-button" class="btn btn-ghost btn-xs play-button" type="button" aria-label="Play full recording" ${live ? "" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Full recording position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>Full recording · ${formatTime(call.duration)}</span></div></div></div>
         </section>
         <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.length ? call.conditions.map(conditionMarkup).join("") : `<p class="facts-empty">${escapeHtml(call.factsReason || "No policy facts are available for this result.")}</p>`}</div></section>
+        ${counterfactualMarkup(call)}
         <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
         <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
