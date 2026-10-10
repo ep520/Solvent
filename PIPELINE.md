@@ -251,30 +251,6 @@ dashboard. A file that fails any step is moved to `data/Inbox/failed/` with its 
 one bad recording cannot silently block the folder or disappear. `--once` processes what is there and
 exits (for `eval`-style batch use); without it, it polls every `--interval` seconds (default 5 s).
 
-### 2.9 Opt-in turn selection (`callguard/snippets_bridge.py`, `tools/snippets/`)
-
-**Off by default.** The normal path (step 2.2: the whole transcript, every time) is unchanged and is
-what every existing cache entry, test and fixture uses. `pipeline.py --snippets` instead sends the chat
-model only the turns a snippet covers, using `tools/snippets/snippets.py` (three finders: keywords,
-digit sequences, and configurable "cue" phrases in `tools/snippets/cues_general.json`; a fourth,
-optional, semantic finder compares turns against check definitions with a multilingual embedding model,
-`BAAI/bge-m3`, downloaded on first use). `snippets_bridge.py` converts between our segment shape and the
-tool's own `Turn`, and never imports the tool at module load time — `rapidfuzz` (the tool's own
-always-on dependency) and `sentence-transformers` (needed only for the semantic finder) are not
-dependencies of the core pipeline, and a missing one must degrade to the full transcript rather than
-fail the call (`SnippetsUnavailable`, caught in `pipeline.run_segments`).
-
-**Why opt-in, not the default:** PLAN.md's standing decision is that the LLM processes the entire
-transcript precisely because Stufe2/Stufe3 are deliberately keyword-free, and an upstream filter risks
-dropping exactly the cases the challenge is testing. Checked on 2026-10-10, cues only, **no semantic
-finder, no model downloaded**: on the three keyword-free dialogues (`Stufe2_C06`, `Stufe2_C09`,
-`Stufe3_C19`), every expected evidence turn survived the filter while keeping only 21–32% of the call's
-text (`test_keyword_free_cases_still_keep_the_expected_evidence_turns`). That is encouraging, not a
-clearance: it is three dialogues out of the dataset's many context-only cases, with the semantic finder
-switched off and no `checks.json` written yet (`--snippets-checks` controls it; without it the semantic
-finder never runs, so `semantic=bge-m3` alone cannot trigger a download). Measure with `eval --snippets
---smoke` and the full set before trusting this on anything not already checked here.
-
 ## 3. Results
 
 Full numbers, confusion matrix, latency, caveats and the evidence audit are in
@@ -322,7 +298,6 @@ python3 -m callguard.ui                                # dashboard on http://127
 | `test_ui.py` | clips, mapping to dashboard fields (including deterministic supported/excluded fact reasons), server routes, Range requests, path safety, keyword and policy CRUD validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes never change one |
 | `test_evaluation.py` | three-class metrics, unresolved/failure accounting, dataset contract, manifest identity, and the release-result envelope / legacy-reader compatibility |
 | `test_counterfactual.py` | counterfactual rule equivalence with `decide.py`, which fact a review names as decisive, threshold counterfactuals; `callguard.ingest` (processed/moved, quarantine on failure, trigger payload); the Qwen3/local-model router additions (`<think>` stripping, `extra_body`, env-resolved model name, self-hostable profiles) |
-| `test_snippets_bridge.py` | `--snippets` filtering keeps a strict, order-preserving, unmodified subset of segments; the default (no flag) path sends the full transcript unchanged; `semantic="off"` never imports `sentence_transformers`; the three keyword-free cases keep their expected evidence turns; a missing `rapidfuzz` degrades to the full transcript rather than failing the call. Needs `rapidfuzz`: skipped, not failed, when it is absent (two dependency-free tests always run) |
 
 Mutation checks confirmed the policy tests fail when a condition is removed, when "undetermined" is
 treated as no alert, or when the threshold is broken.
@@ -347,10 +322,6 @@ treated as no alert, or when the threshold is broken.
 - [x] Self-hosted chat profiles ready to use: Qwen3 Thinking and a fast hybrid variant on vLLM, plus
       Ollama for laptop development, with RunPod deployment scripts (§2.5).
 - [x] Bank-configurable checks: each family can be switched off in `policies.json` without code (§2.2).
-- [x] Opt-in turn selection wired into the real pipeline (`pipeline.py --snippets`), not just the
-      standalone tool: default path unchanged, verified end to end with a mocked extraction call, and
-      the three known keyword-free cases keep their expected evidence turns with cues only (no model
-      downloaded) (§2.9).
 - [x] Every `eval` run freezes what produced it into `manifest.json` — model, profile, self-hostability,
       prompt/policies versions and hashes, thresholds — plus per-call `elapsed_s` timing.
 
@@ -374,15 +345,9 @@ treated as no alert, or when the threshold is broken.
       `qwen3_fast` deployment (`runpod/setup.sh`): the profiles and the router support exist (§2.5), but
       nobody has run them against the dataset yet. Until then the self-hosted path is untested, not just
       unmeasured.
-- [ ] Run `eval --snippets --smoke` then a full `eval --snippets` (cues only, still `semantic=off`) on
-      all 21 dialogues: §2.9 only checked 3 of them so far, by hand, against expected evidence turns —
-      not accuracy/false-alarm numbers, and not yet in the logged results (section 3).
-- [ ] Write a `checks.json` and measure the semantic finder (`--snippets-semantic bge-m3
-      --snippets-checks ...`) once `sentence-transformers` and the `BAAI/bge-m3` download are actually
-      wanted: compare against cues-only on recall of the expected evidence turns, not just on how much
-      text it keeps.
 - [ ] Independently check `tools/snippets/`'s own claim (95% evidence recall with general cues vs 33%
-      random): the number itself has not been re-derived outside that tool.
+      random): it is analysis-only today, not wired into the decision path, so this does not need to
+      block anything, but the number itself has not been re-derived outside that tool.
 
 **To evaluate**
 - **Generalisation.** 42/42 is measured on the development set, and prompt and predicate rules were

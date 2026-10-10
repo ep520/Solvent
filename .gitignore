@@ -6,4 +6,3 @@ cache/
 runs/
 .env
 .playwright-mcp/
-.venv-test/

@@ -24,7 +24,6 @@ from callguard import decide as dec
 from callguard import evidence
 from callguard import extract as ex
 from callguard import models
-from callguard import snippets_bridge
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -47,7 +46,7 @@ def audio_segments(wav, profile=None):
             {"asr_elapsed_s": round(time.perf_counter() - started, 3), "asr_cache_hit": cached})
 
 
-def run_audio(wav, policies, keywords, profile=None, threshold=None, snippets=None, **_):
+def run_audio(wav, policies, keywords, profile=None, threshold=None, **_):
     call = Path(wav).stem
     try:
         segments, timing = audio_segments(wav, profile=profile)
@@ -60,32 +59,18 @@ def run_audio(wav, policies, keywords, profile=None, threshold=None, snippets=No
                                                         "asr_cache_hit": None, "extract_cache_hit": None,
                                                         "decision_elapsed_s": None, "total_elapsed_s": None}}, [])
     return run_segments(call, str(Path(wav)), segments, policies, keywords, profile, threshold,
-                        speakers=False, audio=True, stage_timing=timing, snippets=snippets)
+                        speakers=False, audio=True, stage_timing=timing)
 
 
-def run_text(path, policies, keywords, speakers=True, profile=None, threshold=None, snippets=None):
+def run_text(path, policies, keywords, speakers=True, profile=None, threshold=None):
     segments = ex.segments_from_transcript(path, speakers=speakers)
     return run_segments(Path(path).stem, str(Path(path)), segments, policies, keywords, profile, threshold,
-                        speakers=speakers, audio=False, snippets=snippets)
+                        speakers=speakers, audio=False)
 
 
-def run_segments(call, source, segments, policies, keywords, profile, threshold, speakers, audio,
-                 stage_timing=None, snippets=None):
+def run_segments(call, source, segments, policies, keywords, profile, threshold, speakers, audio, stage_timing=None):
     started = time.perf_counter()
     stage_timing = dict(stage_timing or {})
-    if snippets:
-        # Opt-in only (pipeline --snippets): send the chat model only the turns a snippet covers,
-        # instead of the whole call. See callguard/snippets_bridge.py for why this defaults to off.
-        full_segment_count = len(segments)
-        try:
-            segments, snippet_report = snippets_bridge.select_snippets(
-                segments, snippets["keywords_path"], semantic=snippets.get("semantic", "off"),
-                checks=snippets.get("checks"), cues=snippets.get("cues"))
-            stage_timing["snippets"] = {**snippet_report["stats"], "full_segments": full_segment_count}
-        except snippets_bridge.SnippetsUnavailable as e:
-            # Fall back to the whole transcript rather than failing the call outright: a missing
-            # optional dependency should degrade to the normal path, not stop a compliance decision.
-            stage_timing["snippets"] = {"error": str(e), "full_segments": full_segment_count, "kept_turns": full_segment_count}
     try:
         extraction, extract_cached = ex.extract(segments, policies, profile=profile, return_cache_status=True)
         error = None
@@ -714,14 +699,6 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=1, help="calls evaluated in parallel")
     ap.add_argument("--policies", default=ROOT / "config" / "policies.json")
     ap.add_argument("--keywords", default=DATA / "Stichwortliste.json")
-    ap.add_argument("--snippets", action="store_true",
-                    help="OFF BY DEFAULT: send the chat model only the turns a snippet covers "
-                         "(tools/snippets), not the whole call. See callguard/snippets_bridge.py.")
-    ap.add_argument("--snippets-semantic", choices=("off", "tfidf", "bge-m3"), default="off",
-                    help="snippet semantic finder; 'bge-m3' downloads a model on first use (needs --snippets-checks)")
-    ap.add_argument("--snippets-cues", default=ROOT / "tools" / "snippets" / "cues_general.json",
-                    help="cue rules for --snippets; set to '' to disable")
-    ap.add_argument("--snippets-checks", help="checks.json for the semantic finder; unset disables it")
     args = ap.parse_args(argv)
     policies, keywords = ex.load_json(args.policies), ex.load_json(args.keywords)
     try:
@@ -730,11 +707,7 @@ def main(argv=None):
             models.check("asr", require_self_hostable=True)
     except models.ModelError as e:
         sys.exit(f"model not configured: {e}")
-    snippet_opts = None
-    if args.snippets:
-        snippet_opts = {"keywords_path": args.keywords, "semantic": args.snippets_semantic,
-                        "cues": args.snippets_cues or None, "checks": args.snippets_checks}
-    opts = dict(speakers=not args.no_speakers, profile=args.profile, threshold=args.threshold, snippets=snippet_opts)
+    opts = dict(speakers=not args.no_speakers, profile=args.profile, threshold=args.threshold)
 
     if args.command == "freeze":
         p = models.check("chat", args.profile)
