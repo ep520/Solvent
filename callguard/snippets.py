@@ -585,7 +585,7 @@ def extract(transcript, keywords, checks=None, semantic="bge-m3", embedder=None,
 
 CONFIG_PATH = ROOT / "config" / "snippets.json"
 DEFAULTS = {"enabled": True, "cues": "cues_general.json", "fuzzy": True, "max_snippets": 12,
-            "if_no_snippets": "full_transcript"}
+            "if_no_snippets": "full_transcript", "model_input": "snippets"}
 
 
 def load_config(path=CONFIG_PATH):

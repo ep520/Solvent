@@ -5,27 +5,34 @@
   python3 -m callguard.pipeline audio data/Audio/Stufe1_D02-K1.wav
   python3 -m callguard.pipeline eval --audio [--only C09 | --smoke]
   python3 -m callguard.pipeline freeze [--no-speakers]   # cached extractions -> tests/fixtures/replay
-  python3 -m callguard.pipeline prepare [--only C09] [--workers 4]   # every WAV -> transcript + decision for the dashboard
 """
 import argparse
+import csv
 import hashlib
+import io
 import json
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from callguard import asr
 from callguard import decide as dec
+from callguard import evidence
 from callguard import extract as ex
+from callguard import human_feedback
 from callguard import models
+from callguard import storage
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 LABELS = ("alarm", "review", "no_alert")
+STATES = ("true", "false", "unknown")
+CANONICAL_RESULT_SCHEMA_VERSION = "callguard.canonical-result.v1"
 SMOKE = ("Stufe1_D02", "Stufe1_D03", "Stufe2_C09", "Stufe2_C10", "Stufe3_C17")
 
 
@@ -36,13 +43,28 @@ def script_name(call):
 
 def audio_segments(wav, profile=None):
     """Whisper segments for a WAV (hash-cached by callguard.asr); Whisper has no speakers, so none are shown."""
-    transcript, _ = asr.transcribe(wav, profile=profile)
-    return [{**s, "speaker": None} for s in transcript["segments"]]
+    started = time.perf_counter()
+    transcript, cached = asr.transcribe(wav, profile=profile)
+    segments, corrected = human_feedback.apply_corrections(Path(wav).stem, transcript["segments"])
+    return ([{**s, "speaker": None} for s in segments],
+            {"asr_elapsed_s": round(time.perf_counter() - started, 3), "asr_cache_hit": cached,
+             "transcript_corrections": corrected})
 
 
 def run_audio(wav, policies, keywords, profile=None, threshold=None, **_):
-    return run_segments(Path(wav).stem, str(Path(wav)), audio_segments(wav), policies, keywords, profile, threshold,
-                        speakers=False, audio=True)
+    call = Path(wav).stem
+    try:
+        segments, timing = audio_segments(wav, profile=profile)
+    except Exception as error:
+        # No transcript means no decision is possible.  Do not silently call it no_alert or manufacture
+        # a policy review: evaluation records this explicitly as unresolved ASR failure.
+        return ({"call": call, "source": str(Path(wav)), "speakers": False, "audio": True,
+                 "status": "failed", "label": None, "reasons": ["asr_failure"], "error": str(error),
+                 "keyword_hits": [], "_evaluation": {"asr_failure": True, "asr_elapsed_s": None,
+                                                        "asr_cache_hit": None, "extract_cache_hit": None,
+                                                        "decision_elapsed_s": None, "total_elapsed_s": None}}, [])
+    return run_segments(call, str(Path(wav)), segments, policies, keywords, profile, threshold,
+                        speakers=False, audio=True, stage_timing=timing)
 
 
 def run_text(path, policies, keywords, speakers=True, profile=None, threshold=None):
@@ -51,15 +73,33 @@ def run_text(path, policies, keywords, speakers=True, profile=None, threshold=No
                         speakers=speakers, audio=False)
 
 
-def run_segments(call, source, segments, policies, keywords, profile, threshold, speakers, audio):
-    view = ex.input_view(segments, policies, keywords)        # snippets or full transcript (config/snippets.json)
+def run_segments(call, source, segments, policies, keywords, profile, threshold, speakers, audio, stage_timing=None):
+    started = time.perf_counter()
+    stage_timing = dict(stage_timing or {})
+    highlights = ex.input_view(segments, policies, keywords)  # snippets: shown in the dashboard in every mode
+    view = ex.model_view(highlights)                          # and read by the model when model_input = snippets
     try:
-        extraction, error = ex.extract(segments, policies, profile=profile, view=view), None
+        extraction, extract_cached = ex.extract(segments, policies, profile=profile, view=view, return_cache_status=True,
+                                                feedback_exclude_call=call)
+        error = None
     except models.ModelError as e:
-        extraction, error = {}, e
+        extraction, error, extract_cached = {}, e, None
+    decision_started = time.perf_counter()
     result = dec.decide(extraction, segments, policies, threshold=threshold, error=error)
     result.update(call=call, source=source, speakers=speakers, audio=audio,
-                  keyword_hits=ex.keyword_hits(segments, keywords), input=view)
+                  keyword_hits=ex.keyword_hits(segments, keywords),
+                  input=view or {"mode": "full_transcript",
+                                 "reason": "config/snippets.json model_input = full_transcript (baseline)"},
+                  highlights=highlights)
+    stage_timing.update({"asr_failure": False, "extract_cache_hit": extract_cached,
+                         # A value stored in an old cache records that old model call, not this run's latency.
+                         "extract_elapsed_s": extraction.get("_meta", {}).get("elapsed_s") if extraction and not extract_cached else None,
+                         "decision_elapsed_s": round(time.perf_counter() - decision_started, 6),
+                         "total_elapsed_s": round(time.perf_counter() - started, 6)})
+    if error is None:
+        stage_timing["threshold_labels"] = {name: dec.decide(extraction, segments, policies, threshold=value)["label"]
+                                             for name, value in policies["escalation"]["presets"].items()}
+    result["_evaluation"] = stage_timing
     return result, segments
 
 
@@ -69,12 +109,397 @@ def cited_segments(result):
     return {sid for r in refs for sid in r["segment_ids"]}
 
 
-def gold(call):
-    """Expected assessment from Skript_mit_Sollbewertung; used only for scoring, never as input."""
-    text = (DATA / "Skript_mit_Sollbewertung" / f"{call}.txt").read_text(encoding="utf-8")
-    field = lambda name: re.search(rf"^{name}: (.+)$", text, re.M).group(1).strip()
-    return {"label": field("Bearbeitung"), "family": field("Testziel"), "event": field("Ereignis"),
-            "evidence": re.findall(r"T\d{3}", field("Prüfpräfix bis T\\d{3}; Belege"))}
+def _evidence_refs(result):
+    """Yield canonical evidence objects in a result, once each by object identity."""
+    seen = set()
+    for event in result.get("events", []):
+        refs = [ref for condition in event.get("conditions", {}).values()
+                for ref in condition.get("evidence", [])]
+        refs += event.get("evidence", [])
+        for ref in refs:
+            if id(ref) not in seen:
+                seen.add(id(ref))
+                yield ref
+
+
+def _relative_path_or_original(path):
+    """Keep release JSON portable when its input happens to be outside the repository."""
+    if path is None:
+        return None
+    path = Path(path)
+    try:
+        return str(path.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _review_uncertainty(result):
+    """Classify uncertainty already produced by the deterministic decision, without re-deciding."""
+    missing_facts, grounding, extraction = [], [], []
+    for event in result.get("events", []):
+        if event.get("reason") in ("missing_policy_fact", "actor_role_unknown"):
+            missing_facts += event.get("open_questions", [])
+        for condition in event.get("conditions", {}).values():
+            grounding += condition.get("grounding_issues", [])
+            if condition.get("downgraded"):
+                extraction.append("condition downgraded because no valid grounded evidence was available")
+    if result.get("error"):
+        extraction.append(str(result["error"]))
+    return {
+        "missing_call_facts": list(dict.fromkeys(missing_facts)),
+        "technical": {
+            "extraction_or_schema": list(dict.fromkeys(extraction)),
+            "grounding": list(dict.fromkeys(grounding)),
+            "provider": [str(result["error"])] if result.get("error") else [],
+        },
+    }
+
+
+def _evaluated_rules(result, policies):
+    """Expose stable policy IDs for facts already evaluated in each canonical event.
+
+    These are derived from the policy keys and canonical condition states.  They are
+    not model output and do not change how an event is labelled.
+    """
+    evaluated, alarm_generating = [], []
+    for event_index, event in enumerate(result.get("events", [])):
+        family = event.get("family")
+        family_policy = policies.get("families", {}).get(family, {})
+        can_alarm = bool(family_policy.get("can_alarm", True))
+        family_rule_id = f"policy.{family}"
+        decision = {"rule_id": family_rule_id, "event_index": event_index,
+                    "kind": "family_decision", "outcome": event.get("label"),
+                    "alarm_capable": can_alarm,
+                    "generates_alarm": bool(can_alarm and event.get("label") == "alarm")}
+        evaluated.append(decision)
+        if decision["generates_alarm"]:
+            alarm_generating.append({"rule_id": family_rule_id, "event_index": event_index})
+        for condition_name, condition in event.get("conditions", {}).items():
+            evaluated.append({"rule_id": f"policy.{family}.{condition_name}", "event_index": event_index,
+                              "kind": "condition", "outcome": condition.get("state"),
+                              "alarm_role": "required_condition" if can_alarm else "classification_only"})
+    return evaluated, alarm_generating
+
+
+def _readable_explanation(result):
+    """A deterministic, human-readable summary of the canonical event output."""
+    events = sorted(result.get("events", []), key=lambda event: dec.LABEL_RANK.get(event.get("label"), -1), reverse=True)
+    if result.get("error"):
+        return "A technical problem prevented a complete extraction; the result remains review."
+    if not events:
+        return "No candidate event was available for a policy decision."
+    event = events[0]
+    return f"{event.get('title', event.get('family', 'Policy event'))}. {event.get('summary', '')}".strip()
+
+
+def _decision_event(result, label=None):
+    """Return the highest-priority event relevant to the final decision.
+
+    A call can contain several candidate events.  The rationale must point at
+    the event that determined the call label, rather than narrating every
+    extracted fact or relying on their extraction order.
+    """
+    label = result.get("label") if label is None else label
+    candidates = [(index, event) for index, event in enumerate(result.get("events", []))
+                  if event.get("label") == label]
+    return candidates[0] if candidates else (None, None)
+
+
+def _rationale_condition_refs(event_index, event, states, evidence_role):
+    """Point at facts already present in the canonical event; never copy them."""
+    refs, evidence = [], []
+    for name, condition in (event or {}).get("conditions", {}).items():
+        if condition.get("state") not in states:
+            continue
+        refs.append({"rule_id": f"policy.{event.get('family')}.{name}", "state": condition.get("state")})
+        for ref in condition.get("evidence", []):
+            evidence.append({"event_index": event_index, "condition": name,
+                             "segment_ids": ref.get("segment_ids", []),
+                             "start": ref.get("start"), "end": ref.get("end"), "role": evidence_role})
+    return refs, evidence
+
+
+def _rationale(result, policies):
+    """Make a short post-decision rationale from existing rule output only.
+
+    This deliberately runs *after* ``decide``.  It does not change a rule,
+    infer a fact, create evidence, or call an LLM.  The text is a short
+    rendering; ``conditions`` and ``evidence`` are references to the actual
+    grounded facts kept in ``events``.
+    """
+    label = result.get("label")
+    reason_codes = list(dict.fromkeys(result.get("reasons", [])))
+    event_index, event = _decision_event(result)
+    base = {"text": None, "template": None, "reason_codes": reason_codes,
+            "event_index": event_index, "conditions": [], "evidence": []}
+
+    if label == "alarm" and event:
+        conditions, refs = _rationale_condition_refs(event_index, event, {"true"}, "supports_condition")
+        return {**base, "template": "alarm_supported_conditions",
+                "text": "Alarm: all required conditions are supported by grounded evidence.",
+                "conditions": conditions, "evidence": refs}
+
+    if label == "no_alert":
+        if not event:
+            return {**base, "template": "no_alert_no_candidate_event",
+                    "text": "No alert: no candidate event was detected for an enabled policy."}
+        conditions, refs = _rationale_condition_refs(event_index, event, {"false"}, "excludes_condition")
+        if conditions:
+            return {**base, "template": "no_alert_required_condition_excluded",
+                    "text": "No alert: a required condition is explicitly excluded by grounded evidence.",
+                    "conditions": conditions, "evidence": refs}
+        family_policy = policies.get("families", {}).get(event.get("family"), {})
+        if not event.get("conditions") and not family_policy.get("can_alarm", True):
+            return {**base, "template": "no_alert_classification_only",
+                    "text": "No alert: the detected event is classification-only and cannot raise an alarm."}
+        return {**base, "template": "no_alert_no_decisive_condition",
+                "text": "No alert: no alarm-generating condition was established."}
+
+    if label == "review":
+        event_reason = event.get("reason") if event else None
+        codes = list(dict.fromkeys(reason_codes + ([event_reason] if event_reason else [])))
+        base["reason_codes"] = codes
+        technical = (bool(result.get("error")) or "technical_uncertainty" in codes or
+                     "below_escalation_threshold" in codes)
+        if technical:
+            conditions, refs = _rationale_condition_refs(event_index, event, {"unknown"}, "relevant_context")
+            if "below_escalation_threshold" in codes:
+                text, template = ("Review: grounded evidence is below the ASR-quality escalation threshold.",
+                                  "review_asr_quality_threshold")
+            else:
+                text, template = ("Review: a technical problem prevents a reliable decision.",
+                                  "review_technical_blocker")
+            return {**base, "template": template, "text": text,
+                    "conditions": conditions, "evidence": refs}
+        conditions, refs = _rationale_condition_refs(event_index, event, {"unknown"}, "relevant_context")
+        if "actor_role_unknown" in codes:
+            text, template = ("Review: the required speaker role is not established.",
+                              "review_missing_actor_role")
+        else:
+            text, template = ("Review: a required fact is not established in the call.",
+                              "review_missing_required_fact")
+        return {**base, "template": template, "text": text,
+                "conditions": conditions, "evidence": refs}
+
+    # An unresolved ASR failure has no three-class label, but a release result
+    # still needs a truthful rationale instead of a fabricated no-alert.
+    return {**base, "template": "unresolved_technical_failure",
+            "text": "No decision: a technical failure prevented a final result."}
+
+
+def augment_canonical_result(result, policies, run_id, recording=None, recording_duration_s=None):
+    """Add release traceability to a canonical result without modifying its decision fields.
+
+    New fields are deliberately derived after decision-making: old cached results
+    remain readable, and this function neither calls a model nor changes a label.
+    """
+    recording = recording or {}
+    result["schema_version"] = CANONICAL_RESULT_SCHEMA_VERSION
+    # Keep the historical plural spelling as-is and add the requested singular alias.
+    result["policy_version"] = result.get("policies_version", policies.get("version"))
+    result["run_id"] = run_id
+    result["recording"] = {
+        "id": recording.get("recording_id", result.get("call")),
+        "sha256": recording.get("audio_hash"),
+        "path": recording.get("audio_path", _relative_path_or_original(result.get("source"))),
+        "duration_s": recording_duration_s,
+    }
+    evaluated, alarm_generating = _evaluated_rules(result, policies)
+    result["evaluated_rules"] = evaluated
+    result["alarm_generating_rules"] = alarm_generating
+    result["uncertainty"] = _review_uncertainty(result)
+    result["explanation"] = {
+        "text": _readable_explanation(result),
+        "open_questions": result["uncertainty"]["missing_call_facts"],
+        "review_reasons": list(result.get("reasons", [])),
+    }
+    result["rationale"] = _rationale(result, policies)
+    result["asr_quality"] = {
+        "interpretation": "uncalibrated ASR transcription-quality heuristic; not a fraud probability",
+        "threshold": result.get("threshold"),
+        "unavailable_is_null": True,
+    }
+    for ref in _evidence_refs(result):
+        start, end = ref.get("start"), ref.get("end")
+        if recording_duration_s is not None and isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            clip_start, clip_end = evidence.window(start, end, recording_duration_s)
+            ref["clip_start"] = clip_start
+            ref["clip_end"] = clip_end
+    return result
+
+
+def validate_canonical_result(result, release=False):
+    """Validate the stable core; `release=True` additionally requires new traceability fields.
+
+    The default accepts pre-schema cache artefacts, so readers can continue to
+    consume historic results.  This is deliberately a small validator for data
+    emitted by this repository, not a replacement for the LLM extraction schema.
+    """
+    if result.get("label") not in LABELS and result.get("label") is not None:
+        raise ValueError("result label must be alarm, review, no_alert or null")
+    if not isinstance(result.get("events", []), list):
+        raise ValueError("result events must be a list")
+    for event in result.get("events", []):
+        if event.get("label") not in LABELS:
+            raise ValueError("event label must be a supported classification")
+        if not isinstance(event.get("conditions", {}), dict):
+            raise ValueError("event conditions must be an object")
+        for condition in event["conditions"].values():
+            if condition.get("state") not in STATES:
+                raise ValueError("condition state must be true, false or unknown")
+            for ref in condition.get("evidence", []):
+                _validate_evidence_ref(ref)
+        for ref in event.get("evidence", []):
+            _validate_evidence_ref(ref)
+    if release:
+        if result.get("schema_version") != CANONICAL_RESULT_SCHEMA_VERSION:
+            raise ValueError("release result has an unsupported schema_version")
+        if not isinstance(result.get("run_id"), str) or not result["run_id"]:
+            raise ValueError("release result needs a run_id")
+        if not isinstance(result.get("recording"), dict) or not result["recording"].get("id"):
+            raise ValueError("release result needs recording traceability")
+        if result.get("policy_version") is None:
+            raise ValueError("release result needs a policy_version")
+        rationale = result.get("rationale")
+        required_rationale_fields = {"text", "template", "reason_codes", "event_index", "conditions", "evidence"}
+        if not isinstance(rationale, dict) or not required_rationale_fields <= rationale.keys():
+            raise ValueError("release result needs a complete deterministic rationale")
+        if not isinstance(rationale["text"], str) or not rationale["text"]:
+            raise ValueError("rationale text must be a non-empty template result")
+        if not isinstance(rationale["template"], str) or not rationale["template"]:
+            raise ValueError("rationale template must be named")
+        if not all(isinstance(code, str) for code in rationale["reason_codes"]):
+            raise ValueError("rationale reason_codes must be strings")
+        if rationale["event_index"] is not None and (not isinstance(rationale["event_index"], int) or
+                                                      not 0 <= rationale["event_index"] < len(result["events"])):
+            raise ValueError("rationale event_index must refer to an event or be null")
+        if not isinstance(rationale["conditions"], list) or not isinstance(rationale["evidence"], list):
+            raise ValueError("rationale conditions and evidence must be lists")
+        if any(not isinstance(ref, dict) or
+               ref.get("role") not in {"supports_condition", "excludes_condition", "relevant_context"}
+               for ref in rationale["evidence"]):
+            raise ValueError("rationale evidence references must name their role")
+    return True
+
+
+def _validate_evidence_ref(ref):
+    if not isinstance(ref, dict) or not isinstance(ref.get("segment_ids"), list) or not ref["segment_ids"]:
+        raise ValueError("evidence needs one or more segment_ids")
+    if any(not isinstance(segment_id, str) or not segment_id for segment_id in ref["segment_ids"]):
+        raise ValueError("evidence segment_ids must be non-empty strings")
+    start, end = ref.get("start"), ref.get("end")
+    if start is not None and end is not None and (not isinstance(start, (int, float)) or not isinstance(end, (int, float)) or start < 0 or end < start):
+        raise ValueError("evidence timestamps must be an ordered non-negative range")
+    if "clip_start" in ref or "clip_end" in ref:
+        clip_start, clip_end = ref.get("clip_start"), ref.get("clip_end")
+        if not all(isinstance(value, (int, float)) for value in (clip_start, clip_end)) or clip_start < 0 or clip_end < clip_start:
+            raise ValueError("evidence clip bounds must be an ordered non-negative range")
+        if start is not None and (clip_start > start or clip_end < end):
+            raise ValueError("evidence clip bounds must contain the cited timestamp range")
+
+
+def gold(call, folder=None):
+    """Expected assessment from Skript_mit_Sollbewertung; used only for scoring, never as input.
+
+    Two official formats: C/D files ("Testziel:", "Ereignis:", "Prüfpräfix bis T032; Belege: T006, T032")
+    and M files ("Aufgabe:", "Ergebnis:", an indented "Belegstellen laut Skript:" block). Both have
+    "Bearbeitung:"; a missing optional field is reported as None instead of failing."""
+    text = (Path(folder or DATA / "Skript_mit_Sollbewertung") / f"{call}.txt").read_text(encoding="utf-8")
+
+    def field(name):
+        m = re.search(rf"^{name}:[ \t]*(.+)$", text, re.M)
+        return m.group(1).strip() if m else None
+
+    label = field("Bearbeitung")
+    if label is None:
+        raise ValueError(f"{call}: no 'Bearbeitung:' line")
+    belege = re.search(r"^Prüfpräfix bis T\d{3}; Belege:[ \t]*(.+)$", text, re.M)
+    if belege:
+        evidence = re.findall(r"T\d{3}", belege.group(1))
+    else:                                            # M files: one indented line per cited turn
+        block = re.search(r"^Belegstellen laut Skript:[ \t]*\n((?:[ \t]+.*\n?)+)", text, re.M)
+        evidence = re.findall(r"^[ \t]+(T\d{3})", block.group(1), re.M) if block else []
+    return {"label": label, "family": field("Testziel"), "event": field("Ereignis") or field("Ergebnis"),
+            "evidence": evidence}
+
+
+def recording_variant(recording_id):
+    """Dataset convention only; never used by inference."""
+    stem = Path(recording_id).stem
+    if not re.search(r"-K\d$", stem):
+        return "human"          # a single human recording (M files), not part of a clean/noisy pair
+    return {"K1": "clean", "K3": "clean", "K2": "noisy", "K4": "noisy"}.get(stem.rsplit("-", 1)[-1], "unknown")
+
+
+def dataset_contract(audio_paths=None):
+    """Build and validate the minimum release contract from supplied files and gold scripts.
+
+    Gold lives in the supplied ``Skript_mit_Sollbewertung`` files.  This function is called only after
+    inference, for scoring and release artefacts; it never supplies semantic content to extraction.
+    """
+    audio_paths = list(audio_paths or sorted((DATA / "Audio").glob("*.wav")))
+    scripts = {p.stem: p for p in (DATA / "Skript_mit_Sollbewertung").glob("*.txt")}
+    records, issues, seen = [], [], set()
+    for audio_path in audio_paths:
+        recording_id = audio_path.stem
+        dialogue_id = script_name(recording_id)
+        if recording_id in seen:
+            issues.append(f"duplicate recording_id: {recording_id}")
+            continue
+        seen.add(recording_id)
+        if dialogue_id not in scripts:
+            issues.append(f"{recording_id}: no gold script for dialogue {dialogue_id}")
+            continue
+        try:
+            expected = gold(dialogue_id)
+        except (AttributeError, OSError, ValueError) as error:
+            issues.append(f"{recording_id}: unreadable gold: {error}")
+            continue
+        if expected["label"] not in LABELS:
+            issues.append(f"{recording_id}: invalid gold label {expected['label']!r}")
+            continue
+        records.append({"recording_id": recording_id, "dialogue_id": dialogue_id,
+                        "audio_path": str(audio_path.relative_to(ROOT)), "audio_hash": asr.sha256(audio_path),
+                        "variant": recording_variant(recording_id), "split": "development",
+                        "gold_label": expected["label"],
+                        "gold_source": str(scripts[dialogue_id].relative_to(ROOT)),
+                        # Present in the supplied gold file; do not infer meanings for its R/M identifiers.
+                        "family": expected["family"], "gold_event": expected["event"],
+                        "gold_evidence": expected["evidence"]})
+    by_dialogue = {}
+    for record in records:
+        by_dialogue.setdefault(record["dialogue_id"], []).append(record)
+    for dialogue_id, pair in by_dialogue.items():
+        labels = {r["gold_label"] for r in pair}
+        variants = [r["variant"] for r in pair]
+        if len(labels) != 1:
+            issues.append(f"{dialogue_id}: gold labels disagree across recordings")
+        if variants == ["human"]:
+            continue            # human recordings are evaluated singly
+        if len(pair) != 2 or sorted(variants) != ["clean", "noisy"]:
+            issues.append(f"{dialogue_id}: expected one clean/noisy pair, found {variants}")
+    return records, issues
+
+
+def nullable_ratio(numerator, denominator):
+    return {"numerator": numerator, "denominator": denominator,
+            "value": round(numerator / denominator, 6) if denominator else None}
+
+
+def percentile(values, p):
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = (len(ordered) - 1) * p
+    low, high = int(index), min(int(index) + 1, len(ordered) - 1)
+    return round(ordered[low] + (ordered[high] - ordered[low]) * (index - low), 3)
+
+
+def time_summary(values):
+    values = [v for v in values if isinstance(v, (int, float))]
+    return {"n": len(values), "mean_s": round(statistics.mean(values), 3) if values else None,
+            "median_s": round(statistics.median(values), 3) if values else None,
+            "p95_s": percentile(values, .95)}
 
 
 def file_sha256(path):
@@ -90,20 +515,48 @@ def git_commit():
         return None
 
 
-def run_manifest(args, policies, keywords, chat_profile, asr_profile=None):
+def git_dirty():
+    try:
+        return bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
+                                   text=True, timeout=5, check=True).stdout.strip())
+    except Exception:
+        return None
+
+
+def source_hashes():
+    files = ("callguard/pipeline.py", "callguard/extract.py", "callguard/decide.py", "callguard/asr.py",
+             "callguard/models.py", "callguard/storage.py", "callguard/human_feedback.py", "config/models.json")
+    return {name: file_sha256(ROOT / name) for name in files if (ROOT / name).is_file()}
+
+
+def run_manifest(args, policies, keywords, chat_profile, asr_profile=None, contract=None, started_at=None,
+                 finished_at=None, wall_clock_s=None, run_id=None):
     """What produced this run: model, prompt/schema/policy versions and hashes, thresholds, compliance flags.
 
     Freezing this alongside a run's results is what makes the run reproducible and auditable: anyone can
     check, after the fact, exactly which endpoint, prompt and configuration a given alarm came from."""
     return {
+        "run_id": run_id,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "git_commit": git_commit(),
+        "run_started_at": started_at,
+        "run_finished_at": finished_at,
+        "batch_wall_clock_s": wall_clock_s,
+        "code": {"git_commit": git_commit(), "dirty": git_dirty(), "source_sha256": source_hashes()},
         "mode": "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers",
         "chat": {"profile": chat_profile["name"], "model": chat_profile["model"],
-                "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION},
-        "model_input": {**ex.snippets.load_config(), "engine": ex.snippets.VERSION},
+                "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION,
+                "api": chat_profile.get("api"), "generation": {
+                    "temperature": chat_profile.get("temperature", 0), "seed": chat_profile.get("seed", 7),
+                    **({"extra_body": chat_profile["extra_body"]} if chat_profile.get("extra_body") else {}),
+                    **{k: chat_profile.get(k) for k in
+                       ("max_output_tokens", "json_mode", "strict_schema", "timeout", "retries", "parse_retries") if k in chat_profile}}},
+        "model_input": {"strategy": ex.snippets.load_config().get("model_input", "snippets"), "snippet_engine": ex.snippets.VERSION,
+                        "snippet_config": ex.snippets.load_config(),
+                        "switch": "config/snippets.json model_input: snippets | full_transcript"},
         "asr": ({"profile": asr_profile["name"], "model": asr_profile.get("asr_model"),
-                "self_hostable": bool(asr_profile.get("self_hostable"))} if asr_profile else None),
+                "self_hostable": bool(asr_profile.get("self_hostable")), "api": asr_profile.get("api"),
+                "generation": {k: asr_profile.get(k) for k in ("timeout", "retries", "retry_backoff") if k in asr_profile}}
+                if asr_profile else None),
         "policies": {"version": policies.get("version"), "sha256": file_sha256(args.policies),
                     "escalation_presets": policies["escalation"]["presets"],
                     "default_preset": policies["escalation"]["default_preset"],
@@ -111,37 +564,89 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None):
                     "disabled_families": [name for name, fam in policies["families"].items()
                                           if not fam.get("enabled", True)]},
         "keywords": {"sha256": file_sha256(args.keywords)},
+        "dataset": {"contract_records": len(contract or []),
+                    "recording_hashes": {r["recording_id"]: r["audio_hash"] for r in (contract or [])},
+                    "split": "development" if contract else None},
+        "cache": {"asr": "content hash + ASR profile/model/constraint", "extraction": "profile/model/prompt/messages/schema",
+                  "rule": "cached extraction is valid only when its cache key matches these inputs"},
+        "human_feedback": {"path": "data/ReviewFeedback/reviews.json",
+                           "sha256": file_sha256(human_feedback.FEEDBACK) if human_feedback.FEEDBACK.is_file() else None,
+                           "mode": "bounded calibration examples; current call excluded"},
         "self_hostable_compliant": bool(chat_profile.get("self_hostable")) and
                                    (asr_profile is None or bool(asr_profile.get("self_hostable"))),
     }
 
 
 def metrics(rows):
-    confusion = {g: {p: 0 for p in LABELS} for g in LABELS}
-    for r in rows:
-        confusion[r["gold"]][r["pred"]] += 1
+    """Three-class and operational metrics, without treating an unresolved record as a no-alert."""
+    confusion = {gold_label: {prediction: 0 for prediction in LABELS} for gold_label in LABELS}
+    for row in rows:
+        if row.get("pred") in LABELS:
+            confusion[row["gold"]][row["pred"]] += 1
+    total = len(rows)
+    resolved = [r for r in rows if r.get("pred") in LABELS]
+    unresolved = [r for r in rows if r.get("pred") not in LABELS]
     n_alarm = sum(r["gold"] == "alarm" for r in rows)
-    n_not_alarm = len(rows) - n_alarm
-    pred_alarm = sum(r["pred"] == "alarm" for r in rows)
-    true_alarm = sum(r["pred"] == "alarm" and r["gold"] == "alarm" for r in rows)
-    false_alarms = sum(r["pred"] == "alarm" and r["gold"] != "alarm" for r in rows)
-    missed_strict = sum(r["gold"] == "alarm" and r["pred"] != "alarm" for r in rows)
-    missed_lenient = sum(r["gold"] == "alarm" and r["pred"] == "no_alert" for r in rows)
-    flagged = [r for r in rows if r["pred"] != "no_alert" and r["gold"] != "no_alert" and r["evidence_hit"] is not None]
-    return {
-        "calls": len(rows),
-        "extraction_errors (model unavailable, not a classification)": sum(r.get("extraction_error", False) for r in rows),
-        "accuracy": round(sum(r["gold"] == r["pred"] for r in rows) / len(rows), 3),
-        "extraction_time_s": {"total": round(sum(r.get("elapsed_s") or 0 for r in rows), 1),
-                              "avg_uncached": (round(sum(t for r in rows if (t := r.get("elapsed_s"))) /
-                                               max(1, sum(1 for r in rows if r.get("elapsed_s"))), 2)
-                                               if any(r.get("elapsed_s") for r in rows) else None),
-                              "cached_calls": sum(1 for r in rows if not r.get("elapsed_s"))},
-        "false_alarms": f"{false_alarms}/{n_not_alarm}",
+    n_not_alarm = total - n_alarm
+    pred_alarm = sum(r.get("pred") == "alarm" for r in rows)
+    true_alarm = confusion["alarm"]["alarm"]
+    false_alarms = sum(r.get("pred") == "alarm" and r["gold"] != "alarm" for r in rows)
+    correct = sum(r.get("pred") == r["gold"] for r in rows)
+    flagged = [r for r in rows if r["pred"] != "no_alert" and r["gold"] != "no_alert" and r.get("evidence_hit") is not None]
+    review_reasons = {}
+    for row in rows:
+        if row.get("pred") == "review":
+            for reason in row.get("reasons") or ["unspecified"]:
+                review_reasons[reason] = review_reasons.get(reason, 0) + 1
+    technical_review_reasons = {"technical_uncertainty", "asr_failure", "extraction_failure"}
+    by_level = {}
+    for level in ("Stufe1", "Stufe2", "Stufe3"):
+        subset = [r for r in rows if r["call"].startswith(level)]
+        by_level[level] = {"correct": sum(r.get("pred") == r["gold"] for r in subset), "total": len(subset),
+                           "accuracy": nullable_ratio(sum(r.get("pred") == r["gold"] for r in subset), len(subset))}
+    answer = {
+        "counts": {"expected": total, "processed": total, "with_prediction": len(resolved),
+                   "unresolved": len(unresolved), "technical_failure": sum(bool(r.get("technical_failure")) for r in rows)},
+        "classification": {
+            "confusion_gold_rows_prediction_columns": confusion,
+            "accuracy_headline_including_unresolved": nullable_ratio(correct, total),
+            "accuracy_available_predictions_only": nullable_ratio(correct, len(resolved)),
+            "alarm_precision": nullable_ratio(true_alarm, pred_alarm),
+            "alarm_recall": nullable_ratio(true_alarm, n_alarm),
+            "false_alarms_all_gold_non_alarm": nullable_ratio(false_alarms, n_not_alarm),
+            "alarm_to_review": nullable_ratio(confusion["alarm"]["review"], n_alarm),
+            "alarm_to_no_alert": nullable_ratio(confusion["alarm"]["no_alert"], n_alarm),
+            "review_to_alarm": nullable_ratio(confusion["review"]["alarm"], sum(r["gold"] == "review" for r in rows)),
+            "review_to_no_alert": nullable_ratio(confusion["review"]["no_alert"], sum(r["gold"] == "review" for r in rows)),
+            "alarm_triage_coverage_alarm_or_review": nullable_ratio(sum(r["gold"] == "alarm" and r.get("pred") in ("alarm", "review") for r in rows), n_alarm),
+            "review_rate": nullable_ratio(sum(r.get("pred") == "review" for r in rows), total),
+            "review_by_reason": review_reasons,
+            "technical_review_count": sum(r.get("pred") == "review" and any(x in technical_review_reasons for x in r.get("reasons", [])) for r in rows),
+            "by_level": by_level,
+        },
+        "operations": {
+            "asr_failures": sum(bool(r.get("asr_failure")) for r in rows),
+            "extraction_or_schema_failures": sum(bool(r.get("extraction_error")) for r in rows),
+            "incomplete_extractions": sum(bool(r.get("incomplete_extraction")) for r in rows),
+            "grounding_issues": sum(bool(r.get("grounding_issue")) for r in rows),
+            "no_final_result": len(unresolved),
+            "cache_hits": {"asr": sum(r.get("asr_cache_hit") is True for r in rows),
+                           "extraction": sum(r.get("extract_cache_hit") is True for r in rows)},
+        },
+        "timing_s": {"asr": time_summary([r.get("asr_elapsed_s") for r in rows]),
+                     "extraction": time_summary([r.get("extract_elapsed_s") for r in rows]),
+                     "decision_output": time_summary([r.get("decision_elapsed_s") for r in rows]),
+                     "audio_to_result": time_summary([r.get("total_elapsed_s") for r in rows if r.get("asr_elapsed_s") is not None])},
+    }
+    # Compatibility aliases for the earlier flat summary schema. New consumers should use
+    # ``classification`` above, where a zero denominator stays explicit as n/a (``value: null``).
+    answer.update({
+        "calls": total,
+        "accuracy": round(correct / total, 3) if total else None,
         "alarm_to_review (missed escalation, still triaged)": f"{confusion['alarm']['review']}/{n_alarm}",
         "alarm_to_no_alert (missed without triage)": f"{confusion['alarm']['no_alert']}/{n_alarm}",
-        "missed_strict (alarm expected, not alarm)": f"{missed_strict}/{n_alarm}",
-        "missed_lenient (alarm expected, no_alert)": f"{missed_lenient}/{n_alarm}",
+        "missed_strict (alarm expected, not alarm)": f"{n_alarm - confusion['alarm']['alarm']}/{n_alarm}",
+        "missed_lenient (alarm expected, no_alert)": f"{confusion['alarm']['no_alert']}/{n_alarm}",
         "alarm_precision": f"{true_alarm}/{pred_alarm}",
         "alarm_recall": f"{true_alarm}/{n_alarm}",
         "review_to_alarm (unjustified confident escalation)": confusion["review"]["alarm"],
@@ -149,16 +654,89 @@ def metrics(rows):
         "review_rate": f"{sum(r['pred'] == 'review' for r in rows)}/{len(rows)}",
         "model_input": {"snippet_calls": sum(r.get("input") == "snippets" for r in rows),
                         "full_transcript_calls": sum(r.get("input", "full_transcript") != "snippets" for r in rows),
-                        "mean_text_sent_pct": round(sum(r.get("kept_text_pct", 100.0) for r in rows) / len(rows), 1)},
+                        "highlighted_calls": sum(bool(r.get("highlighted_snippets")) for r in rows),
+                        "mean_text_sent_pct": round(sum(r.get("kept_text_pct", 100.0) for r in rows) / len(rows), 1)
+                                              if rows else None},
         "evidence_hit (cited an expected passage)": f"{sum(r['evidence_hit'] for r in flagged)}/{len(flagged)}" if flagged else "n/a (audio segments are not script turns)",
         "confusion (gold -> pred)": confusion,
-        "by_level": {lvl: f"{sum(r['gold'] == r['pred'] for r in rows if r['call'].startswith(lvl))}/"
-                          f"{sum(r['call'].startswith(lvl) for r in rows)}" for lvl in ("Stufe1", "Stufe2", "Stufe3")},
-        **({"by_audio": {name: f"{sum(r['gold'] == r['pred'] for r in rows if r['call'][-2:] in ks)}/"
-                               f"{sum(r['call'][-2:] in ks for r in rows)}"
-                         for name, ks in (("clean (K1/K3)", ("K1", "K3")), ("noisy (K2/K4)", ("K2", "K4")))}}
-           if any(r["call"][-3:-1] == "-K" for r in rows) else {}),
-    }
+    })
+    if any("-K" in r["call"] for r in rows):
+        answer["paired_audio"] = paired_audio_metrics(rows)
+    return answer
+
+
+def paired_audio_metrics(rows):
+    """Report clean/noisy results by dialogue; a pair is never counted as two independent scenarios."""
+    grouped = {}
+    for row in rows:
+        if recording_variant(row["call"]) != "human":       # pairs are clean/noisy takes only
+            grouped.setdefault(script_name(row["call"]), []).append(row)
+    complete, discordant, both_wrong, incomplete, both_correct = 0, 0, 0, 0, 0
+    for pair in grouped.values():
+        variants = {recording_variant(r["call"]) for r in pair}
+        if len(pair) != 2 or variants != {"clean", "noisy"}:
+            incomplete += 1
+            continue
+        complete += 1
+        if pair[0].get("pred") != pair[1].get("pred"):
+            discordant += 1
+        if all(r.get("pred") != r["gold"] for r in pair):
+            both_wrong += 1
+        if all(r.get("pred") == r["gold"] for r in pair):
+            both_correct += 1
+    def subset(variant):
+        values = [r for r in rows if recording_variant(r["call"]) == variant]
+        return {"correct": sum(r.get("pred") == r["gold"] for r in values), "total": len(values),
+                "accuracy": nullable_ratio(sum(r.get("pred") == r["gold"] for r in values), len(values))}
+    return {"unique_dialogues": len(grouped), "complete_pairs": complete, "incomplete_pairs": incomplete,
+            "pairs_prediction_discordant": discordant, "pairs_both_wrong": both_wrong,
+            "dialogues_both_variants_correct": both_correct, "clean": subset("clean"), "noisy": subset("noisy")}
+
+
+def write_rows_csv(path, rows):
+    fields = ("recording_id", "dialogue_id", "variant", "split", "gold", "prediction", "reasons",
+              "technical_failure", "asr_failure", "extraction_error", "grounding_issue", "unresolved",
+              "asr_cache_hit", "extract_cache_hit", "asr_elapsed_s", "extract_elapsed_s",
+              "decision_elapsed_s", "total_elapsed_s", "gold_source")
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=fields)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: "|".join(row[field]) if field == "reasons" else row.get(field) for field in fields})
+    storage.atomic_write_text(path, stream.getvalue())
+
+
+def write_human_audit_checklist(path, rows):
+    """Prepare, but never falsely complete, a minimum audio/evidence audit."""
+    picks = []
+    for gold_label in ("alarm", "no_alert", "review"):
+        match = next((r for r in rows if r["gold"] == gold_label), None)
+        if match:
+            picks.append(match)
+    picks.extend(r for r in rows if r.get("variant") == "noisy" and r not in picks)
+    picks.extend(r for r in rows if r.get("pred") != r["gold"] and r not in picks)
+    picks = picks[:8]
+    lines = ["# Human evidence and audio audit — pending", "", "This form is intentionally unfilled. Automatic grounding only verifies quote/text/timestamps; it is not a semantic or audio-fidelity audit.",
+             "", "| Recording | Why selected | Evidence checked | Audio listened | Audio/script/gold consistent | Evidence/predicate consistent | Error type | Reviewer | Date |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    for row in picks:
+        why = "final-run error" if row.get("pred") != row["gold"] else f"gold {row['gold']}"
+        if row.get("variant") == "noisy":
+            why += "; noisy sample"
+        lines.append(f"| {row['recording_id']} | {why} | pending | no | pending | pending | pending |  |  |")
+    lines += ["", "Required coverage: at least one alarm, a boundary-adjacent no_alert, a review, noisy variants, and any final-run error. Where present, include negation, speaker-role, access-validity, and authority cases."]
+    storage.atomic_write_text(path, "\n".join(lines) + "\n")
+
+
+def threshold_comparison(rows, primary):
+    """Counts only cached-fact re-decisions; thresholds never invoke ASR or a chat model."""
+    result = {}
+    for preset in sorted({name for row in rows for name in row.get("threshold_predictions", {})}):
+        predictions = [row["threshold_predictions"].get(preset) for row in rows]
+        result[preset] = {"labels": {label: predictions.count(label) for label in LABELS},
+                          "changed_from_primary": [row["recording_id"] for row in rows
+                                                   if row["threshold_predictions"].get(preset) != row.get("pred")]}
+    return {"primary": primary, "presets": result,
+            "note": "Recomputed from the same cached extraction; ASR quality is an escalation heuristic, not a fraud probability."}
 
 
 def prepare(args, policies, keywords):
@@ -184,6 +762,8 @@ def prepare(args, policies, keywords):
         for wav, job in [(w, pool.submit(one, w)) for w in wavs]:
             try:
                 r = job.result()
+                if r.get("label") is None:              # ASR failed: no transcript, so no decision
+                    raise RuntimeError(r.get("error") or "no result")
                 done += 1
                 print(f"{done + failed:>3}/{len(wavs)} {r['label']:<8} {r['call']}  {','.join(r['reasons'])}", flush=True)
             except Exception as e:  # keep going; a rerun resumes from the caches
@@ -194,9 +774,133 @@ def prepare(args, policies, keywords):
         sys.exit(f"{failed} calls failed; run the same command again to retry them")
 
 
+def _sha256_text(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def predict(args, policies, keywords):
+    """Hidden-test protocol, step 1: predictions on unlabeled recordings with the frozen configuration.
+
+    Reads no gold, refuses threshold overrides and cloud profiles, never touches data/Audio (whose full
+    evaluation requires gold for every file), and seals its outputs with SHA-256 so that a later `score`
+    can prove the predictions were not changed after the labels were seen."""
+    if args.threshold is not None:
+        sys.exit("predict uses the frozen default preset; remove --threshold (all presets are recorded anyway)")
+    try:
+        chat = models.check("chat", args.profile, require_self_hostable=True)
+        asr_profile = models.check("asr", require_self_hostable=True)
+    except models.ModelError as e:
+        sys.exit(f"predict needs self-hostable chat and ASR profiles: {e}")
+    folder = Path(args.path or "")
+    wavs = sorted(w for w in folder.glob("*.wav") if not args.only or any(o in w.stem for o in args.only.split(",")))
+    if not wavs:
+        sys.exit(f"no WAV files in {folder}")
+    corrected = [w.stem for w in wavs if human_feedback.correction_path(w.stem).exists()]
+    if corrected:
+        sys.exit("a blind test cannot use human transcript corrections; remove data/Corrections/<id>.json for: "
+                 + ", ".join(corrected))
+    started_at, started_wall = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.perf_counter()
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+        results = list(pool.map(lambda w: run_audio(w, policies, keywords, profile=args.profile)[0], wavs))
+    wall_clock_s, finished_at = round(time.perf_counter() - started_wall, 3), time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    out = ROOT / "runs" / f"predict-{time.strftime('%Y%m%d-%H%M%S')}-{folder.name or 'audio'}"
+    out.mkdir(parents=True, exist_ok=True)
+    records, rows = [], []
+    for wav, result in zip(wavs, results):
+        record = {"recording_id": wav.stem, "dialogue_id": script_name(wav.stem), "audio_hash": asr.sha256(wav),
+                  "audio_path": _relative_path_or_original(str(wav)), "variant": recording_variant(wav.stem),
+                  "split": "hidden"}
+        records.append(record)
+        augment_canonical_result(result, policies, out.name, recording=record, recording_duration_s=evidence.duration(wav))
+        validate_canonical_result(result, release=True)
+        timing = result.get("_evaluation", {})
+        issues = [i for e in result.get("events", []) for i in e.get("issues", [])]
+        rows.append({"call": wav.stem, "recording_id": wav.stem, "dialogue_id": record["dialogue_id"],
+                     "variant": record["variant"], "split": "hidden", "audio_sha256": record["audio_hash"],
+                     "gold": None, "prediction": result.get("label"), "pred": result.get("label"),
+                     "reasons": result.get("reasons", []),
+                     "families": sorted({e["family"] for e in result.get("events", []) if e.get("label") != "no_alert"}),
+                     "asr_failure": bool(timing.get("asr_failure")),
+                     "extraction_error": bool(result.get("error")) and not timing.get("asr_failure"),
+                     "technical_failure": result.get("status") == "failed" or bool(timing.get("asr_failure"))
+                                          or "technical_uncertainty" in result.get("reasons", []),
+                     "incomplete_extraction": any("missing or invalid" in i for i in issues),
+                     "grounding_issue": any("grounding" in i for i in issues),
+                     "unresolved": result.get("label") not in LABELS,
+                     "asr_cache_hit": timing.get("asr_cache_hit"), "extract_cache_hit": timing.get("extract_cache_hit"),
+                     "asr_elapsed_s": timing.get("asr_elapsed_s"), "extract_elapsed_s": timing.get("extract_elapsed_s"),
+                     "decision_elapsed_s": timing.get("decision_elapsed_s"), "total_elapsed_s": timing.get("total_elapsed_s"),
+                     "threshold_predictions": timing.get("threshold_labels", {}),
+                     "input": (result.get("input") or {}).get("mode", "full_transcript"),
+                     "highlighted_snippets": len((result.get("highlights") or {}).get("snippets", [])),
+                     "kept_text_pct": ((result.get("input") or {}).get("stats") or {}).get("kept_text_pct", 100.0)
+                                if (result.get("input") or {}).get("mode") == "snippets" else 100.0, "transcript_corrections": timing.get("transcript_corrections"),
+                     "evidence_hit": None})
+        storage.atomic_write_json(out / f"{wav.stem}.json", result)
+        print(f"{str(result.get('label')):<8} {wav.stem:<24} {','.join(result.get('reasons', []))}", flush=True)
+    manifest = run_manifest(args, policies, keywords, chat, asr_profile, contract=records, started_at=started_at,
+                            finished_at=finished_at, wall_clock_s=wall_clock_s, run_id=out.name)
+    manifest["dataset"]["split"] = "hidden"
+    manifest["protocol"] = {"frozen_preset": policies["escalation"]["default_preset"],
+                            "threshold": policies["escalation"]["presets"][policies["escalation"]["default_preset"]],
+                            "gold_read": False, "human_corrections_used": False,
+                            "review_feedback_examples": len(human_feedback.calibration_examples()),
+                            "note": "predictions written before any label was available"}
+    storage.atomic_write_json(out / "manifest.json", manifest)
+    storage.atomic_write_json(out / "rows.json", rows)
+    with (out / "predictions.csv").open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        presets = list(policies["escalation"]["presets"])
+        writer.writerow(["recording_id", "audio_sha256", "prediction"] + [f"at_{p}" for p in presets] +
+                        ["families", "reasons", "total_elapsed_s"])
+        for r in rows:
+            writer.writerow([r["recording_id"], r["audio_sha256"], r["prediction"]] +
+                            [r["threshold_predictions"].get(p) for p in presets] +
+                            [" ".join(r["families"]), " ".join(r["reasons"]), r["total_elapsed_s"]])
+    sealed = {name: _sha256_text(out / name) for name in sorted(f.name for f in out.iterdir())}
+    storage.atomic_write_json(out / "SEALED.json", {"sealed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "sha256": sealed})
+    print(f"\nsealed {len(sealed)} files in {out.relative_to(ROOT)}/  (SEALED.json fingerprint "
+          f"{_sha256_text(out / 'SEALED.json')[:16]})")
+    print(f"keep this fingerprint; when labels arrive: python3 -m callguard.pipeline score {out.relative_to(ROOT)} --labels <folder>")
+
+
+def score(args, policies):
+    """Hidden-test protocol, step 2: verify the sealed predictions are unchanged, then add labels and score."""
+    run = Path(args.path or "")
+    seal = json.loads((run / "SEALED.json").read_text(encoding="utf-8"))
+    changed = [name for name, digest in seal["sha256"].items() if _sha256_text(run / name) != digest]
+    if changed:
+        sys.exit(f"sealed predictions were modified after sealing: {', '.join(changed)}")
+    labels = Path(args.labels or DATA / "Skript_mit_Sollbewertung")
+    rows, missing = [], []
+    for row in json.loads((run / "rows.json").read_text(encoding="utf-8")):
+        try:
+            row["gold"] = gold(row["dialogue_id"], labels)["label"]
+        except (OSError, AttributeError, ValueError):
+            missing.append(row["recording_id"])
+            continue
+        rows.append(row)
+    if not rows:
+        sys.exit(f"no labels found in {labels} for these recordings")
+    m = metrics(rows)
+    print(json.dumps(m, indent=1))
+    for row in rows:
+        mark = "ok  " if row["gold"] == row["pred"] else "MISS"
+        print(f"{mark} {row['recording_id']:<24} gold={row['gold']:<8} pred={str(row['pred']):<8} {','.join(row['reasons'])}")
+    out = run / f"score-{time.strftime('%Y%m%d-%H%M%S')}"
+    out.mkdir()
+    storage.atomic_write_json(out / "summary.json", {
+        "format": "callguard-evaluation-2", "artifact_status": "hidden_scored_after_sealing",
+        "predictions_run": run.name, "seal_verified": True, "labels": str(labels), "unlabeled": missing,
+        "metrics": m, "threshold_comparison": threshold_comparison(rows, policies["escalation"]["default_preset"]),
+        "rows": rows})
+    write_rows_csv(out / "recordings.csv", rows)
+    print(f"seal verified; {len(rows)} scored, {len(missing)} without label; saved {out}/")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="callguard.pipeline")
-    ap.add_argument("command", choices=["text", "audio", "eval", "freeze", "prepare"])
+    ap.add_argument("command", choices=["text", "audio", "eval", "freeze", "prepare", "predict", "score"])
     ap.add_argument("--audio", action="store_true", help="eval: run on the 42 WAVs (Whisper transcripts) instead of the scripts")
     ap.add_argument("path", nargs="?")
     ap.add_argument("--no-speakers", action="store_true", help="hide speaker labels, as with raw ASR output")
@@ -209,8 +913,15 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=1, help="calls evaluated in parallel")
     ap.add_argument("--policies", default=ROOT / "config" / "policies.json")
     ap.add_argument("--keywords", default=DATA / "Stichwortliste.json")
+    ap.add_argument("--labels", help="score: folder with the Skript_mit_Sollbewertung-style label files")
     args = ap.parse_args(argv)
     policies, keywords = ex.load_json(args.policies), ex.load_json(args.keywords)
+    if args.command == "score":                      # labels only: no model is needed or called
+        score(args, policies)
+        return
+    if args.command == "predict":
+        predict(args, policies, keywords)
+        return
     try:
         models.check("chat", args.profile, require_self_hostable=args.require_self_hostable)
         if args.require_self_hostable and (args.command == "audio" or args.audio):
@@ -226,11 +937,15 @@ def main(argv=None):
     if args.command == "freeze":
         p = models.check("chat", args.profile)
         mode = "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers"
-        out = ROOT / "tests" / "fixtures" / "replay" / p["model"] / ex.PROMPT_VERSION
+        model_dir = p["model"].replace("/", "--")
+        out = ROOT / "tests" / "fixtures" / "replay" / model_dir / ex.PROMPT_VERSION
         out.mkdir(parents=True, exist_ok=True)
-        for path in sorted((DATA / "Transkript").glob("*.txt")):
-            segs = ex.segments_from_transcript(path, speakers=not args.no_speakers)
-            src = ex.cache_path(segs, policies, p, view=ex.input_view(segs, policies, keywords))
+        source = sorted((DATA / "Audio").glob("*.wav")) if args.audio else sorted((DATA / "Transkript").glob("*.txt"))
+        for path in source:
+            segs = audio_segments(path)[0] if args.audio else ex.segments_from_transcript(path, speakers=not args.no_speakers)
+            examples = human_feedback.calibration_examples(exclude_call=path.stem)
+            src = ex.cache_path(segs, policies, p, view=ex.model_view(ex.input_view(segs, policies, keywords)),
+                                feedback_examples=examples)
             if not src.exists():
                 sys.exit(f"no cached extraction for {path.stem} ({mode}); run eval first")
             shutil.copy(src, out / f"{path.stem}.{mode}.json")
@@ -244,12 +959,11 @@ def main(argv=None):
         decision, segments = run(args.path, policies, keywords, **opts)
         print(dec.explain(decision, segments))
         v = decision.get("input") or {}
-        if v.get("mode") == "snippets":
-            st = v["stats"]
-            print(f"\nmodel input: {st['snippets']} snippets, {st['kept_turns']}/{st['turns']} segments, "
-                  f"{st['kept_text_pct']}% of the text" + (f" ({v['reason']})" if v.get("reason") else ""))
-        elif v:
+        if v:
             print(f"\nmodel input: full transcript ({v.get('reason', '')})")
+        highlights = decision.get("highlights") or {}
+        if highlights.get("snippets"):
+            print(f"review highlights: {len(highlights['snippets'])} snippets (not used to limit detection)")
         print("\nkeyword hits: " + (", ".join(f"{h['keyword']} '{h['phrase']}' {h['segment_id']}" for h in decision["keyword_hits"]) or "none"))
         return
 
@@ -259,34 +973,111 @@ def main(argv=None):
              and (not args.smoke or script_name(p.stem) in SMOKE)]
     if not paths:
         sys.exit("no transcripts matched")
-    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        results = list(pool.map(lambda p: run(p, policies, keywords, **opts)[0], paths))
+    contract, contract_issues = dataset_contract(paths if args.audio else None)
+    # A partial smoke/--only run is not expected to have both variants; full audio evaluation is.
+    if args.audio and not args.only and not args.smoke and contract_issues:
+        sys.exit("dataset contract invalid:\n- " + "\n- ".join(contract_issues))
     mode = "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers"
     out = ROOT / "runs" / f"eval-{time.strftime('%Y%m%d-%H%M%S')}-{mode}"
+    suffix = 2
+    while out.exists():
+        out = ROOT / "runs" / f"eval-{time.strftime('%Y%m%d-%H%M%S')}-{mode}-{suffix}"
+        suffix += 1
     out.mkdir(parents=True, exist_ok=True)
+    run_id = out.name
+    started_wall = time.perf_counter()
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    chat_profile = models.check("chat", args.profile)
+    asr_profile = models.check("asr", require_self_hostable=False) if args.audio else None
+    manifest = run_manifest(args, policies, keywords, chat_profile, asr_profile, contract=contract,
+                            started_at=started_at, run_id=run_id)
+    manifest["artifact_status"] = "in_progress"
+    manifest["checkpoint"] = {"expected_calls": len(paths), "completed_calls": 0, "completed_call_ids": [],
+                              "write_strategy": "atomic_replace"}
+    storage.atomic_write_json(out / "manifest.json", manifest)
     rows = []
-    for result in results:
+    contract_by_id = {record["recording_id"]: record for record in contract}
+    call_order = {path.stem: index for index, path in enumerate(paths)}
+
+    def write_incremental_summary(status):
+        ordered_rows = sorted(rows, key=lambda row: call_order[row["recording_id"]])
+        summary = {"format": "callguard-evaluation-2", "artifact_status": "current_run" if status == "complete" else status,
+                   "args": {k: str(v) for k, v in vars(args).items()},
+                   "dataset_contract": {"records": contract, "issues": contract_issues}, "metrics": metrics(ordered_rows),
+                   "threshold_comparison": threshold_comparison(ordered_rows, policies["escalation"]["default_preset"]),
+                   "rows": ordered_rows}
+        storage.atomic_write_json(out / "summary.json", summary)
+
+    def checkpoint(status=None):
+        if status:
+            manifest["artifact_status"] = status
+        manifest["generated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        manifest["batch_wall_clock_s"] = round(time.perf_counter() - started_wall, 3)
+        manifest["checkpoint"]["completed_calls"] = len(rows)
+        manifest["checkpoint"]["completed_call_ids"] = [row["recording_id"] for row in sorted(rows, key=lambda row: call_order[row["recording_id"]])]
+        storage.atomic_write_json(out / "manifest.json", manifest)
+        if rows:
+            write_incremental_summary(manifest["artifact_status"])
+
+    def record(result):
         g = gold(script_name(result["call"]))
-        rows.append({"call": result["call"], "gold": g["label"], "pred": result["label"], "reasons": result["reasons"],
-                     "extraction_error": bool(result.get("error")), "elapsed_s": result.get("meta", {}).get("elapsed_s"),
-                     "input": (result.get("input") or {}).get("mode", "full_transcript"),
-                     "kept_text_pct": ((result.get("input") or {}).get("stats") or {}).get("kept_text_pct", 100.0)
-                                      if (result.get("input") or {}).get("mode") == "snippets" else 100.0,
-                     "evidence_hit": None if args.audio else bool(cited_segments(result) & set(g["evidence"]))})
-        (out / f"{result['call']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
-        mark = "ok  " if g["label"] == result["label"] else "ERR " if result.get("error") else "MISS"
-        print(f"{mark} {result['call']:<12} gold={g['label']:<8} pred={result['label']:<8} {','.join(result['reasons'])}")
+        contract_row = contract_by_id.get(result["call"], {})
+        recording_duration_s = evidence.duration(result["source"]) if args.audio else None
+        augment_canonical_result(result, policies, run_id, recording=contract_row,
+                                 recording_duration_s=recording_duration_s)
+        validate_canonical_result(result, release=True)
+        timing = result.get("_evaluation", {})
+        all_issues = [issue for event in result.get("events", []) for issue in event.get("issues", [])]
+        grounding_issue = any("grounding" in issue for issue in all_issues)
+        row = {"call": result["call"], "recording_id": result["call"],
+               "dialogue_id": contract_row.get("dialogue_id", script_name(result["call"])),
+               "variant": contract_row.get("variant", "unknown"), "split": contract_row.get("split", "development"),
+               "gold": g["label"], "prediction": result.get("label"), "pred": result.get("label"),
+               "reasons": result.get("reasons", []), "gold_source": contract_row.get("gold_source", _relative_path_or_original(DATA / "Skript_mit_Sollbewertung" / f"{script_name(result['call'])}.txt")),
+               "asr_failure": bool(timing.get("asr_failure")), "extraction_error": bool(result.get("error")) and not timing.get("asr_failure"),
+               "technical_failure": result.get("status") == "failed" or bool(timing.get("asr_failure")) or "technical_uncertainty" in result.get("reasons", []),
+               "incomplete_extraction": any("missing or invalid" in issue for issue in all_issues),
+               "grounding_issue": grounding_issue,
+               "unresolved": result.get("label") not in LABELS,
+               "asr_cache_hit": timing.get("asr_cache_hit"), "extract_cache_hit": timing.get("extract_cache_hit"),
+               "asr_elapsed_s": timing.get("asr_elapsed_s"), "extract_elapsed_s": timing.get("extract_elapsed_s"),
+               "decision_elapsed_s": timing.get("decision_elapsed_s"), "total_elapsed_s": timing.get("total_elapsed_s"),
+               "threshold_predictions": timing.get("threshold_labels", {}),
+               "evidence_hit": None if args.audio else bool(cited_segments(result) & set(g["evidence"])),
+               "input": (result.get("input") or {}).get("mode", "full_transcript"),
+               "highlighted_snippets": len((result.get("highlights") or {}).get("snippets", [])),
+               "kept_text_pct": ((result.get("input") or {}).get("stats") or {}).get("kept_text_pct", 100.0)
+                                if (result.get("input") or {}).get("mode") == "snippets" else 100.0}
+        rows.append(row)
+        storage.atomic_write_json(out / f"{result['call']}.json", result)
+        checkpoint()
+        mark = "ok  " if g["label"] == result.get("label") else "ERR " if result.get("error") else "MISS"
+        print(f"{mark} {result['call']:<16} gold={g['label']:<8} pred={str(result.get('label')):<8} {','.join(result.get('reasons', []))}")
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+            jobs = {pool.submit(run, path, policies, keywords, **opts): path for path in paths}
+            for job in as_completed(jobs):
+                record(job.result()[0])
+    except BaseException:
+        manifest["run_finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        checkpoint("interrupted")
+        raise
+    rows.sort(key=lambda row: call_order[row["recording_id"]])
+    wall_clock_s = round(time.perf_counter() - started_wall, 3)
+    finished_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     m = metrics(rows)
     print(json.dumps(m, indent=1))
-    manifest = run_manifest(args, policies, keywords, models.check("chat", args.profile),
-                            models.check("asr", require_self_hostable=False) if args.audio else None)
-    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
-    (out / "summary.json").write_text(json.dumps({"args": {k: str(v) for k, v in vars(args).items()}, "metrics": m,
-                                                  "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+    manifest["run_finished_at"] = finished_at
+    manifest["batch_wall_clock_s"] = wall_clock_s
+    write_rows_csv(out / "recordings.csv", rows)
+    errors = [row for row in rows if row["pred"] != row["gold"] or row["technical_failure"] or row["unresolved"]]
+    storage.atomic_write_json(out / "errors.json", errors)
+    write_human_audit_checklist(out / "human-audit-checklist.md", rows)
+    checkpoint("complete")
     if not manifest["self_hostable_compliant"]:
         print("NOTE: this run used a non-self-hostable endpoint (see manifest.json); the README asks for "
               "self-hostable models in the submitted pipeline.", file=sys.stderr)
-    print(f"saved {out.relative_to(ROOT)}/ (one canonical JSON per call + manifest.json + summary.json)")
+    print(f"saved {out.relative_to(ROOT)}/ (canonical JSON, manifest, summary, recordings.csv, errors, human audit checklist)")
 
 
 if __name__ == "__main__":

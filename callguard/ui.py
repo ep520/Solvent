@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 from callguard import decide as dec
 from callguard import evidence
 from callguard import extract as ex
+from callguard import human_feedback
 from callguard import models
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +24,7 @@ DASHBOARD = ROOT / "dashboard"
 AUDIO = ROOT / "data" / "Audio"
 TRANSCRIPTS = ROOT / "data" / "Transcriptions"
 WAV_NAME = re.compile(r"^[\w-]+\.wav$")
+CALL_NAME = re.compile(r"^[\w-]+$")
 LABELS = {"alarm": "Alarm", "review": "Review", "no_alert": "No alert"}
 STATES = {"true": "Supported", "false": "Excluded", "unknown": "Unknown"}
 CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
@@ -65,6 +67,30 @@ def _assessment(result):
     return text
 
 
+def _format_timestamp(seconds):
+    """0:00 / 12:34, matching the dashboard's own formatTime() in app.js."""
+    seconds = int(seconds)
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def _condition_reason(condition):
+    """Short, operator-facing rationale for a dashboard fact; never a new model judgement."""
+    state = condition["state"]
+    refs = condition.get("evidence", [])
+    if refs:
+        ref = refs[0]
+        at = f" at {_format_timestamp(ref['start'])}" if isinstance(ref.get("start"), (int, float)) else ""
+        quote = ref.get("quote", "").strip()
+        prefix = ("The transcript says" if state == "true" else
+                  "The transcript explicitly says" if state == "false" else "Relevant transcript context")
+        return f'{prefix}: “{quote}”{at}.'
+    if condition.get("grounding_issues"):
+        return "Not established: the cited passage could not be found in the transcript."
+    if condition.get("downgraded"):
+        return "Not established: there is no usable supporting passage."
+    return "Not established: the transcript neither confirms nor excludes this fact."
+
+
 def dashboard_call(call, segments, results, default, length, cache_status="current", extraction_version=None,
                    model_input=None):
     """Map canonical results (one per threshold preset) to the shape the dashboard renders."""
@@ -95,10 +121,13 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
 
     items = [evidence_item(ref) for ref in refs]
     if event is not None and event["conditions"]:
-        conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]]}
+        conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]],
+                       "policy": c.get("policy", ""), "reason": _condition_reason(c), "hasEvidence": bool(c.get("evidence"))}
                       for n, c in event["conditions"].items()]
     elif event is not None:
-        conditions = [{"label": f"Object type: {event.get('object_type', 'unknown').replace('_', ' ')}", "state": "Supported"}]
+        conditions = [{"label": f"Object type: {event.get('object_type', 'unknown').replace('_', ' ')}", "state": "Supported",
+                       "policy": "Numbers are classified only (never an alarm condition); this is the applied rule, not an extracted fact.",
+                       "reason": "Classification-only identifier rule; this policy family never generates an alarm.", "hasEvidence": bool(event.get("evidence"))}]
     else:
         conditions = []
     open_questions = [q for e in base["events"] if e.get("reason") == "missing_policy_fact" for q in e["open_questions"]]
@@ -116,6 +145,9 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
         "runStatus": base.get("status", "ok"), "policiesVersion": base.get("policies_version"),
         "disabledFamilies": base.get("disabled_families", []),
         "family": event["family"].capitalize() if event else "None",
+        "noCandidateEvent": event is None,
+        "factsReason": ("No candidate event was extracted for any enabled policy family. This no-alert is an absence of extracted policy facts, not a guarantee that the recording is safe."
+                        if event is None else None),
         "actor": {"role": actor.get("role", "unknown"), "status": actor.get("status", "unknown")},
         # This is an ASR heuristic for the supporting passage, not a calibrated
         # probability or a compliance-decision confidence score.
@@ -134,14 +166,13 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
         "evidence": items or [{"time": 0, "end": 0, "speaker": "", "text": "No supporting passage: no candidate event.",
                                "support": "", "segments": [], "segment_ids": [], "evidence_start": 0,
                                "evidence_end": 0, "clip_start": 0, "clip_end": 0, "quality": None, "match": None}],
-        "transcript": [{"time": s["start"], "speaker": "—", "text": s["text"]} for s in segments],
+        "transcript": [{"id": s["id"], "time": s["start"], "speaker": "—", "text": s["text"]} for s in segments],
         "conditions": conditions,
         "events": [{"family": e["family"], "label": LABELS[e["label"]], "status": e["status"], "reason": e["reason"],
                     "actor": e.get("actor", {"role": "unknown", "status": "unknown"})}
                    for e in base["events"]],
         "issues": base["issues"],
-        # What the extraction model read (snippets with hits, scores and bold spans, or the full transcript),
-        # and which of those segments the decision cites as evidence.
+        # The full transcript sent to the extraction model, separate review highlights, and cited evidence.
         "modelInput": model_input,
         "citedSegments": sorted({sid for e in base["events"] for c in e.get("conditions", {}).values()
                                  for r in c["evidence"] for sid in r["segment_ids"]} |
@@ -250,44 +281,123 @@ def save_keyword_config(payload, path):
     return result
 
 
-def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" / "extract"):
+_POLICY_ID = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def validate_policy_config(payload):
+    """Validate editable policy CRUD data before atomically replacing the local file.
+
+    Policy changes alter extraction/decision semantics.  They intentionally do
+    not reuse an old extraction cache: callers must run a fresh evaluation.
+    """
+    if not isinstance(payload, dict) or not isinstance(payload.get("families"), dict):
+        raise ValueError("policies need a families object")
+    result = json.loads(json.dumps(payload))
+    if not isinstance(result.get("version"), str) or not result["version"].strip():
+        raise ValueError("policies need a non-empty version")
+    escalation = result.get("escalation")
+    if not isinstance(escalation, dict) or not isinstance(escalation.get("min_asr_quality"), (int, float)):
+        raise ValueError("escalation.min_asr_quality must be numeric")
+    if not 0 <= escalation["min_asr_quality"] <= 1:
+        raise ValueError("escalation.min_asr_quality must be between 0 and 1")
+    presets = escalation.get("presets")
+    if not isinstance(presets, dict) or not presets:
+        raise ValueError("escalation needs one or more presets")
+    for name, value in presets.items():
+        if not isinstance(name, str) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+            raise ValueError("each escalation preset must be a number between 0 and 1")
+    if escalation.get("default_preset") not in presets:
+        raise ValueError("escalation.default_preset must name a preset")
+    if not result["families"]:
+        raise ValueError("at least one policy family is required")
+    for family_id, family in result["families"].items():
+        if not isinstance(family_id, str) or not _POLICY_ID.fullmatch(family_id):
+            raise ValueError("policy IDs must use lowercase letters, digits and underscores")
+        if not isinstance(family, dict) or not isinstance(family.get("title"), str) or not family["title"].strip():
+            raise ValueError(f"policy {family_id!r} needs a title")
+        family["title"] = " ".join(family["title"].split())
+        family["enabled"] = bool(family.get("enabled", True))
+        family["can_alarm"] = bool(family.get("can_alarm", True))
+        conditions = family.get("conditions", {})
+        if not isinstance(conditions, dict):
+            raise ValueError(f"policy {family_id!r} conditions must be an object")
+        if family["can_alarm"] and not conditions:
+            raise ValueError(f"alarm-capable policy {family_id!r} needs at least one condition")
+        for condition_id, explanation in conditions.items():
+            if not isinstance(condition_id, str) or not _POLICY_ID.fullmatch(condition_id):
+                raise ValueError(f"policy {family_id!r} has an invalid condition ID")
+            if not isinstance(explanation, str) or not explanation.strip():
+                raise ValueError(f"condition {family_id}.{condition_id} needs an explanation")
+            conditions[condition_id] = " ".join(explanation.split())
+        roles = family.get("role_requirements", {})
+        if not isinstance(roles, dict) or set(roles) - set(conditions):
+            raise ValueError(f"policy {family_id!r} has a role requirement for an unknown condition")
+        for condition_id, role in roles.items():
+            if role not in ("customer", "advisor"):
+                raise ValueError(f"role requirement {family_id}.{condition_id} must be customer or advisor")
+        object_types = family.get("object_types", [])
+        if object_types and (not isinstance(object_types, list) or any(not isinstance(value, str) or not value.strip() for value in object_types)):
+            raise ValueError(f"policy {family_id!r} object_types must be non-empty strings")
+    return result
+
+
+def save_policy_config(payload, path):
+    """Atomically persist validated local policy CRUD data."""
+    result = validate_policy_config(payload)
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+    return result
+
+
+def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" / "extract", feedback_examples=None):
     """Cached extraction for this call, newest input first: (path, status) or (None, None).
 
     current        extracted with today's input (snippet settings and keyword list)
-    stale_input    extracted with an earlier keyword list or snippet setting; re-run the pipeline to refresh
+    stale_input    legacy extraction that used snippets as model input; re-run the pipeline to refresh
     full_transcript extracted from the whole call (before snippet mode, or snippet mode switched off)
     legacy         an extract-4 cache entry
     """
-    path = ex.cache_path(segments, policies, chat, cache_dir, view=view)
+    path = ex.cache_path(segments, policies, chat, cache_dir, view=view, feedback_examples=feedback_examples)
     if path.exists():
         return path, "current"
     pointer = ex.latest_path(segments, policies, chat, cache_dir)
     if pointer.exists():
         path = pointer.parent.parent / json.loads(pointer.read_text(encoding="utf-8"))["cache"]
         if path.exists():
-            sent = ex.load_json(path).get("_meta", {}).get("input") or {}
+            meta = ex.load_json(path).get("_meta", {})
+            if meta.get("review_feedback_fingerprint") != human_feedback.examples_fingerprint(feedback_examples or []):
+                return path, "stale_feedback"
+            sent = meta.get("input") or {}
             return path, "stale_input" if sent.get("mode") == "snippets" else "full_transcript"
-    path = ex.cache_path(segments, policies, chat, cache_dir)
+    path = ex.cache_path(segments, policies, chat, cache_dir, feedback_examples=feedback_examples)
     if path.exists():
         return path, "full_transcript"
     path = ex.legacy_cache_path(segments, policies, chat, cache_dir)
     return (path, "legacy") if path.exists() else (None, None)
 
 
-def model_input(extraction, current_view, segments):
-    """What the model actually read for this extraction, shaped for the dashboard."""
+def model_input(extraction, highlights, segments):
+    """What the extraction model read, shaped for the dashboard.
+
+    Snippet mode: the snippets stored with the extraction are exactly what the model read, and they are
+    also the review highlights. Full-transcript mode: the whole call was read; snippets only highlight."""
     sent = extraction.get("_meta", {}).get("input")
-    if sent is None:
-        sent = {"mode": "full_transcript", "reason": "extracted from the whole call (before snippet mode)"}
-    out = {"mode": sent["mode"], "reason": sent.get("reason"), "stats": sent.get("stats"),
-           "version": sent.get("version"), "config": sent.get("config"),
-           "snippets": sent.get("snippets", []), "segmentCount": len(segments)}
-    if current_view and current_view.get("mode") == "snippets" and sent != current_view:
-        out["currentDiffers"] = True     # keyword list or snippet settings changed since this extraction
-    return out
+    if sent and sent.get("mode") == "snippets":
+        current = highlights.get("snippets", []) if highlights else []
+        return {"mode": "snippets", "reason": sent.get("reason"), "stats": sent.get("stats"),
+                "segmentCount": len(segments), "highlights": sent.get("snippets", []),
+                "highlightStats": sent.get("stats"),
+                "currentDiffers": bool(highlights) and current != sent.get("snippets", [])}
+    reason = (sent or {}).get("reason") or "full transcript read by the model"
+    return {"mode": "full_transcript", "reason": reason,
+            "segmentCount": len(segments), "highlights": highlights.get("snippets", []) if highlights else [],
+            "highlightStats": highlights.get("stats") if highlights else None}
 
 
-def build_data(policies, keywords, profile=None):
+def build_data(policies, keywords, profile=None, corrections_dir=human_feedback.CORRECTIONS,
+               feedback_path=human_feedback.FEEDBACK):
     chat = models.resolve("chat", profile)
     presets = policies["escalation"]["presets"]
     default = policies["escalation"]["default_preset"]
@@ -297,26 +407,42 @@ def build_data(policies, keywords, profile=None):
         if not transcript.exists():
             pending.append(wav.stem)
             continue
-        segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
-        view = ex.input_view(segments, policies, keywords)
-        cached, cache_status = find_extraction(segments, policies, chat, view)
+        raw_segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
+        segments, corrected = human_feedback.apply_corrections(wav.stem, raw_segments, corrections_dir)
+        feedback_examples = human_feedback.calibration_examples(feedback_path, exclude_call=wav.stem)
+        highlights = ex.input_view(segments, policies, keywords)
+        cached, cache_status = find_extraction(segments, policies, chat, ex.model_view(highlights),
+                                               feedback_examples=feedback_examples)
+        decision_segments = segments
+        # A corrected transcript can still be reviewed against the last raw extraction, but is clearly
+        # marked stale until a fresh pipeline run has extracted facts from the corrected wording.
+        if cached is None and corrected:
+            cached, cache_status = find_extraction(raw_segments, policies, chat,
+                                                   ex.model_view(ex.input_view(raw_segments, policies, keywords)),
+                                                   feedback_examples=feedback_examples)
+            decision_segments = raw_segments
+            if cached is not None:
+                cache_status = "stale_transcript"
         if cached is None:
             pending.append(wav.stem)
             continue
         extraction = ex.load_json(cached)
-        results = {name: dec.decide(extraction, segments, policies, threshold=value) for name, value in presets.items()}
+        results = {name: dec.decide(extraction, decision_segments, policies, threshold=value) for name, value in presets.items()}
         extraction_version = extraction.get("_meta", {}).get("prompt_version", "unversioned")
         versions.append(extraction_version)
         hits = [{**hit, "call": wav.stem} for hit in ex.keyword_hits(segments, keywords)]
         all_hits += hits
         call = dashboard_call(wav.stem, segments, results, default, evidence.duration(wav),
                               cache_status=cache_status, extraction_version=extraction_version,
-                              model_input=model_input(extraction, view, segments))
+                              model_input=model_input(extraction, highlights, segments))
         call["model"] = chat["model"]
         call["keywordHitCount"] = len(hits)
+        call["transcriptCorrections"] = corrected
+        call["humanFeedback"] = human_feedback.review_for_call(wav.stem, feedback_path)
         calls.append(call)
     return {"source": "pipeline", "calls": calls, "pending": pending, "thresholds": presets, "defaultThreshold": default,
             "keywordGroups": keyword_groups(keywords), "keywordConfig": keywords,
+            "policyConfig": policies,
             "keywordCoverage": keyword_coverage(keywords, all_hits, len(calls)),
             "meta": {"chat_model": chat["model"], "current_prompt_version": ex.PROMPT_VERSION,
                      "extraction_versions": sorted(set(versions)), "legacy_cache_calls": sum(v != ex.PROMPT_VERSION for v in versions),
@@ -326,6 +452,8 @@ def build_data(policies, keywords, profile=None):
 class Handler(BaseHTTPRequestHandler):
     policies_path = ROOT / "config" / "policies.json"
     keywords_path = ROOT / "data" / "Stichwortliste.json"
+    corrections_dir = human_feedback.CORRECTIONS
+    feedback_path = human_feedback.FEEDBACK
 
     def log_message(self, fmt, *args):
         pass
@@ -352,7 +480,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/favicon.ico":
             return self.send(204)
         if path == "/api/data":
-            data = build_data(ex.load_json(self.policies_path), ex.load_json(self.keywords_path))
+            data = build_data(ex.load_json(self.policies_path), ex.load_json(self.keywords_path),
+                              corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
             return self.send(200, json.dumps(data, ensure_ascii=False).encode())
         if path.startswith("/audio/") or path.startswith("/clip/"):
             name = path.split("/", 2)[2]
@@ -380,17 +509,65 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlparse(self.path)
-        if url.path != "/api/keywords":
+        if url.path not in ("/api/keywords", "/api/policies", "/api/reviews") and not url.path.startswith("/api/transcripts/"):
             return self.send(404, b'{"error": "not found"}')
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > 512_000:
                 raise ValueError("request body must be between 1 and 512000 bytes")
             payload = json.loads(self.rfile.read(length))
-            saved = save_keyword_config(payload, self.keywords_path)
+            if url.path == "/api/keywords":
+                saved = save_keyword_config(payload, self.keywords_path)
+                key = "keywords"
+            elif url.path == "/api/policies":
+                saved = save_policy_config(payload, self.policies_path)
+                key = "policies"
+            elif url.path == "/api/reviews":
+                saved = self.save_review(payload)
+                key = "review"
+            else:
+                saved = self.save_transcript_correction(url.path, payload)
+                key = "transcript"
         except (ValueError, json.JSONDecodeError) as error:
             return self.send(400, json.dumps({"error": str(error)}).encode())
-        return self.send(200, json.dumps({"ok": True, "keywords": saved}, ensure_ascii=False).encode())
+        return self.send(200, json.dumps({"ok": True, key: saved}, ensure_ascii=False).encode())
+
+    def transcript_segments(self, call):
+        if not CALL_NAME.fullmatch(call):
+            raise ValueError("invalid call id")
+        path = TRANSCRIPTS / f"{call}.json"
+        if not path.is_file():
+            raise ValueError("transcript not found")
+        return [{**segment, "speaker": None} for segment in ex.load_json(path).get("segments", [])]
+
+    def save_transcript_correction(self, endpoint, payload):
+        call = endpoint.removeprefix("/api/transcripts/")
+        if not isinstance(payload, dict):
+            raise ValueError("a transcript correction object is required")
+        segments = self.transcript_segments(call)
+        saved = human_feedback.save_correction(call, segments, payload.get("segment_id"), payload.get("text"),
+                                                self.corrections_dir)
+        corrected, changed = human_feedback.apply_corrections(call, segments, self.corrections_dir)
+        return {"call": call, "corrected_segments": changed,
+                "segment": next(segment for segment in corrected if segment["id"] == payload["segment_id"]),
+                "document": saved}
+
+    def save_review(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("a review object is required")
+        call, threshold = payload.get("call"), payload.get("threshold")
+        if not isinstance(call, str) or not isinstance(threshold, str):
+            raise ValueError("call and threshold are required")
+        policies, keywords = ex.load_json(self.policies_path), ex.load_json(self.keywords_path)
+        data = build_data(policies, keywords, corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
+        current = next((item for item in data["calls"] if item["id"] == call), None)
+        if current is None or current["classificationByThreshold"].get(threshold) != "Review":
+            raise ValueError("human outcome can only resolve a current review")
+        segments = self.transcript_segments(call)
+        segments, _ = human_feedback.apply_corrections(call, segments, self.corrections_dir)
+        return human_feedback.save_review(call, payload.get("outcome"), current.get("family"),
+                                          current.get("reasonByThreshold", {}).get(threshold, []), segments,
+                                          self.feedback_path)
 
     def send_wav(self, wav):
         size = wav.stat().st_size
@@ -408,9 +585,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send(206, body, "audio/wav", {"Accept-Ranges": "bytes", "Content-Range": f"bytes {start}-{end}/{size}"})
 
 
-def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_path=None):
+def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_path=None, corrections_dir=None, feedback_path=None):
     """Create a dashboard server, optionally against isolated config files for tests."""
-    if policies_path is None and keywords_path is None:
+    if policies_path is None and keywords_path is None and corrections_dir is None and feedback_path is None:
         handler = Handler
     else:
         class handler(Handler):
@@ -419,6 +596,10 @@ def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_pat
             handler.policies_path = Path(policies_path)
         if keywords_path is not None:
             handler.keywords_path = Path(keywords_path)
+        if corrections_dir is not None:
+            handler.corrections_dir = Path(corrections_dir)
+        if feedback_path is not None:
+            handler.feedback_path = Path(feedback_path)
     return ThreadingHTTPServer((host, port), handler)
 
 

@@ -2,7 +2,7 @@
   "use strict";
 
   const decision = window.CallGuardDecision;
-  let calls, keywordGroups, keywordConfig, keywordCoverage, allKeywords, state, live = false, thresholdValues = null;
+  let calls, keywordGroups, keywordConfig, keywordCoverage, policyConfig, allKeywords, state, live = false, thresholdValues = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -71,10 +71,23 @@
   function renderSummary() {
     const counts = calls.reduce((acc, call) => { acc[classificationFor(call)]++; return acc; },
                                 { Alarm: 0, Review: 0, "No alert": 0, Failed: 0 });
+    const dialogues = new Map();
+    calls.forEach((call) => {
+      const id = call.id.replace(/-K\d+$/, "");
+      dialogues.set(id, [...(dialogues.get(id) || []), classificationFor(call)]);
+    });
+    const dialogueCounts = { Alarm: 0, Review: 0, "No alert": 0, Failed: 0 }, discordantPairs = [];
+    dialogues.forEach((labels, id) => {
+      if (new Set(labels).size === 1) dialogueCounts[labels[0]]++;
+      else discordantPairs.push(id);
+    });
     const attention = counts.Alarm + counts.Review;
     const operationalNote = [state.pendingCount ? `${state.pendingCount} pending` : "", counts.Failed ? `${counts.Failed} failed` : ""].filter(Boolean).join(" · ");
     const operationalSuffix = operationalNote ? ` · ${operationalNote}` : "";
-    $("#summary-counters").innerHTML = `<div class="attention-summary"><strong>${attention} calls need attention</strong><span><b>${counts.Alarm}</b> alarms · <b>${counts.Review}</b> reviews</span></div><span class="summary-muted">${calls.length + state.pendingCount} total calls · ${counts["No alert"]} no alert${operationalSuffix}</span>`;
+    const dialogueSummary = discordantPairs.length
+      ? `${dialogues.size} dialogues · ${discordantPairs.length} clean/noisy pair${discordantPairs.length === 1 ? "" : "s"} disagree`
+      : `${dialogues.size} dialogues: ${dialogueCounts.Alarm} alarms · ${dialogueCounts.Review} reviews · ${dialogueCounts["No alert"]} no alert`;
+    $("#summary-counters").innerHTML = `<div class="attention-summary"><strong>${attention} recordings need attention</strong><span><b>${counts.Alarm}</b> alarms · <b>${counts.Review}</b> reviews · <b>${counts["No alert"]}</b> no alert</span></div><span class="summary-muted">${calls.length + state.pendingCount} recordings · ${dialogueSummary}${operationalSuffix}</span>`;
   }
 
   function renderThreshold() {
@@ -170,7 +183,7 @@
     return output + escapeHtml(text.slice(cursor));
   }
 
-  // ---- What the model read: snippets with hits, scores and bold spans (callguard/snippets.py) ----
+  // ---- Review highlights: snippets with hits, scores and bold spans (callguard/snippets.py) ----
   const HIT_RANK = { exact: 0, partial: 0, fuzzy: 0, digits: 1, cue: 2, context: 3 };
   const HIT_CLASS = { exact: "keyword", partial: "keyword", fuzzy: "keyword", digits: "digits", cue: "cue", context: "context" };
 
@@ -230,14 +243,22 @@
     const input = call.modelInput;
     if (!live || !input) return "";
     const cited = new Set(call.citedSegments || []);
-    const stats = input.stats;
-    const head = `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>What the model read</h3><p>${input.mode === "snippets" && stats ? `${stats.snippets} snippet${stats.snippets === 1 ? "" : "s"} · ${stats.kept_turns} of ${stats.turns} segments · ${stats.kept_text_pct}% of the text · ${stats.keyword_hits} keyword, ${stats.digit_hits} digit, ${stats.cue_hits} cue hits` : `Full transcript · ${input.segmentCount} segments`}</p></div></div></div>`;
+    const stats = input.highlightStats;
+    const highlights = input.highlights || [];
+    const snippetMode = input.mode === "snippets";
+    const head = snippetMode
+      ? `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>What the model read</h3><p>${stats ? `${stats.snippets} snippet${stats.snippets === 1 ? "" : "s"} · ${stats.kept_turns} of ${stats.turns} segments · ${stats.kept_text_pct}% of the text` : "Snippets"}</p></div></div></div>`
+      : `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>Model input and review highlights</h3><p>Full transcript · ${input.segmentCount} segments</p></div></div></div>`;
+    const reason = input.reason ? `${escapeHtml(input.reason[0].toUpperCase() + input.reason.slice(1))}. ` : "";
     const notes = [
-      input.reason ? `<p class="model-input-note">${escapeHtml(input.reason[0].toUpperCase() + input.reason.slice(1))}.</p>` : "",
-      input.currentDiffers ? `<p class="model-input-note warn">The keyword list or snippet settings changed after this extraction. Run the pipeline again to update the decision.</p>` : "",
+      snippetMode
+        ? `<p class="model-input-note">${reason}The model read only these snippets; the same passages are your review highlights.</p>`
+        : `<p class="model-input-note">${reason}Snippets below are only for highlighting and audio navigation; they did not limit detection.</p>`,
+      snippetMode && input.currentDiffers ? `<p class="model-input-note warn">The keyword list or snippet settings changed after this extraction. Run the pipeline again to update the decision.</p>` : "",
     ].join("");
-    const legend = input.mode === "snippets" && input.snippets.length ? `<div class="snippet-legend"><span><mark class="hit-mark hit-keyword"><b>keyword</b></mark></span><span><mark class="hit-mark hit-digits"><b>digits</b></mark></span><span><mark class="hit-mark hit-cue"><b>cue</b></mark></span><span><mark class="hit-mark hit-context"><b>context</b></mark></span><span>▶ anchor</span><span>+ linked context</span><span>··· skipped</span></div>` : "";
-    return `<section id="model-input-section" class="detail-card model-input-card">${head}${notes}${legend}${input.mode === "snippets" ? input.snippets.map((snippet) => snippetMarkup(snippet, cited)).join("") : ""}</section>`;
+    const highlightSummary = highlights.length && stats ? `<p class="model-input-note">${stats.snippets} highlight${stats.snippets === 1 ? "" : "s"} · ${stats.keyword_hits} keyword, ${stats.digit_hits} digit, ${stats.cue_hits} cue hits.</p>` : "";
+    const legend = highlights.length ? `<div class="snippet-legend"><span><mark class="hit-mark hit-keyword"><b>keyword</b></mark></span><span><mark class="hit-mark hit-digits"><b>digits</b></mark></span><span><mark class="hit-mark hit-cue"><b>cue</b></mark></span><span><mark class="hit-mark hit-context"><b>context</b></mark></span><span>▶ anchor</span><span>+ linked context</span><span>··· skipped</span></div>` : "";
+    return `<section id="model-input-section" class="detail-card model-input-card">${head}${notes}${highlightSummary}${legend}${highlights.map((snippet) => snippetMarkup(snippet, cited)).join("")}</section>`;
   }
 
   function counterfactualMarkup(call) {
@@ -251,7 +272,10 @@
     const cls = condition.state.toLowerCase();
     const symbol = condition.state === "Supported" ? "✓" : condition.state === "Excluded" ? "—" : "?";
     const stateLabel = condition.state === "Excluded" ? "Explicitly excluded" : condition.state === "Unknown" ? "Not established" : "Supported";
-    return `<div class="condition"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span></div>`;
+    const reason = condition.reason || "No rationale is available for this fact.";
+    // Explainability: the policy wording being checked, then the evidence that decided it.
+    const tooltip = condition.policy ? `Policy: ${condition.policy}\n${reason}` : reason;
+    return `<div class="condition" tabindex="0" title="${escapeHtml(tooltip)}" aria-label="${escapeHtml(`${userConditionLabel(condition.label)}. ${stateLabel}. ${tooltip}`)}"><span>${symbol} ${escapeHtml(userConditionLabel(condition.label))}</span><span class="status-label condition-state ${cls}">${stateLabel}</span><span class="condition-reason" role="tooltip">${condition.policy ? `<strong>Policy:</strong> ${escapeHtml(condition.policy)}<br>` : ""}${escapeHtml(reason)}</span></div>`;
   }
 
   function liveReasons(call) {
@@ -320,6 +344,55 @@
     return "No alert detected";
   }
 
+  function reviewResolutionMarkup(call, classification) {
+    if (!live || classification !== "Review") return "";
+    const saved = call.humanFeedback;
+    const outcome = saved?.outcome === "alarm" ? "Alert" : saved?.outcome === "no_alert" ? "No alert" : null;
+    return `<section id="human-resolution-section" class="detail-card human-resolution guide-target">
+      <div class="section-head"><div class="section-title"><span class="section-icon">${icon("review")}</span><div><h3>Human resolution</h3><p>${outcome ? `Saved outcome: ${outcome}. It becomes a calibration example only for future extractions.` : "Resolve this review after checking the transcript and audio."}</p></div></div></div>
+      <div class="resolution-actions"><button class="btn btn-sm ${saved?.outcome === "alarm" ? "btn-primary" : "btn-outline"}" type="button" data-review-outcome="alarm">Mark alert</button><button class="btn btn-sm ${saved?.outcome === "no_alert" ? "btn-primary" : "btn-outline"}" type="button" data-review-outcome="no_alert">Mark no alert</button></div>
+      <p class="resolution-note">This does not relabel the stored pipeline result or change policy rules. A fresh pipeline run can use prior human resolutions as bounded calibration examples.</p>
+    </section>`;
+  }
+
+  function transcriptMarkup(call) {
+    const editing = state.transcriptEdit && state.transcriptEdit.call === call.id ? state.transcriptEdit.segmentId : null;
+    const changed = new Set(call.transcriptCorrections || []);
+    return `<details class="detail-card transcript-collapse" ${editing ? "open" : ""}><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript${live ? " · correct any segment" : ""}</small></span></span></summary><div class="transcript-body">${call.transcript.map((line, index) => { const id = line.id || `line-${index}`; const isEditing = editing === id; return `<div class="transcript-line ${changed.has(id) ? "transcript-corrected" : ""}" data-transcript-id="${escapeHtml(id)}"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span class="transcript-content">${isEditing ? `<textarea class="transcript-edit" data-transcript-text rows="3">${escapeHtml(line.text)}</textarea><span class="transcript-edit-actions"><button class="btn btn-xs btn-primary" data-save-transcript="${escapeHtml(id)}" type="button">Save</button><button class="btn btn-xs btn-ghost" data-cancel-transcript type="button">Cancel</button></span>` : `${markedText(line.text)}${changed.has(id) ? '<small class="transcript-corrected-note">corrected</small>' : ""}`}</span>${live && !isEditing ? `<button class="btn btn-xs btn-ghost transcript-correct" data-edit-transcript="${escapeHtml(id)}" type="button">Correct</button>` : ""}</div>`; }).join("")}</div></details>`;
+  }
+
+  async function saveReviewOutcome(call, outcome) {
+    try {
+      const response = await fetch("/api/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call: call.id, threshold: state.threshold, outcome }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      call.humanFeedback = result.review;
+      renderDetail({ immediate: true, startGuide: false });
+      $("#sr-status").textContent = `Human resolution saved as ${outcome === "alarm" ? "alert" : "no alert"}. It will calibrate future pipeline runs.`;
+    } catch (error) {
+      $("#sr-status").textContent = `Could not save human resolution: ${error.message}`;
+    }
+  }
+
+  async function saveTranscriptCorrection(call, segmentId) {
+    const field = $("[data-transcript-text]");
+    if (!field) return;
+    try {
+      const response = await fetch(`/api/transcripts/${encodeURIComponent(call.id)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ segment_id: segmentId, text: field.value }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      const line = call.transcript.find((item) => item.id === segmentId);
+      if (line) line.text = result.transcript.segment.text;
+      call.transcriptCorrections = result.transcript.corrected_segments;
+      call.cacheStatus = "stale_transcript";
+      state.transcriptEdit = null;
+      renderDetail({ immediate: true, startGuide: false });
+      $("#sr-status").textContent = "Transcript correction saved. Run the pipeline again before relying on a refreshed automatic assessment.";
+    } catch (error) {
+      $("#sr-status").textContent = `Could not save transcript correction: ${error.message}`;
+    }
+  }
+
   function renderDetail(options = {}) {
     const call = selectedCall();
     const classification = classificationFor(call);
@@ -333,13 +406,14 @@
     stopAudio();
     const detail = $("#call-detail");
     detail.innerHTML = `<div class="detail-inner detail-change">
-      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
+      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list or snippet setting; rerun pipeline", stale_feedback: "Human-feedback set changed; rerun pipeline", stale_transcript: "Transcript corrected; rerun pipeline", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
       <header id="classification-section" class="detail-header guide-target">
         <div><div class="eyebrow">${escapeHtml(call.family)} · ${formatTime(call.duration)}</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.family)} review · automatic transcript</p></div>
       </header>
       <div class="review-workspace">
         ${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown") || (!live && call.decisionType === "missing-fact")) ? `<section id="open-question-section" class="review-question guide-target"><span class="eyebrow">Question to resolve</span><h3>${escapeHtml(call.missingFact || "What required fact is still unresolved?")}</h3><p>This answer is required before the case can be resolved.</p></section>` : ""}
         ${classification === "Review" && reasons.includes("technical_uncertainty") ? `<section class="review-question technical-review"><span class="eyebrow">Technical review</span><h3>Evidence needs verification</h3><p>The extraction or its transcript grounding could not be verified. Listen to the relevant context before making a compliance decision.</p></section>` : ""}
+        ${reviewResolutionMarkup(call, classification)}
         <section id="assessment-section" class="main-review-card guide-target"><div class="section-head"><div><span class="eyebrow">${escapeHtml(caseHeading(call, classification))}</span><h3>${escapeHtml(operationalNarrative(call, classification))}</h3></div></div>
           <div id="evidence-section" class="evidence-window"><div class="evidence-meta"><span><strong>${hasEvidence ? `${formatTime(evidence.evidence_start ?? evidence.time)}–${formatTime(evidence.evidence_end ?? evidence.end)}` : "No supporting passage"}</strong></span><span>${hasEvidence ? `Context ${formatTime(bounds.start)}–${formatTime(bounds.end)}` : ""}</span></div><p class="evidence-context">${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown")) ? "Relevant context — it does not establish the unresolved fact." : hasEvidence ? "Supporting passage in the automatic transcript." : "Audio or grounded evidence is not available."}</p><p id="evidence-text" class="evidence-text passage-change" aria-hidden="true"></p><p class="sr-only">${escapeHtml(evidence.text)}</p></div>
           ${live ? `<audio id="audio-element" preload="metadata" src="/audio/${encodeURIComponent(call.id)}.wav"></audio>` : ""}
@@ -347,10 +421,10 @@
           ${call.evidence.length > 1 ? `<div class="passage-nav">Passage ${evidenceIndex + 1} of ${call.evidence.length}${call.evidence.map((_, index) => `<button class="btn btn-xs ${index === evidenceIndex ? "btn-primary" : "btn-ghost"}" data-evidence-index="${index}" type="button">${index + 1}</button>`).join("")}</div>` : ""}
           <div class="audio-player secondary-audio"><button id="play-button" class="btn btn-ghost btn-xs play-button" type="button" aria-label="Play full recording" ${live ? "" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Full recording position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>Full recording · ${formatTime(call.duration)}</span></div></div></div>
         </section>
-        <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.map(conditionMarkup).join("")}</div></section>
+        <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.length ? call.conditions.map(conditionMarkup).join("") : `<p class="facts-empty">${escapeHtml(call.factsReason || "No policy facts are available for this result.")}</p>`}</div></section>
         ${counterfactualMarkup(call)}
         ${modelInputMarkup(call)}
-        <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
+        ${transcriptMarkup(call)}
         <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
     </div>`;
@@ -421,6 +495,15 @@
     $$('[data-evidence-index]').forEach((button) => button.addEventListener("click", () => {
       state.evidenceIndex = Number(button.dataset.evidenceIndex);
       renderDetail({ immediate: true, startGuide: false });
+    }));
+    $$('[data-review-outcome]').forEach((button) => button.addEventListener("click", () => saveReviewOutcome(selectedCall(), button.dataset.reviewOutcome)));
+    $$('[data-edit-transcript]').forEach((button) => button.addEventListener("click", () => {
+      state.transcriptEdit = { call: selectedCall().id, segmentId: button.dataset.editTranscript };
+      renderDetail({ immediate: true, startGuide: false });
+    }));
+    $$('[data-save-transcript]').forEach((button) => button.addEventListener("click", () => saveTranscriptCorrection(selectedCall(), button.dataset.saveTranscript)));
+    $$('[data-cancel-transcript]').forEach((button) => button.addEventListener("click", () => {
+      state.transcriptEdit = null; renderDetail({ immediate: true, startGuide: false });
     }));
     $$("#classification-section, #assessment-section, #evidence-section, #audio-section, #policy-section, #open-question-section").forEach((section) => {
       if (section) section.addEventListener("pointerdown", pauseGuideTimer);
@@ -521,7 +604,7 @@
   }
 
   function renderKeywordEditor() {
-    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts now. The keywords also choose the snippets the model reads, so decisions change only after the pipeline runs again.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts now. When the model reads snippets, decisions change only after the pipeline runs again.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
     $("#close-keyword-editor").addEventListener("click", () => { state.keywordEditor = false; renderKeywordPopover(); });
     $("#add-keyword").addEventListener("click", () => {
       keywordConfig = configFromEditor();
@@ -560,7 +643,7 @@
   }
 
   function applyLiveData(data) {
-    ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
+    ({ calls, keywordGroups, keywordConfig, keywordCoverage, policyConfig } = data);
     thresholdValues = data.thresholds;
     allKeywords = Object.values(keywordGroups).flat();
     state.enabledKeywords = new Set(allKeywords);
@@ -582,6 +665,89 @@
     } catch (error) {
       state.keywordSaveError = error.message;
       renderKeywordEditor();
+    }
+  }
+
+  function policyConditionMarkup(conditionId, description, requiredRole) {
+    return `<fieldset class="policy-condition-row"><div class="policy-condition-head"><label>Condition ID<input class="input input-xs" data-field="condition-id" value="${escapeHtml(conditionId)}"></label><label>Required role<select class="select select-xs" data-field="role"><option value="" ${requiredRole ? "" : "selected"}>None</option><option value="customer" ${requiredRole === "customer" ? "selected" : ""}>Customer</option><option value="advisor" ${requiredRole === "advisor" ? "selected" : ""}>Advisor</option></select></label><button class="btn btn-xs btn-ghost remove-policy-condition" type="button">Remove</button></div><label>Deterministic condition description<textarea data-field="condition-description" rows="2">${escapeHtml(description)}</textarea></label></fieldset>`;
+  }
+
+  function policyFamilyMarkup(id, family) {
+    const conditions = Object.entries(family.conditions || {}).map(([conditionId, description]) => policyConditionMarkup(conditionId, description, (family.role_requirements || {})[conditionId])).join("");
+    return `<fieldset class="policy-editor-row" data-policy-original-id="${escapeHtml(id)}"><div class="policy-editor-row-head"><strong>${escapeHtml(id)}</strong><label class="keyword-enabled">Enabled <input data-field="enabled" type="checkbox" ${family.enabled !== false ? "checked" : ""}></label><button class="btn btn-xs btn-ghost remove-policy" type="button">Delete policy</button></div><label>Policy ID<input class="input input-sm" data-field="policy-id" value="${escapeHtml(id)}"></label><label>Title<input class="input input-sm" data-field="title" value="${escapeHtml(family.title || "")}"></label><div class="policy-options"><label><input data-field="can-alarm" type="checkbox" ${family.can_alarm !== false ? "checked" : ""}> Can generate alarms</label><label>Object types (classification-only)<input class="input input-sm" data-field="object-types" value="${escapeHtml((family.object_types || []).join(", "))}" placeholder="account_or_iban, other"></label></div><div class="policy-conditions"><div class="policy-condition-title"><strong>Conditions</strong><button class="btn btn-xs btn-ghost add-policy-condition" type="button">Add condition</button></div>${conditions || '<p class="policy-empty-conditions">No conditions. An alarm-capable policy needs one before it can be saved.</p>'}</div></fieldset>`;
+  }
+
+  function renderPolicyPopover() {
+    if (!live || !policyConfig) return;
+    if (!state.policyEditor) {
+      const note = state.policyConfigChanged ? '<p class="policy-save-note" role="status">Policy file saved. Existing call results use the previous policy; run a fresh evaluation before review.</p>' : "";
+      $("#policy-popover").innerHTML = `<div class="keyword-head"><div><h3>Policy rules</h3><p>${Object.keys(policyConfig.families).length} policy families · edits change future extraction and decisions</p></div><button id="manage-policies" class="btn btn-xs btn-outline" type="button">Edit policies</button></div>${note}`;
+      $("#manage-policies").addEventListener("click", () => { state.policyEditor = true; state.policySaveError = ""; renderPolicyPopover(); });
+      return;
+    }
+    $("#policy-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage policy rules</h3><p>Changes are validated and saved atomically. They require a fresh evaluation; old extraction caches are never reused.</p></div><button id="close-policy-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.policySaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.policySaveError)}</p>` : ""}<form id="policy-editor-form" class="policy-editor">${Object.entries(policyConfig.families).map(([id, family]) => policyFamilyMarkup(id, family)).join("")}<div class="keyword-editor-actions"><button id="add-policy" class="btn btn-xs btn-ghost" type="button">Add policy</button><button class="btn btn-xs btn-primary" type="submit">Save policies</button></div></form>`;
+    $("#close-policy-editor").addEventListener("click", () => { state.policyEditor = false; renderPolicyPopover(); });
+    $("#add-policy").addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      let index = 1; while (policyConfig.families[`new_policy_${index}`]) index++;
+      policyConfig.families[`new_policy_${index}`] = { title: "New policy", enabled: true, can_alarm: false, conditions: {}, role_requirements: {}, object_types: [] };
+      renderPolicyPopover();
+    });
+    $$(".remove-policy", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      delete policyConfig.families[$("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim()];
+      renderPolicyPopover();
+    }));
+    $$(".add-policy-condition", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      const id = $("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim(), family = policyConfig.families[id];
+      let index = 1; while (family.conditions[`new_condition_${index}`]) index++;
+      family.conditions[`new_condition_${index}`] = "Describe the fact this policy needs to establish.";
+      renderPolicyPopover();
+    }));
+    $$(".remove-policy-condition", $("#policy-editor-form")).forEach((button) => button.addEventListener("click", () => {
+      policyConfig = policyConfigFromEditor();
+      const familyId = $("[data-field=policy-id]", button.closest("[data-policy-original-id]")).value.trim();
+      const conditionId = $("[data-field=condition-id]", button.closest(".policy-condition-row")).value.trim();
+      delete policyConfig.families[familyId].conditions[conditionId];
+      delete policyConfig.families[familyId].role_requirements[conditionId];
+      renderPolicyPopover();
+    }));
+    $("#policy-editor-form").addEventListener("submit", savePolicyConfig);
+  }
+
+  function policyConfigFromEditor() {
+    const next = JSON.parse(JSON.stringify(policyConfig));
+    next.families = {};
+    $$(".policy-editor-row", $("#policy-editor-form")).forEach((row) => {
+      const originalId = row.dataset.policyOriginalId, id = $("[data-field=policy-id]", row).value.trim();
+      const previous = policyConfig.families[originalId] || {}, conditions = {}, roles = {};
+      $$(".policy-condition-row", row).forEach((conditionRow) => {
+        const conditionId = $("[data-field=condition-id]", conditionRow).value.trim();
+        conditions[conditionId] = $("[data-field=condition-description]", conditionRow).value.trim();
+        const role = $("[data-field=role]", conditionRow).value;
+        if (role) roles[conditionId] = role;
+      });
+      next.families[id] = { ...previous, title: $("[data-field=title]", row).value.trim(), enabled: $("[data-field=enabled]", row).checked,
+        can_alarm: $("[data-field=can-alarm]", row).checked, conditions, role_requirements: roles,
+        object_types: $("[data-field=object-types]", row).value.split(",").map((value) => value.trim()).filter(Boolean) };
+    });
+    return next;
+  }
+
+  async function savePolicyConfig(event) {
+    event.preventDefault();
+    try {
+      const response = await fetch("/api/policies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(policyConfigFromEditor()) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      policyConfig = result.policies;
+      state.policyEditor = false; state.policySaveError = ""; state.policyConfigChanged = true;
+      renderPolicyPopover();
+      $("#sr-status").textContent = "Policy configuration saved. Run a fresh evaluation before using the updated policy; current call results are historical.";
+    } catch (error) {
+      state.policySaveError = error.message;
+      renderPolicyPopover();
     }
   }
 
@@ -624,6 +790,8 @@
     if (drawer.hidden) return;
     $("#keyword-popover").hidden = true;
     $("#keyword-button").setAttribute("aria-expanded", "false");
+    $("#policy-popover").hidden = true;
+    $("#policy-button").setAttribute("aria-expanded", "false");
     drawer.setAttribute("aria-hidden", "true");
     drawer.hidden = true;
     $("#settings-backdrop").hidden = true;
@@ -762,6 +930,12 @@
       const keywordSearch = $("#keyword-search");
       if (!popover.hidden && keywordSearch) keywordSearch.focus();
     });
+    $("#policy-button").addEventListener("click", () => {
+      const popover = $("#policy-popover");
+      popover.hidden = !popover.hidden;
+      $("#policy-button").setAttribute("aria-expanded", String(!popover.hidden));
+      if (!popover.hidden) renderPolicyPopover();
+    });
     $("#settings-button").addEventListener("click", openSettings);
     $("#settings-close").addEventListener("click", () => closeSettings());
     $("#settings-backdrop").addEventListener("click", () => closeSettings());
@@ -777,7 +951,10 @@
       if (event.key === "Escape") {
         stopGuide(); closeMobileDetail();
         if (!$("#settings-drawer").hidden) closeSettings();
-        else { $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false"); }
+        else {
+          $("#keyword-popover").hidden = true; $("#keyword-button").setAttribute("aria-expanded", "false");
+          $("#policy-popover").hidden = true; $("#policy-button").setAttribute("aria-expanded", "false");
+        }
       }
     });
   }
@@ -803,6 +980,7 @@
     if (data) {
       live = true;
       ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
+      policyConfig = data.policyConfig;
       thresholdValues = data.thresholds;
       $("#data-badge").hidden = true;
       $("#threshold-badge").textContent = "ASR quality";
@@ -810,6 +988,8 @@
       ({ calls, keywordGroups } = window.CallGuardData);
       keywordConfig = null;
       keywordCoverage = null;
+      policyConfig = null;
+      $("#policy-settings-section").hidden = true;
     }
     allKeywords = Object.values(keywordGroups).flat();
     state = window.CallGuardState.createUiState(calls, allKeywords);

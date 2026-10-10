@@ -91,7 +91,28 @@ class DashboardCallTest(unittest.TestCase):
                           call["evidence"][0]["clip_start"], call["evidence"][0]["clip_end"]),
                          (0.0, 4.0, 0.0, 14.0))
         self.assertEqual({c["state"] for c in call["conditions"]}, {"Supported"})
+        self.assertTrue(all(c["reason"].startswith("The transcript says:") for c in call["conditions"]))
         self.assertEqual(len(call["transcript"]), 2)
+
+    def test_supported_conditions_carry_the_policy_wording_for_explainability(self):
+        """Hovering 'Supported' (or any state) must show which policy rule was checked, not just the quote."""
+        results = {"balanced": dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=0.6)}
+        call = ui.dashboard_call("Stufe1_D02-K1", SEGMENTS, results, "balanced", 155.1)
+        own_trade = next(c for c in call["conditions"] if c["label"] == "Own trade request")
+        self.assertEqual(own_trade["policy"],
+                         POLICIES["families"]["trade"]["conditions"]["own_trade_request"])
+        self.assertTrue(all(c.get("policy") for c in call["conditions"]), "every condition needs its policy text")
+
+    def test_evidence_timestamp_in_the_reason_is_minutes_seconds_not_raw_seconds(self):
+        """A dashboard timestamp must read like the audio player's own clock (0:04), never '4s'."""
+        results = {"balanced": dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=0.6)}
+        call = ui.dashboard_call("Stufe1_D02-K1", SEGMENTS, results, "balanced", 155.1)
+        at_4s = next(c for c in call["conditions"] if "at 0:04" in c["reason"] or " at 4s" in c["reason"])
+        self.assertIn("at 0:04", at_4s["reason"])
+        self.assertNotIn(" at 4s", at_4s["reason"])
+        self.assertEqual(ui._format_timestamp(0), "0:00")
+        self.assertEqual(ui._format_timestamp(65), "1:05")
+        self.assertEqual(ui._format_timestamp(600), "10:00")
 
     def test_call_without_events_has_a_placeholder_evidence(self):
         empty = {"families": {name: {"events": []} for name in POLICIES["families"]}}
@@ -100,6 +121,8 @@ class DashboardCallTest(unittest.TestCase):
         self.assertEqual((call["classificationByThreshold"]["balanced"], call["family"]), ("No alert", "None"))
         self.assertEqual(call["evidence"][0]["segments"], [])
         self.assertEqual(call["actor"], {"role": "unknown", "status": "unknown"})
+        self.assertTrue(call["noCandidateEvent"])
+        self.assertIn("not a guarantee", call["factsReason"])
 
     def test_grounding_issues_are_preserved_for_a_review(self):
         extraction = trade_extraction()
@@ -115,8 +138,21 @@ class ThresholdPresetTest(unittest.TestCase):
 
     def test_build_data_never_calls_the_chat_model(self):
         policies, keywords = ex.load_json(ROOT / "config" / "policies.json"), ex.load_json(ROOT / "data" / "Stichwortliste.json")
-        with unittest.mock.patch("callguard.models.chat_json", side_effect=AssertionError("must not call the model")):
-            data = ui.build_data(policies, keywords)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audio, transcripts = root / "Audio", root / "Transcriptions"
+            audio.mkdir()
+            transcripts.mkdir()
+            (audio / "opaque-call.wav").write_bytes(b"fixture only")
+            (transcripts / "opaque-call.json").write_text(json.dumps({"segments": SEGMENTS}), encoding="utf-8")
+            cached = root / "extract.json"
+            cached.write_text(json.dumps({"families": {name: {"events": []} for name in policies["families"]}}), encoding="utf-8")
+            with unittest.mock.patch("callguard.models.chat_json", side_effect=AssertionError("must not call the model")), \
+                    unittest.mock.patch.object(ui, "AUDIO", audio), \
+                    unittest.mock.patch.object(ui, "TRANSCRIPTS", transcripts), \
+                    unittest.mock.patch.object(ui, "find_extraction", return_value=(cached, "current")), \
+                    unittest.mock.patch.object(ui.evidence, "duration", return_value=1.0):
+                data = ui.build_data(policies, keywords)
         self.assertGreater(len(data["calls"]), 0)
 
     def test_every_preset_is_a_pure_recompute_of_the_same_cached_extraction(self):
@@ -172,12 +208,50 @@ class KeywordDecisionIndependenceTest(unittest.TestCase):
         self.assertEqual(result["label"], "alarm")
 
 
+class PolicyConfigTest(unittest.TestCase):
+    def test_policy_crud_validation_accepts_a_new_classification_only_policy(self):
+        edited = json.loads(json.dumps(POLICIES))
+        edited["families"]["new_identifier"] = {"title": "New identifier policy", "enabled": True,
+                                                   "can_alarm": False, "conditions": {}, "role_requirements": {}}
+        saved = ui.validate_policy_config(edited)
+        self.assertFalse(saved["families"]["new_identifier"]["can_alarm"])
+
+    def test_policy_validation_rejects_an_alarm_policy_without_conditions(self):
+        edited = json.loads(json.dumps(POLICIES))
+        edited["families"]["unsafe"] = {"title": "Unsafe", "enabled": True, "can_alarm": True, "conditions": {}}
+        with self.assertRaisesRegex(ValueError, "needs at least one condition"):
+            ui.validate_policy_config(edited)
+
+
+class ReviewResolutionApiTest(unittest.TestCase):
+    def test_only_a_review_can_be_saved_as_human_feedback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            handler = object.__new__(ui.Handler)
+            handler.feedback_path = Path(directory) / "reviews.json"
+            handler.corrections_dir = Path(directory) / "corrections"
+            handler.policies_path = ROOT / "config" / "policies.json"
+            handler.keywords_path = ROOT / "data" / "Stichwortliste.json"
+            current = {"id": "call-1", "family": "Trade", "classificationByThreshold": {"balanced": "Review"},
+                       "reasonByThreshold": {"balanced": ["missing_policy_fact"]}}
+            with unittest.mock.patch.object(ui, "build_data", return_value={"calls": [current]}), \
+                 unittest.mock.patch.object(ui.Handler, "transcript_segments", return_value=SEGMENTS):
+                saved = handler.save_review({"call": "call-1", "threshold": "balanced", "outcome": "no_alert"})
+                self.assertEqual(saved["outcome"], "no_alert")
+                with self.assertRaisesRegex(ValueError, "only resolve"):
+                    handler.save_review({"call": "call-1", "threshold": "sensitive", "outcome": "alarm"})
+
+
 class ServerTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.keyword_path = Path(self.tmp.name) / "keywords.json"
+        self.policies_path = Path(self.tmp.name) / "policies.json"
+        self.corrections_dir = Path(self.tmp.name) / "corrections"
+        self.feedback_path = Path(self.tmp.name) / "reviews.json"
         self.keyword_path.write_text((ROOT / "data" / "Stichwortliste.json").read_text(encoding="utf-8"), encoding="utf-8")
-        self.srv = ui.make_server("127.0.0.1", 0, keywords_path=self.keyword_path)
+        self.policies_path.write_text((ROOT / "config" / "policies.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.srv = ui.make_server("127.0.0.1", 0, policies_path=self.policies_path, keywords_path=self.keyword_path,
+                                  corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
 
@@ -243,6 +317,32 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("duplicate term", json.loads(body)["error"])
         self.assertFalse(ex.load_json(self.keyword_path)["keywords"][0]["enabled"])
+
+    def test_policy_save_is_validated_and_atomic(self):
+        edited = ex.load_json(self.policies_path)
+        edited["families"]["new_identifier"] = {"title": "New identifier policy", "enabled": True,
+                                                   "can_alarm": False, "conditions": {}, "role_requirements": {}}
+        status, _, body = post(self.base, "/api/policies", edited)
+        self.assertEqual(status, 200)
+        self.assertIn("new_identifier", json.loads(body)["policies"]["families"])
+        self.assertIn("new_identifier", ex.load_json(self.policies_path)["families"])
+
+        invalid = ex.load_json(self.policies_path)
+        invalid["families"]["unsafe"] = {"title": "Unsafe", "enabled": True, "can_alarm": True, "conditions": {}}
+        status, _, body = post(self.base, "/api/policies", invalid)
+        self.assertEqual(status, 400)
+        self.assertIn("needs at least one condition", json.loads(body)["error"])
+        self.assertNotIn("unsafe", ex.load_json(self.policies_path)["families"])
+
+    def test_transcript_correction_is_saved_as_an_overlay(self):
+        source = ex.load_json(ROOT / "data" / "Transcriptions" / "Stufe1_D02-K1.json")["segments"][0]
+        status, _, body = post(self.base, "/api/transcripts/Stufe1_D02-K1",
+                               {"segment_id": source["id"], "text": "Korrigierter menschlicher Text."})
+        saved = json.loads(body)
+        self.assertEqual((status, saved["transcript"]["segment"]["text"]), (200, "Korrigierter menschlicher Text."))
+        corrected, changed = ui.human_feedback.apply_corrections("Stufe1_D02-K1", [source], self.corrections_dir)
+        self.assertEqual((corrected[0]["text"], changed), ("Korrigierter menschlicher Text.", [source["id"]]))
+
 
 
 if __name__ == "__main__":

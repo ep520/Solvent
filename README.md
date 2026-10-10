@@ -58,18 +58,13 @@ python3 -m callguard.ui                                                     # sa
   ("if *the information was not public* were supported instead of not established, the decision would be ALARM";
   "with the conservative preset this would be REVIEW"). The dashboard shows them under *What would change the decision*,
   and `pipeline text` prints them as `WHAT-IF` lines.
-- **Snippets are the model input** ([`config/snippets.json`](config/snippets.json), engine in
-  [`callguard/snippets.py`](callguard/snippets.py)). Instead of the whole call, the model reads the passages found by
-  the official keyword list, spoken digit sequences and cue words, with linked context from anywhere in the call,
-  the matched words in **bold**, each hit's score, the snippet priority and the ASR quality per segment. Segment IDs
-  are unchanged, so quotes still ground exactly. A call where no finder fires is read in full (`if_no_snippets`), and
-  `"enabled": false` restores the full-transcript prompt. On the test scripts the snippets keep 21/22 expected
-  evidence turns with speaker labels and 20/22 without (raw ASR), with 38 % of the text; measure with
-  [`tools/snippets/eval_snippets.py`](tools/snippets/README.md).
-- **Dashboard: "What the model read"** shows, per call, exactly what was sent (stored with the extraction):
-  each snippet with time range, priority, finders, keyword hits with IDs and scores, cue words, highlighted words,
-  ASR quality per segment, a play button for the snippet audio, and the segments the decision cites as evidence.
-  If the keyword list or snippet settings changed since, the card says so until the pipeline runs again.
+- **Complete transcript is the model input.** Each extraction receives the complete ASR transcript within the
+  context budget. [`callguard/snippets.py`](callguard/snippets.py) still selects keyword/cue/digit passages, but
+  only for dashboard highlighting and jump-to-audio navigation; it never limits detection or changes an existing
+  decision. Adaptive routing is deferred until recall and latency are measured against this baseline.
+- **Dashboard: "Model input and review highlights"** shows the complete input size plus snippets with time range,
+  finders, keyword hits, audio navigation and cited segments. Highlights are not evidence and are not a cache
+  invalidation input for the full-transcript extraction.
 
 ## The problem today
 
@@ -126,9 +121,10 @@ interesting solutions sit in between.
 ## The data
 
 In [`data/`](data/README.md): 42 calls (WAV, mono, 16 kHz, Swiss German) from 21 dialogues, each in
-a clean and a noisy version. Every dialogue comes with its script as a transcript and with the
-expected assessment: alert, no alert or review, with the reasoning and the passages that carry the
-decision. A preliminary keyword list is included as JSON.
+a clean and a noisy version. Every dialogue has a reference script and an expected assessment: alert,
+no alert or review, with reasoning and supporting passages. The audio path instead creates and uses a
+separate ASR transcript; the reference script and gold are only evaluation material. A preliminary keyword
+list is included as JSON.
 
 - **Level 1** (`Stufe1_`): direct keyword calls.
 - **Level 2** (`Stufe2_`): context pairs, similar calls where only the context decides.

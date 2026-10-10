@@ -8,13 +8,12 @@ than an explicit unknown value.
 import argparse
 import hashlib
 import json
-import os
 import sys
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from callguard import models
+from callguard import storage
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "cache" / "asr"
@@ -75,10 +74,7 @@ def transcribe(audio_path, profile=None, force=False):
               "verbatim_constraint": VERBATIM_CONSTRAINT,
               "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
               "segments": _annotate(raw)}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # atomic: parallel workers never read half a file
-    tmp.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    storage.atomic_write_json(path, result, indent=2)
     return result, False
 
 
@@ -91,10 +87,9 @@ def _timestamp(seconds):
 def export(result, output_dir=EXPORT):
     """Create tracked JSON and readable Markdown exports with English metadata."""
     output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
     stem = Path(result["source_file"]).stem
     json_path, md_path = output_dir / f"{stem}.json", output_dir / f"{stem}.md"
-    json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    storage.atomic_write_json(json_path, result, indent=2)
     lines = [f"# {stem}", "", f"- ASR model: `{result.get('asr_model', 'unknown')}`", "- Language hint: `de`", "- Role policy: `UNKNOWN_ROLE` is retained where diarization is unavailable; no speaker is guessed.",
              "- Verbatim constraint: no translation, paraphrasing, reordering, correction, or word substitution.", "",
              "| Timestamp | Turn | Role | Speaker | Transcript |", "| --- | --- | --- | --- | --- |"]
@@ -102,7 +97,7 @@ def export(result, output_dir=EXPORT):
         stamp = f"{_timestamp(seg['start'])} → {_timestamp(seg['end'])}"
         text = seg["text"].replace("|", "\\|").replace("\n", " ")
         lines.append(f"| {stamp} | {seg['turn']} | {seg['role']} | {seg['speaker']} | {text} |")
-    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    storage.atomic_write_text(md_path, "\n".join(lines) + "\n")
     return json_path, md_path
 
 

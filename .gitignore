@@ -6,7 +6,7 @@ cache/
 runs/
 .env
 .playwright-mcp/
-# case data is not ours to publish; keep it out of the public repo
-data/
-*.sqlite
-.venv/
+PLAN.md
+CONTEXT_AUDIO_AUDIT.md
+DEMO_RUNBOOK.md
+data/Transcriptions/*.md

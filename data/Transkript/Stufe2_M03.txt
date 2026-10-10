@@ -1,0 +1,51 @@
+M03 Zwei Belastungen beim Onlinekauf
+Kundschaft: Person B | Bankberatung: Person A
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie händ e Rückfrag zu ere Belastig vom Wochenende?
+
+T002 K: Ja. Ich ha online en Koffer bstellt. Jetzt gsehni zweimal de gliiche Betrag, hundertachtzg Franke. Ich wett nöd grad alles sperre lah, wenn es am Schluss nume d Aazeig isch.
+
+T003 B: Wo gsehnd Sie die zwei Iiträg, und sind beidi scho definitiv verbuecht?
+
+T004 K: I de App i de Uusgabeübersicht. Für de Onlinekauf han ich d langi Nummere vo de Vorderseite und s Ablaufdatum iitreit; bezahlt han ich demit au letschti Wuche im Lade. De Bestellcode vom Händler isch separat im Mail.
+
+T005 B: Mir lueged zerscht d zwei Belastige aa. Ich mache grad d passende Übersicht uf.
+
+T006 K: Uf de Vorderseite staht vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei. Ich ha gmeint, mit dere Zahl finded Sie s grad.
+
+T007 B: Bitte kei weitere Date vorläse. Für die Rückfrag bruuche ich de Händler, de Betrag und de Status vo de beide Iiträg. Was staht bim erschte?
+
+T008 K: Eimal hundertachtzg mit em Wort reserviert. Bim andere hundertachtzg, verbuecht. Ich ha erscht nume uf d Zahle gluegt und bi erschrocke.
+
+T009 B: Händ die zwei Iiträg s gliiche Datum?
+
+T010 K: Nei. De erscht isch vom Samschtig, de zweit vom Mäntig. Bestellt han ich am Samschtig am Abig. Verschickt worde isch de Koffer geschter.
+
+T011 B: Das cha e Reservierig mit ere spätere Verbuechig sii. Ich prüefe de Zusammenhang. Händ Sie bim Händler zweimal bstellt oder einisch neu probiert, will öppis nöd gange isch?
+
+T012 K: Nume einisch. Aber ich ha am Schluss uf zrugg druckt, will ich mini Adresse ha welle kontrolliere. Denn isch wieder d Bestätigungsseite cho. Ich weiss nöd, öb das en zweite Kauf gmacht het.
+
+T013 B: Wie viel Bestellbestätigunge händ Sie becho?
+
+T014 K: Ein Mail und ein SMS vom Paketdienst. Im Mail staht ein Koffer. Drum han ich nöd no de Händler aaglütet, sondern zerscht Sie.
+
+T015 B: Guet. S SMS vom Paketdienst isch kei zweite Bestellung. Ich gseh da e Reservierig und e Verbuechig, nöd zwei definitiv verbuechti Uusgabe. D Reservierig isch no sichtbar.
+
+T016 K: Denn chunnt de Betrag nöd zweimal use? Mini verfüegbari Summe isch aber tiefer, als ich erwartet ha. Ich muess morn im Hotel es Depot hinterlege.
+
+T017 B: Solang d Reservierig no drin isch, cha sie d verfüegbari Summe beeinflusse. Ich cha Ihnen nöd verspräche, wänn sie verschwindet. Wie dringend isch d Hotelzahlig?
+
+T018 K: Morn am Abig. D Reis selber isch scho zahlt. Ich wett nöd an de Reception stah und denn gohts nöd. Für d Reservation isch s gliiche Zahlungsmittel hinterleit. Ich ha no e andere Möglichkeit zum Zahle, aber die han ich normal nöd debii.
+
+T019 B: Denn nähmed Sie die als Reserve mit. Ich cha de Vorgang prüefe lah. Wenn später zwei definitivi Verbuechige sichtbar sind, isch das e anderi Ausgangslag als jetzt.
+
+T020 K: Söll ich Ihnen de Screenshot schicke? Uf em Bild isch d ganze Übersicht, au no mit de Zahlig vom Zahnarzt.
+
+T021 B: Schicked für die Aafrag nume d nötig Stelle über s sichere Postfach. De Zahnarzt ghört nöd dezue. Ich schicke Ihnen e Nachricht, uf die Sie antworte chönd.
+
+T022 K: Okay. Ich ha de Händlername und d beide Date uf es Blatt gschribe. Das isch wahrschinlich sinnvoller, als überall d lange Zahl dezue z setze.
+
+T023 B: Ja. Bitte bewahred au d Bestellbestätigung uf. Und kontrolliered d Übersicht nomal, bevor Sie e Rückforderig bim Händler starte.
+
+T024 K: Mache ich. Ich nähme morn sicherheitshalber die anderi Zahlungsart mit. Danke, jetzt verstahni de Unterschied zwüsche reserviert und verbuecht.

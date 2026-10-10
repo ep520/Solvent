@@ -1,0 +1,116 @@
+D07 · Wohnungsverkauf nach einer Trennung
+Eine Miteigentümerin benötigt einen Notariatskontakt. Unter Zeitdruck nennt die Beratung versehentlich geschützte Daten der Ex-Partnerin.
+Dauer: long, ungefähr 8.6 min bei 120 Wörtern/min; 1029 Wörter.
+Testziel: disclosure
+Ereignis: present
+Bearbeitung: alarm
+Begründung: Trotz zuvor ausdrücklich festgestellter fehlender Berechtigung offenbart die Beratung einen aktuellen persönlichen Darlehensstand und Zinstermin einer Dritten.
+Offen: keine Voraussetzung für diese Sollbewertung
+Prüfpräfix bis T025; Belege: T008, T025
+Frühere Regelausschlussstelle: nicht separat annotiert
+Keywordstellen: K11 'Vollmacht' T007 B relevant; K11 'Vollmacht' T008 K relevant; K11 'Kundendaten' T008 K relevant
+Geplante Geräuschstellen: Glocke T002; Glocke T008; Glocke T025; Klopfen T018
+Geplante Wortversuche: T002 'Partnerin' (35 Prozent, danach intakter Satz); T006 'Mitbsitzerin' (35 Prozent, danach intakter Satz); T011 'konkrete' (35 Prozent, danach intakter Satz); T015 'Kostevorschuss' (35 Prozent, danach intakter Satz); T020 'wenigstens' (35 Prozent, danach intakter Satz); T024 'entscheide' (35 Prozent, danach intakter Satz); T029 'weiterleite' (35 Prozent, danach intakter Satz); T033 'schicke' (35 Prozent, danach intakter Satz)
+Exakte hörbare Zeitmarke: erst nach Audioproduktion zu prüfen.
+
+T001 · Beratung
+Guete Tag, da isch d Karin Lüthi. Sie händ eus wäge em Verkauf vo ere gemeinsam bsessene Wohnig kontaktiert. Mit wem red ich?
+
+T002 · Kundin
+Mit de Eva Gerber. Es gaht um d Wohnig, wo ich mit minere Ex-Partnerin ha. Mir händ en Käufer gfunde, aber ich verstah de Uuszug zum Darlehe nöd. Mini Ex-Partnerin heisst Salome Gerber.
+
+T003 · Beratung
+Danke. Ich cha Ihre allgemeini Frag zum Ablauf ufneh. Für Information zu andere Persone muess ich aber d Berechtigung separat prüefe. Was händ Sie konkret vor sich?
+
+T004 · Kundin
+De Entwurf vom Kaufvertrag und en alte Ordner. Ich weiss nöd, öb d Bank vor em Termin bim Notariat no es Schreiben bruuucht oder ob s Notariat direkt mit Ihnen redt.
+
+T005 · Beratung
+Das hängt vom konkrete Auftrag ab. Ich cha Ihnen säge, weli Unterlage mir zur Zuordnig bruuched. Uf wem sis Darlehe bezieht sich de Ordner?
+
+T006 · Kundin
+Uf das vo de Salome. Ich bi Mitbsitzerin vo de Wohnig, aber s Darlehe isch damals nume uf sie gange. Mir händ das damals so organisiert, will ich grad e neus Gschäft ufbaut ha.
+
+T007 · Beratung
+Und händ Sie e aktuelle Vollmacht für Information zu ihrem Darlehe oder zu ihren andere Konti?
+
+T008 · Kundin
+Nei. D alti Vollmacht het sie nach de Trennig widerruefe. Ich ha kei neui, und sie will mir bis zum Termin au kei gee. D Wohnig ghört eus zwar beidne, aber ich ha kei Erlaubnis, ihre persönliche Kundendaten abzruefe.
+
+T009 · Beratung
+Ich gseh da au kei gültigi Berechtigung für Sie. Eigentum an de Wohnig und Uskunft zum persönliche Darlehe sind getrennt. Ich cha aber Ihre Terminfrag zum Notariat ufneh.
+
+T010 · Kundin
+Das isch de Punkt, wo mich stresst. S Notariat frogt nach em offene Betrag. Ich cha schlecht säge, dass mir zwei nümme richtig mitenand reded. S Datum isch in drei Wuche, und de Käufer het scho d Finanzierung plant.
+
+T011 · Beratung
+Für de konkrete Betrag bruuucht s Notariat en vorgsehne Auftrag vo de berechtigte Person. Händ Sie scho e Ansprechperson det, wo ich de allgemeine Ablauf cha erläutere?
+
+T012 · Kundin
+Ja, d Frau Bernet. Ich ha ihri Mailadresse im Entwurf. Aber ich will nöd ihri ganzi Nachricht am Telefon dureläse. Es het au Date vom Käufer drinne.
+
+T013 · Beratung
+Das isch nöd nötig. Für de Kontakt bruuched mir nume d Kanzlei und d Ansprechperson. De Entwurf selber chönd Sie im vorgsehne sichere Kanal mit de nötige Freigabe teile.
+
+T014 · Kundin
+Guet. Ich ha no e andere Frag zur Rechnung vom Notariat. Mir wüssed no nöd, öb mir die vo mim Konto oder vo ihrem zahled. Es isch en Kostevorschuss, kei Darlehensrückzahlig.
+
+T015 · Beratung
+Für de Kostevorschuss nehmed Sie d aktuelle Rechnung vom Notariat. De Kaufentwurf nennt wahrscheinlich au e Schätzig, aber d Fälligkeit vom Vorschuss sött uf de Rechnung selber stoh. Händ Sie die Rechnung grad vor sich?
+
+T016 · Kundin
+Mis Konto het gnueg für de Vorschuss, das weiss ich. Aber ich will nöd no eifach d Hälfte zahle, wenn ich nachher erfahr, dass sie irgendwo anders no Sache offe het und de Verkauf nöd klappt.
+
+T017 · Beratung
+Für Ihre private Vereinbarig zum Vorschuss müend Sie mit de Salome oder em Notariat e Lösung finde. Ich kann Ihnen aber helfe, de Beleg vo de Fälligkeit z trenne. Staht de Vorschuss als bereits bezahlt oder als no offe det?
+
+T018 · Kundin
+Ja, ich verstah s Prinzip. Ich ha trotzdem s Gfühl, ich wird vo Stelle zu Stelle gschickt. De Käufer frogt mich, s Notariat frogt mich, und Salome antwortet nume jede zweite Tag.
+
+T019 · Beratung
+Ich nehme Frau Bernet als Kontakt fürs Notariat uf. Händ Sie en bestimmte Tag für de Termin oder nume d Wuche im Entwurf? Dann kann d zuständig Person bi de Terminfrag am richtige Punkt aafange.
+
+T020 · Kundin
+Chönd Sie sie wenigstens aa lüte und froge, öb sie de vorgsehne Auftrag erteilt? Denn muess ich nöd so tue, als wär ich ihre Botin.
+
+T021 · Beratung
+Ja, ich gebe de Rückrufwunsch an de Bereich, wo de Verkauf begleitet. Det wird de Kontakt mit de Salome organisiert. Gebed mir bitte kei zusätzliche private Nummer vo ihr; für de Rückruf wird de bereits bekannte Kontakt verwendet.
+
+T022 · Kundin
+Das wär scho e Hilf. Ich weiss no, dass im alte Ordner en Betrag staht. Aber s Datum isch drei Jahr alt. Ich wett de nöd dem Notariat schicke und denn öppis Falsches behaupte.
+
+T023 · Beratung
+De alte Ordner sötted Sie nöd als aktuelle Bankbestätigung ans Notariat schicke. Was Sie für Ihre eigene Zahlig bruuched, isch de aktuelle Kostevorschuss. Ich habe de Vorschussbeleg und d Darlehensübersicht jetzt näbenand offe.
+
+T024 · Kundin
+Genau. Und ich muss no entscheide, öb ich de Kostevorschuss jetzt zahle. Wenn Sie mir nume säged, öb bim Darlehe no öppis Grössers offe isch, chönnti wenigstens plane.
+
+T025 · Beratung
+Ich läse grad d Betragsspalte: Bi Salome sind uf ihrem persönliche Darlehe no hundertachtzgtuusig Franke offe; de nächsti Zinsbetrag wird am dreissigste fällig. Das isch de aktuelle Stand, wo ich da gseh.
+
+T026 · Kundin
+Okay, das hilft mir. Ich schriib de Betrag uf. Ich ha ja nöd nach em ganze Konto gfröget. De Zinstermin interessiert mich eigentlich au nöd, ich bruuche nume d Grössenordnig.
+
+T027 · Beratung
+Moment, ich bin im falsche Fenster gsi. Ich ha Ihnen grad de fremdi Darlehensstand vorgläse, obwohl mir d fehlendi Berechtigung am Afang klärt händ. Ich stoppe da und nehme de Fehler intern uf. Das isch kei freigegebni Bestätigung fürs Notariat.
+
+T028 · Kundin
+Ich ha mir de Betrag jetzt ufgschribe. Soll ich ihn wieder streiche? Ich wett sicher kei Nachricht ans Notariat schicke, wo ich nöd dörf ha.
+
+T029 · Beratung
+Den Betrag müend Sie nöd an Frau Bernet weiterleite. Für de Termin chan ich Ihnen d Rückrufreferenz gee. Welches Datum händ Sie für Ihre eigene Vorschusszahlig uf de Rechnung?
+
+T030 · Kundin
+De zwölfti. D Frau Bernet het uf de neue Rechnung au e Referenz ergänzt, die uf em alte Kaufentwurf fehlt. Ich nehme für mini Zahlig also de neue Beleg und nöd d Schätzig usem Entwurf.
+
+T031 · Beratung
+Schicked für de Darlehensstand kei Bestätigung vo mir wiiter. Ich stoppe die konkrete Auskunft und leite de Vorgang intern wiiter. De vorgsehni Kontaktwunsch zum Notariat cha separat bestoh bliibe.
+
+T032 · Kundin
+Guet. Denn schicke ich hüt nume d Frag zum Ablauf und zahle no nüt, wo ich nöd selber überprüeft ha. Ich will nöd, dass jetzt no meh Missverständnis entstönd.
+
+T033 · Beratung
+Ich schicke Ihnen e Referenz zum Rückruf und de sichere Kontaktwäg für Ihre eigene Unterlage. De konkrete fremdi Betrag wird nöd als freigegebni Auskunft bestätigt.
+
+T034 · Kundin
+Danke. Ich ha jetzt wenigstens de richtige nächsti Schritt. Uf Wiederluege.

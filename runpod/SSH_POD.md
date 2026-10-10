@@ -51,6 +51,20 @@ scp "${SSHOPT[@]}" -P "$SSH_PORT" root@"$POD_IP":/workspace/dashboard_results.zi
 scp "${SSHOPT[@]}" -P "$SSH_PORT" -r root@"$POD_IP":/workspace/Solvent/runs .
 ```
 
+## Hidden test (new recordings, frozen configuration)
+Keep new recordings out of `data/Audio`: the full development evaluation requires gold for every file there.
+```
+mkdir -p data/Hidden                                   # upload the new WAVs here
+python3 -m callguard.pipeline predict data/Hidden --workers 4
+```
+`predict` reads no labels, refuses `--threshold` (Balanced 0.60 is frozen; all presets are recorded), refuses
+non-self-hostable profiles and human transcript corrections for these recordings, and seals its outputs
+(`SEALED.json`, fingerprint printed). Download `runs/predict-*` before labels exist. When labels arrive:
+```
+python3 -m callguard.pipeline score runs/predict-YYYYMMDD-HHMMSS-Hidden --labels data/Hidden_labels
+```
+`score` verifies the seal, then writes `score-*/summary.json` (standard metrics) next to the untouched predictions.
+
 ## Stop billing
 The pod costs about $0.60/hour and has **no automatic shutdown**. Closing SSH does not stop it.
 Stop it in the RunPod console (pod `hackathon-202610-builder-vlm`). `/workspace` keeps venvs, models and results.

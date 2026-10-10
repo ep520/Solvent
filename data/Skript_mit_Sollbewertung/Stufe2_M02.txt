@@ -1,0 +1,71 @@
+M02 · Anlagefrage nach einer Firmenmeldung
+Aufgabe: Öffentliches Anlagegespräch
+Bearbeitung: no_alert
+Ergebnis: Kein Handelsereignis
+Begründung: Kein Handelsereignis nach der lokalen Regel. Öffentliche Quartalszahlen und die Erwähnung einer Finanzabteilung sind korrekte Worttreffer, aber keine eigene nicht öffentliche Informationsgrundlage.
+Zusammenfassung: Die Kundschaft fragt nach Kosten und Erfassung eines Aktientitels auf Grundlage einer öffentlichen Unternehmensmeldung. Sie nennt keine zusätzliche vertrauliche Information.
+Belegstellen laut Skript:
+  T004 K: «D Quartalszahle, wo sie geschter am Morge uf ihrer öffentliche Website veröffentlicht händ.» (Die als Grundlage genannte Unternehmensmeldung ist veröffentlicht und öffentlich zugänglich.)
+  T026 K: «Hüt sötted Sie für mich no kei Auftrag erfasse.» (Kein Auftrag soll im Gespräch erfasst werden; der zentrale Ausschlussgrund der Handelsregel ist trotzdem die öffentliche Quelle.)
+
+Hinweis: von zwei Personen eingesprochen und geschnitten. Der gesprochene Wortlaut kann vom Skript abweichen.
+
+M02 Anlagefrage nach einer Firmenmeldung
+Kundschaft: Person B | Bankberatung: Person A
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie händ e Frag zu de Firma Bergwinkel Energie hinterlah?
+
+T002 K: Ja. Ich ha ihre Nachricht gläse und wett wüsse, öb ich die Aktie über mis Depot cha chaufe. Im Suchfeld finde ich sie, aber bi de Choschte bini usgstiege.
+
+T003 B: Was für e Nachricht isch das gsi?
+
+T004 K: D Quartalszahle, wo sie geschter am Morge uf ihrer öffentliche Website veröffentlicht händ. Ich ha de Link us de Ziitig und de Bericht denn selber gläse.
+
+T005 B: Guet. Sie meined also die veröffentlichte Meldig. Händ Sie scho en Betrag überleit?
+
+T006 K: Dreituusig Franke, höchstens. Ich ha mir zuerst füüftuusig vorgnoh, aber nächschte Monet chunnt d Jahresrechnung vo de Versicherig.
+
+T007 B: Denn lohnt sichs, die Uusgab vorher iizrechne. Wänd Sie e zusätzliche Position oder öppis Bestehends verkaufe?
+
+T008 K: E zusätzliche. Mis Chind het mir de Artikel gschickt und gmeint, die Firma chönnt interessant sii. Ich ha mer de Link fürs Wochenende gspeicheret.
+
+T009 B: Und weli Choschte sind Ihnen im Formular unklar?
+
+T010 K: Es staht öppis pro Auftrag und öppis prozentual. Ich weiss nöd, öb ich beides muess zämezähle. Und unde isch no en Hinweis zu fremde Währige.
+
+T011 B: De Währigshinweis gilt nöd bi jedem Titel. Für d genaue Choschte müend mir de richtige Handelsplatz und de Betrag im Entwurf ha. Ich cha Ihnen d Felder erkläre, ohni en Auftrag abzschicke.
+
+T012 K: Ja, bitte. Ich han dreituusig im Chopf. Aber wenn ich de Priis nöd genau kenne, wie söll ich d Anzahl wähle?
+
+T013 B: Händ Sie im Formular e Anzahl iitreit oder bis jetzt nume en Betrag uf Ihrem Blatt?
+
+T014 K: De Betrag staht uf mim Blatt. Im Formular han ich zwölf Stück iitreit und wieder glöscht; de Kurs isch scho e Viertelstund alt gsi.
+
+T015 B: Denn isch de Entwurf no nöd fertig. Mir müend zerscht kläre, wie Sie de Priis begrenze wänd. De aazeigte Kurs isch kei Zusag für de Priis vo Ihrem mögliche Kauf.
+
+T016 K: Ich wett nöd blind chaufe. Im Artikel sind d interni Zahle vo de Finanzabteilig erwähnt, aber die Tabelle isch ja jetzt im öffentliche Bericht. Ich ha mir usgrechnet, dass es günstig usgseht. Villicht han ich öppis überseh.
+
+T017 B: Ich cha Ihnen d Erfassig erkläre. Ob die Anlage für Sie passt, isch e separates Gspröch. Wänd Sie hüt vor allem de Ablauf kenne oder au e Beratung dezue?
+
+T018 K: De Ablauf. D Entscheidig wett ich nachher i Rueh mache. Ich ha s Depot sit es paar Jahr, aber bis jetzt nume de Fonds. Bi einzelne Aktie bini nöd so sicher.
+
+T019 B: Denn luegemer zerscht d Choschtevorschau im Entwurf aa. Händ Sie s Fenster no offe?
+
+T020 K: Ja. Ah, jetzt gsehni, dass ich de falsche Handelsplatz aaklickt ha. Drum isch die fremdi Währig cho. Ich ha mi scho gwunderet.
+
+T021 B: Mit em richtige Treffer sötted Sie de Titel und d Währig nomal abgliiche. Nachher chönd Sie d Vorschau läse. Wenn Sie öppis ändered, cha au die Vorschau ändere.
+
+T022 K: Verstande. Ich mach mer e Notiz. Und d Bestätigung chunnt wieder ins Postfach, wenn ich später öppis abschicke?
+
+T023 B: Ja. Kontrolliered denn, was genau bestätigt wird. E Empfangsbestätigung isch nöd immer scho d Bestätigung vo ere Uusfüehrig.
+
+T024 K: Guet, das han ich bi de erschte Anlage durenand bracht. Ich ha s Mail gseh und gmeint, alles sei erledigt. De eigentligi Beleg isch später cho.
+
+T025 B: Wänd Sie de Entwurf jetzt speichere und d Entscheidig offe lah?
+
+T026 K: Ja. Ich luege mir de Bericht nomal i Rueh aa. Hüt sötted Sie für mich no kei Auftrag erfasse.
+
+T027 B: Okay. De Entwurf isch denn für Sie zum Wiiterbearbeite. Bitte kontrolliered vor em Abschicke Betrag, Titel und Priisbegrenzig.
+
+T028 K: Mache ich. Danke. Ich luege jetzt no, was nach de Versicherigsrechnung überhaupt übrig bliibt, und entscheide erst denn.

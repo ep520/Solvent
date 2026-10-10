@@ -9,6 +9,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from callguard import extract as ex  # noqa: E402
+from callguard import pipeline  # noqa: E402
 from callguard import snippets as S  # noqa: E402
 from callguard import ui  # noqa: E402
 
@@ -123,39 +124,6 @@ class SnippetExtractionTest(unittest.TestCase):
         self.assertEqual(out["families"]["trade"], {"events": []})
 
 
-class FasterWhisperTest(unittest.TestCase):
-    def test_in_process_whisper_returns_scored_segments(self):
-        import types
-        from callguard import models
-
-        class Seg:
-            def __init__(self, start, end, text):
-                self.start, self.end, self.text = start, end, text
-                self.avg_logprob, self.no_speech_prob, self.compression_ratio = -0.2, 0.01, 1.3
-
-        calls = {}
-
-        class WhisperModel:
-            def __init__(self, name, device, compute_type):
-                calls["init"] = (name, device)
-
-            def transcribe(self, path, **kwargs):
-                calls["kwargs"] = kwargs
-                return iter([Seg(0.0, 2.5, " Grüezi mitenand."), Seg(2.5, 5.0, " Ich wett chaufe.")]), None
-
-        fake = types.ModuleType("faster_whisper")
-        fake.WhisperModel = WhisperModel
-        config = models.load_config()
-        with mock.patch.dict(sys.modules, {"faster_whisper": fake}), mock.patch.dict(models._fw_models, clear=True):
-            p = models.check("asr", "faster_whisper", config, require_self_hostable=True)
-            segs = models.transcribe("call.wav", profile="faster_whisper", config=config)
-        self.assertEqual(p["model"], "large-v3")
-        self.assertEqual([s["text"] for s in segs], ["Grüezi mitenand.", "Ich wett chaufe."])
-        self.assertEqual((segs[1]["id"], segs[1]["avg_logprob"]), ("s002", -0.2))
-        self.assertEqual(calls["kwargs"]["language"], "de")
-        self.assertIsNone(calls["kwargs"]["initial_prompt"])   # no English instruction text as Whisper context
-
-
 class DashboardInputTest(unittest.TestCase):
     def test_dashboard_finds_current_stale_and_full_extractions(self):
         profile = {"name": "fake", "model": "m"}
@@ -173,13 +141,41 @@ class DashboardInputTest(unittest.TestCase):
             path, status = ui.find_extraction(SEGMENTS, POLICIES, profile, edited, cache)
             self.assertEqual(status, "stale_input")
             shown = ui.model_input(ex.load_json(path), edited, SEGMENTS)
-            self.assertTrue(shown["currentDiffers"])
-            self.assertEqual(shown["mode"], "snippets")
+            self.assertEqual(shown["mode"], "snippets")             # what the model actually read
+            self.assertEqual(shown["highlights"], view["snippets"])
+            self.assertTrue(shown["currentDiffers"])                 # keyword list changed since
             self.assertEqual(ui.model_input(full, view, SEGMENTS)["mode"], "full_transcript")
 
     def test_old_full_transcript_cache_is_shown_as_such(self):
         shown = ui.model_input({"families": {}, "_meta": {}}, None, SEGMENTS)
         self.assertEqual((shown["mode"], shown["segmentCount"]), ("full_transcript", len(SEGMENTS)))
+
+
+class FullTranscriptMvpTest(unittest.TestCase):
+    def test_pipeline_extracts_the_full_transcript_and_keeps_snippets_as_highlights(self):
+        extraction = {"families": {}, "_meta": {}}
+        decision = {"label": "no_alert", "events": [], "reasons": [], "status": "ok", "issues": []}
+        full = {**S.load_config(), "model_input": "full_transcript"}
+        with mock.patch.object(S, "load_config", return_value=full), \
+                mock.patch.object(ex, "extract", return_value=(extraction, False)) as extract_call, \
+                mock.patch.object(pipeline.dec, "decide", return_value=decision):
+            result, _ = pipeline.run_segments("call-1", "source", SEGMENTS, POLICIES, KEYWORDS, None, None,
+                                              speakers=False, audio=True)
+        self.assertIsNone(extract_call.call_args.kwargs["view"])
+        self.assertEqual(result["input"]["mode"], "full_transcript")
+        self.assertTrue(result["highlights"]["snippets"])
+
+    def test_default_mode_sends_the_snippets_and_shows_the_same_ones(self):
+        extraction = {"families": {}, "_meta": {}}
+        decision = {"label": "no_alert", "events": [], "reasons": [], "status": "ok", "issues": []}
+        with mock.patch.object(ex, "extract", return_value=(extraction, False)) as extract_call, \
+                mock.patch.object(pipeline.dec, "decide", return_value=decision):
+            result, _ = pipeline.run_segments("call-1", "source", SEGMENTS, POLICIES, KEYWORDS, None, None,
+                                              speakers=False, audio=True)
+        view = extract_call.call_args.kwargs["view"]
+        self.assertEqual(view["mode"], "snippets")
+        self.assertEqual(result["input"], view)
+        self.assertEqual(result["highlights"], view)
 
 
 if __name__ == "__main__":

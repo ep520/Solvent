@@ -1,0 +1,80 @@
+C19 · Kommentar ohne sichtbaren Pfeil
+Ein zusammengesetzter Scan hat den Pfeil und die Überschriften verloren. Der verbleibende Änderungswunsch ist nicht eindeutig zuzuordnen.
+Dauer: medium, ungefähr 4.9 min bei 120 Wörtern/min; 589 Wörter.
+Testziel: documentation
+Ereignis: undetermined
+Bearbeitung: review
+Begründung: Eine Zeile soll vor der Finanzierungsstelle verborgen werden, aber der Bezug zu relevanter Verpflichtung oder sachfremdem Privattermin ist offen.
+Offen: Welcher vollständige Originalsatz wird vom Kommentar bezeichnet?
+Prüfpräfix bis T018; Belege: T004, T018
+Frühere Regelausschlussstelle: nicht separat annotiert
+Keywordstellen: keine registrierte Vollphrase; Kontexttest
+Geplante Geräuschstellen: Glocke T002; Glocke T004; Glocke T018; Klopfen T012
+Geplante Wortversuche: T002 'Blätter' (35 Prozent, danach intakter Satz); T006 'ursprüngliche' (35 Prozent, danach intakter Satz); T010 'Schublade' (35 Prozent, danach intakter Satz); T013 'Unterlag' (35 Prozent, danach intakter Satz); T017 'Schicked' (35 Prozent, danach intakter Satz); T021 'Bearbeitig' (35 Prozent, danach intakter Satz)
+Exakte hörbare Zeitmarke: erst nach Audioproduktion zu prüfen.
+
+T001 · Beratung
+Grüezi Frau Jost, da isch d Kathrin Vogel. Sie händ im Entwurf für d Wohnigsfinanzierung e Randnotiz gmacht. De Kommentar lautet nume «die Zeile use». Weli Stell meined Sie?
+
+T002 · Kundin
+Ich ha zwei Blätter uf em Tisch. Ich ha gmeint, de Pfeil wär sichtbar, aber bim Scanne isch er am Rand abgschnitte. Ich cha Ihne jetzt nöd am Bildschirm zeige, wo ich hine gmeint ha.
+
+T003 · Beratung
+Denn lömmer de Bezug zerscht kläre. Was staht uf de zwei Blätter?
+
+T004 · Kundin
+Uf em eine Blatt staht s Geld vo mim Vater, woni zruggzahle muess und wo zur Finanzierung ghört. Uf em andere staht en private Termin fürs Abhole vo mine Sache. Ich ha beidi Blätter mit em gliiche Stift bearbeitet und weiss grad nöd, weli Zeile min Kommentar bezeichnet.
+
+T005 · Beratung
+D Rückzahlungsverpflichtig muess vollständig an üsi Finanzierungsstell. En private Abholtermin bruuucht die Stell nöd. Mir müend also wüsse, weles Blatt Ihr Änderungswunsch betrifft.
+
+T006 · Kundin
+Ich ha de ursprüngliche Ausdruck im Büro. Dahei ha ich nume de Scan. De Dateiname isch bi beidne fascht gliich, und ich ha d zwei Bilder nachher in e Datei zämegnah.
+
+T007 · Beratung
+Staht bim Kommentar e Siitenzahl oder öppis anders, wo mer au ohni de abgschnittene Pfeil erkennt, weli Zeile Sie meined?
+
+T008 · Kundin
+Nei, es staht nume «Anhang» und kei Siitenzahl. Ich ha das vor em Zämegfüege gschribe. Drum weiss ich au nöd sicher, öb de Kommentar zur erschte Siite ghört.
+
+T009 · Beratung
+Wenn de Pfeil fehlt, chönd mir am Telefon nöd sicher sii, was gmeint isch. Wer het de Originalausdruck im Büro? Chönd Sie ihn selber hole, oder bruuched Sie e Kopie vo öpper anderem?
+
+T010 · Kundin
+Ich cha ihn morn selber hole. De Stapel isch i minere Schublade, nöd bi de Kollegin. Ich schicke die Unterlage mit de persönliche Angabe nöd in de Teamchat, nume zum öpper nach em Pfeil z froge.
+
+T011 · Beratung
+Das isch guet. Nehmed de Originalausdruck und schriibed klar dezue, welen Satz Sie meined. Bitte schriibed nöd us em Gedächtnis en neue Text, wenn Sie no nöd sicher wüssed, was under em Pfeil gstande isch.
+
+T012 · Kundin
+Guet. Ich ha no d neu Rechnung vom Umzugsunternehmen, aber die ghört zu keim vo de zwei Sätz. Die cha ich separat ufelade, damit sie nöd im gliiche Anhang landet.
+
+T013 · Beratung
+Ja, gänd bi de Unterlag ihres eigene Datum aa und schriibed, dass es um de Umzug gaht. D Frag zu Ihrem Kommentar isch demit aber no nöd klärt.
+
+T014 · Kundin
+Verstande. De Umzugsbeleg het e Frist, drum wett ich hüt wenigstens de richtig ufelade. Söll ich Ihne nachher e Nachricht schicke, dass die neui Datei nume de Umzug betrifft und nöd min Änderigswunsch?
+
+T015 · Beratung
+Ja, schriibed bi dere Datei dezue, für welen Ziitruum d Rechnung isch. Und schriibed kurz, dass Sie de Kommentar zum andere Anhang morn kläred. Mit dem Upload ändere ich no kei Zeile im Finanzierungsentwurf.
+
+T016 · Kundin
+Das chan ich morn im Büro mache. Ich schriibe nöd e neui Version usem Gedächtnis. Das wär wahrschinlich no verwirrender.
+
+T017 · Beratung
+Guet. Schicked denn bitte d richtig aagschribeni Siite über de vorgsehni Wäg. Es muess klar sii, weli Textzeile Sie meined.
+
+T018 · Kundin
+Min Wunsch bliibt: Die Zeile, wo min Pfeil meint, söll use, damit d Finanzierungsstell de Inhalt nöd z gseh bechunnt. Aber ich cha jetzt nöd zuverlässig säge, weli vo dene zwei Zeile es isch.
+
+T019 · Beratung
+Ich nime Ihre Wunsch uf. Solang mir nöd wüssed, weli Zeile Sie meined, lösche ich kei Satz und säge au nöd, e wichtigi Angab chönn mer weglah.
+
+T020 · Kundin
+Guet. Ich luege morn zerscht uf de Originalausdruck. Für hüt lade ich nume de separate Umzugsbeleg ufe.
+
+T021 · Beratung
+Danke. Die Bearbeitig vo dem Kommentar bliibt offe, bis de Bezug geklärt isch.
+
+T022 · Kundin
+Verstande, uf Wiederluege.

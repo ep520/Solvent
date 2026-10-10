@@ -1,0 +1,59 @@
+M04 Mahnbrief zur bezahlten Bestellung
+Kundschaft: Person A | Bankberatung: Person B
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie händ wäge ere Onlinebestellig um en Rückruf bätte?
+
+T002 K: Ja. Ich ha en Schreibtisch bstellt und d Rechnung scho zahlt. De Händler schickt mer trotzdem e Mahnig. Im Mail sind zwei Nummere, und ich weiss nöd, weli ich bi de Zahlig ha sölle aageh.
+
+T003 B: Chönd Sie d Dokument unterscheide? Weli Nummer ghört zur Rechnung, und weli zur Bestellig?
+
+T004 K: Uf de Bestellbestätigung staht direkt über de lange Zahl Bestellnummer. Im Rechnigsbrief isch e separates Feld für d Zahlungsreferenz. Ich ha bi de Überwiisig leider d Bestellnummer ins Mitteiligsfeld kopiert.
+
+T005 B: Zum Abgliiche mit em Bankbeleg: Weli Bestellnummer händ Sie ins Mitteiligsfeld kopiert? Bitte nume die Nummer.
+
+T006 K: Vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei, vier, zwei. Die staht so i vier Gruppe uf em Blatt.
+
+T007 B: Danke. Und d Überwiisig isch uf Ihrem Konto scho verbuecht, nöd nume als Entwurf gspeicheret?
+
+T008 K: Verbuecht, sit Mäntig. Ich ha au en Beleg, wo Betrag und Empfänger druf sind. Im erste Moment han ich gmeint, ich heig s Datum falsch iitreit.
+
+T009 B: Wie hoch isch de Betrag?
+
+T010 K: Vierhundertzwänzg Franke. De Tisch selber isch dreihundertachtzg, de Rest Lieferig. Im Mail stoht jetzt vierhundertzwänzg plus Mahngebühr. Die Gebühr han ich nöd zahlt.
+
+T011 B: Mir sötted zerscht d ursprüngligi Zahlig zuordne lah. Händ Sie de Händler scho kontaktiert und gseit, dass de Betrag use isch?
+
+T012 K: Ja, über s Kontaktformular. Det händ sie wieder nach de Bestellnummer gfragt. Ich ha s Mail mit em Beleg beantwortet, aber bis jetzt isch nume e automatische Antwort cho.
+
+T013 B: Isch d Aafrag unter ere Ticketnummer bestätigt worde?
+
+T014 K: Ja, e churzi. Die isch wieder anders. Ich ha uf em Ausdruck alles mit em gliiche Leuchtstift markiert. Jetzt gsehni sälber nüm, was zu was ghört.
+
+T015 B: Die churzi Nummer ghört also zu Ihrer Rückfrag. Lueged mer jetzt uf de Bankbeleg: Was staht det im Mitteiligsfeld?
+
+T016 K: Det isch tatsächlich die langi Bestellnummer. Ich ha sie wohl automatisch kopiert, will sie im Mail ganz obe gsi isch. De Empfängername stimmt aber.
+
+T017 B: Das cha d Zuordnig bim Händler erschwere. Mit em Beleg sött er d Zahlig sueche chönne.
+
+T018 K: Chönd Sie de Text i minere Zahlig no ändere, damit er d Rechnigsreferenz gseht?
+
+T019 B: Bi ere bereits verbuechte Zahlig cha ich d Mitteilung nöd eifach nachträglich umschriibe. Mir chönd Ihnen de Beleg zum Wiitergeh bereitstelle.
+
+T020 K: De han ich scho. Ich weiss nume nöd, weli Teile ich mitschicke söll. Uf mim erste Screenshot sind au mini andere Kontobewegige gsi.
+
+T021 B: Für de Händler längt de Beleg zu dere einzelne Überwiisig. De ganze Kontoauszug ghört nöd i die Aafrag. Kontrolliered aber, dass Betrag, Datum und Empfänger lesbar sind.
+
+T022 K: Guet. Ich ha s PDF vo de einzelne Zahlig gfunde. S Bild vo de ganze Liste han ich im Kontaktformular gar nöd abgschickt, zum Glück.
+
+T023 B: Denn chönd Sie de passende Beleg mit de Ticketnummer nachreiche. Verwiised au uf d Rechnung, damit s nöd als neui Bestellung verstande wird.
+
+T024 K: Und d Mahnig? Ich ha nume no drei Täg, bevor laut Mail öppis Wiiters passiert. Ich wett nöd, dass s Tischgeld zweimal abgaht.
+
+T025 B: Fragend de Händler schriftlich nach em Stand vo Ihrer Aafrag und nach de Zahlungszuordnig. Ich cha für ihn kei Fristverlängerig bestätige. E zweite Zahlig würd de erscht Vorgang nöd korrigiere.
+
+T026 K: Verstande. Ich schicke de Beleg nach und schriibe, dass d Mahnig zur bereits zahlte Rechnung ghört. D Bestellnummer packi dezue, aber richtig beschriftet.
+
+T027 B: Genau. Bewahred d Antwort vom Händler und de Beleg zäme uf. Wenn Sie nachher e konkrete Rückfrag zur Überwiisig händ, chönd mir uf dere Grundlage wiiterluege.
+
+T028 K: Danke. Ich mach mer jetzt drei verschiedeni Notize statt eim grosse gelbe Fleck uf em Blatt.

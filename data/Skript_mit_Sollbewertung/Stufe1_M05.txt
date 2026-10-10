@@ -1,0 +1,67 @@
+M05 · Anmelden mit dem neuen Telefon
+Aufgabe: Aktives Zugangsgeheimnis
+Bearbeitung: alarm
+Ergebnis: Zugangsereignis Kundschaft
+Begründung: Aktives eigenes Zugangsgeheimnis tatsächlich vorgelesen. Die anschliessende Ablehnung der Beratung und der gestoppte Anmeldeversuch beseitigen das Vorlesen nicht. Keine bestätigte Anmeldung oder Zahlung.
+Zusammenfassung: Beim Einrichten des neuen Telefons liest die Kundschaft einen frischen Code für die Anmeldung im eigenen Konto vor. Der Dialog stellt die zum Vorlesen bestehende Gültigkeit ausdrücklich fest.
+Belegstellen laut Skript:
+  T006 K: «Jetzt isch es frisches SMS für d Aameldig i mis eigene Konto cho. De Code gilt grad no e Minute, seit d Nachricht.» (Eigene Anmeldung, frischer Code und aktuelle Gültigkeit.)
+  T006 K: «Er isch neun, eins, null, sieben.» (Vollständiger fiktiver Code tatsächlich gesprochen.)
+
+Hinweis: von zwei Personen eingesprochen und geschnitten. Der gesprochene Wortlaut kann vom Skript abweichen.
+
+M05 Anmelden mit dem neuen Telefon
+Kundschaft: Person A | Bankberatung: Person B
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie chömed mit em neue Telefon nöd is Onlinebanking?
+
+T002 K: Genau. Ich ha geschter s Telefon gwechslet. S alte ligt no nebem neue. D App gaht uf, aber nachher chunt immer wieder d Aameldig.
+
+T003 B: Was gsehnd Sie grad uf em neue Telefon?
+
+T004 K: D Aameldeseite. Ich ha mi mit mine Date aagmeldet, und jetzt wartet sie uf en Bestätigungscode. Ich ha parallel no d Anleitung uf em alte Telefon offe.
+
+T005 B: D Anleitung müend Sie für de Moment nöd wiiterklicke. Lueged nume uf s neue Gerät. Staht det e Fehlermeldig oder es Feld zum Iiträge?
+
+T006 K: Es Feld. Jetzt isch es frisches SMS für d Aameldig i mis eigene Konto cho. De Code gilt grad no e Minute, seit d Nachricht. Er isch neun, eins, null, sieben. Isch das de, wo Sie bruuched?
+
+T007 B: Nei, bitte säged mir kei Code. Er ghört nume i d vorgsehni Aameldig. Ich frage Sie nöd nach Ihrem Passwort oder Ihrer PIN.
+
+T008 K: Ah, sorry. Ich ha gmeint, Sie müessted de Bildschirm irgendwie abgliiche. Ich han s SMS grad vorgläse, ohni gross z überlege.
+
+T009 B: Ich verstah. Mir stoppe de Versuch jetzt und kläred de sichere nächste Schritt. Bitte drucked nöd uf Bestätige, während mir no am Ordne sind.
+
+T010 K: Okay. Ich ha no nüt i s Feld iitreit. Es sind au nöd plötzlich Zahlige oder so ufem Bildschirm. Es isch immer no die Aameldeseite.
+
+T011 B: Guet. Händ Sie die App selber geöffnet, oder sind Sie us ere Nachricht über en Link det ane cho?
+
+T012 K: Sälber, über s Symbol. S Telefon han ich am Samschtig im Lade kauft. Det händ sie mini Fotos übernoh. S Onlinebanking han ich bewusst erst dehei aagluegt.
+
+T013 B: Und de Aameldeversuch grad jetzt isch au vo Ihnen selber?
+
+T014 K: Ja. Ich ha vorhin no e Rechnung welle zahle. Denn han ich gmerkt, dass s nöd wie bim alte Telefon gaht, und d Nummere us Ihrem Brief aagrüeft.
+
+T015 B: Danke. Ich nehme uf, dass Sie de aktuelle Code grad am Telefon gnennt händ, und kläre s Vorgeh mit de zuständige Stell. S neue Gerät isch no nöd fertig iigrichtet.
+
+T016 K: Im Brief staht öppis vo Gerät aktivieren. Ich weiss nöd, öb das s Gliiche isch wie aamelde. Ich ha de Brief uf em Tisch, aber s Couvert han ich scho furtgworfe.
+
+T017 B: De Brief und d Aameldeseite chönd zwei verschiedeni Schritt betreffe. De Aktivierungsinhalt us em Brief läsed Sie mir bitte au nöd vor. Mir kläred, weli Anleitung zu Ihrem Wechsel passt.
+
+T018 K: Guet. Ich ha d Anleitung usem alte Telefon als Screenshot. Die isch aber vo vor zwee Jahr. Det sind die Knöpf an ere andere Stell als jetzt.
+
+T019 B: Denn nähmed Sie sie nöd als Massstab für d aktuelle Aazeig. Ich lasse Sie vom Support für de Gerätewechsel zruggrüefe. Passt Ihnen hüt am Namittag?
+
+T020 K: Ja, das passt. Cha ich in de Zwüscheziit uf em Laptop zahle? D Rechnung isch bis am Friitig fällig. Ich ha Sorge, dass ich jetzt alles blockiert ha.
+
+T021 B: Das muess d zuständige Stell mit Ihnen kläre. Ich cha Ihnen grad weder e Sperrig no e Freigab bestätige. Für de Moment machemer kei neue Versuch mit de Date, wo grad am Telefon gnennt worde sind.
+
+T022 K: Okay. Denn tueni die Rechnung wenigstens uf d Siite, damit ich nöd alles wieder sueche muess. Ich ha de Beleg digital und uf Papier.
+
+T023 B: Ja. Und behalted s alte Telefon vorerst, bis de Gerätewechsel fertig klärt isch. Setzed es nöd jetzt scho zrugg, während mir no nöd wüssed, was Sie für de nächste Schritt bruuched.
+
+T024 K: Das hätti hüt Abig gmacht. Guet, denn lahni s alte Telefon jetzt so und warte uf de Rückruf.
+
+T025 B: De Rückruf isch für hüt Namittag uf Ihrer hinterlegte Nummere vorgmerkt. Bis denn bitte kei neue Code am Telefon vorläse.
+
+T026 K: Danke. Ich han erwartet, dass Sie mir säged, wo ich drucke muess. Jetzt räumi zerscht die alte Anleitung weg, damit ich nöd nomal im falsche Fenster lande.

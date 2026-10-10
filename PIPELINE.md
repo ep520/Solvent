@@ -11,12 +11,16 @@ case brief is [`README.md`](README.md).
 ```
 data/Audio/*.wav (mono, 16 kHz, Swiss German)
    │
-   ▼  callguard/asr.py ─ Whisper (whisper-1) via the model router, cached by file content hash
-segments [{id, start, end, text, avg_logprob}]          → data/Transcriptions/*.json|.md
+   ▼  callguard/asr.py ─ Whisper via the model router, cached by file content hash
+segments [{id, start, end, text, avg_logprob}]          → cache/asr/<hash>.json
+   │                         └─ asr.export (ASR CLI or ingest) → data/Transcriptions/*.json|.md
    │
-   ├─ extract.keyword_hits ─ Stichwortliste.json phrases → cached-transcript highlights and coverage only
+   ├─ keyword matchers ─ Stichwortliste.json → cached-transcript highlights and coverage
+   │                    └─ also feeds snippet selection (with cue words and spoken digits)
    │
-   ▼  callguard/extract.py ─ ONE structured LLM request per call (Claude Sonnet 5), cached
+   ├─ callguard/snippets.py ─ selected passages for dashboard highlights and audio navigation only
+   │                          (config/snippets.json; max. 12 snippets)
+   ▼  callguard/extract.py ─ at most ONE structured LLM request per call over the complete transcript
 facts: {"families": {<enabled family>: {"events": [{conditions: {<predicate>: {state, evidence}}}]}}}
    │      state ∈ true | false | unknown, evidence = segment id + short quote
    │      a family a bank switched off is left out entirely, not just empty
@@ -25,6 +29,7 @@ facts: {"families": {<enabled family>: {"events": [{conditions: {<predicate>: {s
    2. three-valued rules per family
    3. ASR-quality escalation threshold
    4. call label = max(alarm > review > no_alert), reason codes, template explanation
+   5. post-decision rationale = short deterministic template pointing to the deciding conditions and grounded evidence
    ▼
 one canonical JSON per call → metrics (pipeline.py) · dashboard (ui.py) · ±10 s clips (evidence.py)
 ```
@@ -45,17 +50,25 @@ to a rule, the state of each condition, and the exact words in the recording.
   `customer` or `advisor` only as `inferred`, with supporting segment IDs; otherwise the role is `unknown`.
 - No audio preprocessing: the files are already mono 16 kHz and under the 25 MB API limit.
 
-### 2.2 Fact extraction (`callguard/extract.py`, prompt version `extract-6`)
+### 2.2 Fact extraction (`callguard/extract.py`, prompt version `extract-7`)
 
-- One request per call with the **whole** transcript, every time. There is no keyword pre-filter,
-  because Level 2 and 3 calls contain no listed keyword at all.
+- At most one request per call. For the MVP, the model always receives the **complete transcript**, within
+  the context budget. It assesses every enabled family from that baseline; no keyword, cue word or digit
+  match can suppress detection.
+- `callguard/snippets.py` remains active only for dashboard highlighting and jump-to-audio passages.
+  Snippet hits are neither evidence nor routing. Routing/adaptive prompting is deferred until recall and
+  latency have been measured against this full-transcript baseline.
+- The extraction cache key includes the chat profile/model, prompt and schema, policies, full rendered
+  transcript and human-calibration examples. Keyword or snippet configuration changes only alter review
+  highlights; they do not require a fresh extraction.
 - The JSON schema requires every family; `"events": []` means "assessed, nothing found", so a missing
   family exposes an incomplete answer. Every event also carries an actor role: `customer` or `advisor` is
   `inferred` only with supporting segment ids; otherwise it is explicitly `unknown`.
 - Prompt rules that matter: `true` only when a passage establishes the condition, `false` only when a
   passage explicitly excludes it, otherwise `unknown` (including "I don't know" and "not proven"); an
   ambiguous object makes dependent conditions `unknown`; a later refusal neither undoes a request nor
-  proves one; quotes are 3–10 consecutive words copied from one segment.
+  proves one; quotes are 3–10 consecutive words copied from the cited segment, or from that segment
+  into its immediate successor when needed.
 - Families and predicates live in [`config/policies.json`](config/policies.json) (`policies-0.5`):
 
 | Family | Alarm requires all of |
@@ -135,12 +148,50 @@ unusually clean even when "noisy") would be needed to calibrate or replace it.
 
 - `python3 -m callguard.pipeline eval [--audio]` writes one canonical result per call — label, `status`
   (`ok` or `failed`, so a model/network failure is never confused with a genuine review), reasons,
-  events, conditions, quotes with times and quality, keyword hits, disabled families, model, prompt and
-  policies versions — to `runs/eval-<timestamp>-<mode>/<call>.json`, plus `summary.json` with the metrics
-  and `manifest.json` with what produced the run (`EVALUATION.md` §1).
+  events, conditions, quotes with segment IDs/times/quality and clamped clip bounds, keyword hits and
+  disabled families — to `runs/eval-<timestamp>-<mode>/<call>.json`. New release artefacts also add a
+  backward-compatible traceability envelope: `schema_version`, `run_id`, `policy_version`, recording
+  ID/hash, deterministic readable explanation, a short post-decision `rationale`, evaluated policy-rule
+  outcomes, actual alarm-generating rules, and separate missing-fact / extraction / grounding / provider
+  uncertainty. `rationale` never asks a model for prose or adds facts: alarm points to supported
+  conditions; no-alert points to an excluded condition or no candidate event; review points to the
+  missing fact or technical blocker. See
+  `CANONICAL_RESULT_SCHEMA.md`; legacy cached results without the envelope remain readable.
+  The run folder also contains:
+  `summary.json` (three-class metrics, unresolved and technical counts, paired clean/noisy analysis and
+  threshold comparison), `manifest.json` (release identity/configuration/cache contract/audio hashes),
+  `recordings.csv`, `errors.json`, and an intentionally unfilled `human-audit-checklist.md`.
+  The folder and its initial manifest are created before the batch starts. Every completed call atomically
+  replaces its per-call JSON and then updates the manifest and partial summary; an interrupted batch is
+  explicitly marked `in_progress` or `interrupted` rather than being mistaken for a final evaluation.
+  A fresh invocation reuses the already-complete ASR and extraction cache entries.
+  Cached values are not presented as uncached latency.
 - `callguard/evidence.py` cuts ±10 s clips from the **original** WAV (standard library `wave`).
 - `callguard/ui.py` serves the dashboard over cached results (see §2.6). Its local `POST /api/keywords`
   endpoint validates and atomically saves the keyword configuration; it never calls ASR or an LLM.
+  `POST /api/policies` supports local add/edit/delete of policy families and conditions, with schema
+  validation and atomic writes. A policy edit deliberately invalidates old extraction caches and requires
+  a fresh evaluation; it is never applied retrospectively to old results.
+- A reviewer can resolve an automatic `Review` as **Alert** or **No alert** in the dashboard. The outcome
+  is atomically retained under `data/ReviewFeedback/` and becomes a small, bounded calibration example
+  for later extractions; it is included in the extraction cache key and never overwrites an existing
+  automatic result or policy rule. The reviewed call itself is excluded from its own calibration prompt.
+- Every exported ASR segment can be corrected in the dashboard. Corrections are stored as overlays under
+  `data/Corrections/`, retain the original ASR wording, and are ignored if a newer ASR run changes that
+  original segment. The next pipeline run reads the corrected wording and creates a new extraction cache
+  entry; until then the dashboard labels the prior assessment as requiring re-evaluation.
+
+Direct `pipeline eval --audio` uses the ASR cache but does not create the tracked
+`data/Transcriptions` exports. Use `python3 -m callguard.asr` or `callguard.ingest` when the dashboard
+needs those exports.
+
+**Keyword provenance.** `data/Stichwortliste.json` has 11 configurable keyword IDs, 58 DE/Swiss-German
+spellings and 47 distinct normalised terms. The file is based on the public Outcept list (the former
+`Outcept/trigger-api` URL redirects to `Outcept/inventx-case-study`); comparison on 2026-10-10 found its
+45 upstream distinct terms plus two local, documented additions: `K03.de: Quantauszahlen` and
+`K04.de: von der Meldung`. Keyword matches never directly decide a classification. In the MVP they
+influence dashboard highlights and audio navigation only, so changing them never changes the
+full-transcript extraction input.
 
 ### 2.5 Model router (`callguard/models.py`, `config/models.json`)
 
@@ -165,16 +216,29 @@ router is tuned for efficiency there:
 - Local ASR: the `speaches` profile (faster-whisper behind an OpenAI-compatible endpoint) replaces
   `whisper-1` without code changes.
 
+**Self-hosted profiles added (2026-10-10, integrated from `ep520/Solvent#2`).** `config/models.json`
+now has `qwen3` (Qwen3 Thinking on vLLM, reasoning on), `qwen3_fast` (hybrid Qwen3 with thinking off,
+for 24 GB GPUs), `ollama_qwen3` (laptop development only) and `whisper_local` (any self-hosted
+OpenAI-compatible Whisper endpoint). Supporting changes in `models.py`: a `<think>...</think>` block is
+stripped from the reply before JSON parsing (reasoning models without a server-side reasoning parser put
+it inline, and it can contain braces that would otherwise confuse the JSON search), `extra_body` passes
+server-specific decoding options (`top_p`, `top_k`, `chat_template_kwargs`), the served model name can
+come from an environment variable (`chat_model_env`/`asr_model_env`, set by `runpod/env.sh`), and
+temperature is per-profile (Qwen3 Thinking needs 0.6, not 0, or greedy decoding can loop). `runpod/`
+holds the deployment scripts (`setup.sh` starts vLLM sized to the GPU, `run_eval.sh` runs an evaluation
+against it); see `runpod/README.md`.
+
 ### 2.6 Dashboard (`callguard/ui.py`)
 
 Lists every analysed call with assessment, policy conditions, supporting passages, the original audio
-(jump buttons start 10 s before each passage), downloadable clips, the threshold presets and keyword
-highlights. Three states are shown apart, not folded into Alarm/Review/No alert:
+(jump buttons start 10 s before each passage), downloadable clips, threshold presets, keyword highlights
+and the exact model input. Input/cache state is shown separately from Alarm/Review/No alert:
 
 | State | When |
 |---|---|
-| **Pending** | No cached extraction yet for this WAV |
-| **Failed** | A cached result exists but `status: "failed"` (technical failure) — needs a retry, not a compliance read |
+| **Pending** | The transcript export or a compatible extraction cache is missing for this WAV |
+| **Current** | The cached extraction was made with the current keyword/snippet input |
+| **Stale input** | A cached extraction exists, but its earlier keyword/snippet input differs from the current configuration; rerun the pipeline |
 | **Alarm / Review / No alert** | A completed, deterministic decision |
 
 Two `de` keyword variants were added from real Whisper output, not invented: noisy audio consistently
@@ -186,10 +250,36 @@ Switching the threshold preset only reruns `decide()` on the already-cached fact
 (`test_build_data_never_calls_the_chat_model`); a stricter preset can only move a call towards
 `review`/`no_alert`, never towards `alarm` (`test_every_preset_is_a_pure_recompute_of_the_same_cached_extraction`).
 The keyword panel supports add/edit/remove/enable/disable with validation (empty or duplicate terms
-rejected) and atomic save; saving only reruns matching, highlights and counts over cached transcripts —
-never a classification (`test_suspicious_event_without_a_keyword_remains_an_alarm`,
-`test_innocent_keyword_occurrence_does_not_change_a_no_alert`). The dashboard never calls a model on its
-own.
+rejected) and atomic save; saving reruns matching, highlights and counts over cached transcripts and
+updates the current snippet view, but does not call a model or change the decision from an existing cache
+entry. The dashboard never calls a model on its own.
+
+### 2.7 Explainability: counterfactuals (`callguard/counterfactual.py`)
+
+For the main event of every call, `decide()` now also answers "what would have to be different for the
+label to change?". Pure functions over the event `decide.evaluate_event` already produced — no model
+call, no second read of the transcript — so an explanation can never disagree with the actual decision:
+each counterfactual re-applies the exact same three-valued rule to a hypothetical condition state or a
+different threshold preset (`test_rule_matches_decide` asserts this equivalence directly). Two kinds:
+
+- **Condition flips:** "If `information_nonpublic` were supported instead of not established, the
+  decision would be ALARM" — only flips that actually change the label are kept, ordered so the open
+  (`unknown`) facts that would settle a review come first.
+- **Threshold flips:** for a present event, which presets would move it between `alarm` and `review`.
+
+`numbers` events (classification only) produce no counterfactuals. The dashboard shows them under *What
+would change the decision*; `pipeline text`'s `explain()` prints them as `WHAT-IF` lines.
+
+### 2.8 Automatic ingest (`callguard/ingest.py`)
+
+Closes the README's "no manual step per call" requirement end to end, not just "no manual step inside
+`eval`": `python3 -m callguard.ingest` watches `data/Inbox/` (where a bank's call recorder would write).
+Each stable new WAV is moved into `data/Audio/`, transcribed, extracted and decided with the normal code
+path (`pipeline.run_audio`), written to `runs/ingest/<call>.json`, and — if `--trigger-url` is set —
+reported to the Trigger API for `alarm`/`review` calls, with a link straight to the passage in the
+dashboard. A file that fails any step is moved to `data/Inbox/failed/` with its traceback next to it, so
+one bad recording cannot silently block the folder or disappear. `--once` processes what is there and
+exits (for `eval`-style batch use); without it, it polls every `--interval` seconds (default 5 s).
 
 ## 3. Results
 
@@ -216,7 +306,7 @@ little leverage on this corpus (§2.3).
 
 ```bash
 cp .env.example .env                                   # then set OPENAI_API_KEY (only needed for new audio)
-python3 -m unittest discover -s tests                  # 106 tests, no external model calls or keys
+python3 -m unittest discover -s tests                  # full suite; no external model calls or keys
 python3 -m callguard.models                            # active chat / ASR profiles
 python3 -m callguard.asr data/Audio --workers 4        # transcribe (cached; skips known files)
 python3 -m callguard.pipeline audio data/Audio/Stufe1_D02-K1.wav   # one call, text explanation
@@ -227,7 +317,7 @@ python3 -m callguard.ui                                # dashboard on http://127
 ```
 
 
-## 5. Tests (106)
+## 5. Tests
 
 | Suite | What it guards |
 |---|---|
@@ -235,7 +325,9 @@ python3 -m callguard.ui                                # dashboard on http://127
 | `test_policies.py` | hand-written **oracle** extractions for all 21 scripts must give the expected assessment and cite an expected turn; **replay** of 42 real Sonnet extractions (`extract-1`) through the current rules; config/fixture consistency |
 | `test_models.py` | router with a fake HTTP server and a fake `claude` command, `.env` loading, retries, compact-schema skeleton and context-window guard for local models |
 | `test_asr.py` | segment annotation, exports, timestamp validation |
-| `test_ui.py` | clips, mapping to dashboard fields per threshold, server routes, Range requests, path safety, keyword coverage/validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes never change one |
+| `test_ui.py` | clips, mapping to dashboard fields (including deterministic supported/excluded fact reasons), server routes, Range requests, path safety, keyword and policy CRUD validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes do not change an existing cached classification |
+| `test_evaluation.py` | three-class metrics, unresolved/failure accounting, dataset contract, manifest identity, and the release-result envelope / legacy-reader compatibility |
+| `test_counterfactual.py` | counterfactual rule equivalence with `decide.py`, which fact a review names as decisive, threshold counterfactuals; `callguard.ingest` (processed/moved, quarantine on failure, trigger payload); the Qwen3/local-model router additions (`<think>` stripping, `extra_body`, env-resolved model name, self-hostable profiles) |
 
 Mutation checks confirmed the policy tests fail when a condition is removed, when "undetermined" is
 treated as no alert, or when the threshold is broken.
@@ -244,16 +336,22 @@ treated as no alert, or when the threshold is broken.
 
 - [x] Transcription of all 42 calls, hash-cached, exported and checked (complete coverage, matching
       hashes, no prompt leakage).
-- [x] Five fraud checks plus number classification, as configuration, with one extraction per call.
+- [x] Five fraud checks plus number classification, as configuration, with at most one extraction request per call (or the configured no-request fallback).
 - [x] Deterministic decisions with explicit reasons and open questions; uncertainty goes to review.
 - [x] Evidence anchored to the real transcript, with timestamps, quality and ±10 s audio clips.
 - [x] Adjustable threshold (three presets, editable without code) with a visible effect.
 - [x] Keyword coverage and local keyword management: families, enabled terms, DE/Swiss-German variants,
-      observed occurrences, and validated persistence. Matching remains independent from decisions.
+      observed occurrences, and validated persistence. Matching never enters the deterministic rules
+      directly; it is used only for review highlights and audio navigation.
 - [x] Metrics on false alarms and missed cases, split by level and by clean/noisy audio.
-- [x] Review dashboard connected to the pipeline, tested in a browser; Pending and Failed calls shown
-      apart from Alarm/Review/No alert (§2.6).
-- [x] No manual step per call: audio in, canonical result and clips out.
+- [x] Review dashboard connected to the pipeline, tested in a browser; Pending, Current and Stale-input
+      states are shown apart from Alarm/Review/No alert (§2.6).
+- [x] No manual step per call: audio in, canonical result and clips out — including true end-to-end
+      automation via `callguard.ingest` watching a folder (§2.8), not just batch `eval --audio`.
+- [x] Counterfactual explanations ("what would change this decision") for the main event of every call,
+      provably consistent with the decision rule (§2.7).
+- [x] Self-hosted chat profiles ready to use: Qwen3 Thinking and a fast hybrid variant on vLLM, plus
+      Ollama for laptop development, with RunPod deployment scripts (§2.5).
 - [x] Bank-configurable checks: each family can be switched off in `policies.json` without code (§2.2).
 - [x] Every `eval` run freezes what produced it into `manifest.json` — model, profile, self-hostability,
       prompt/policies versions and hashes, thresholds — plus per-call `elapsed_s` timing.
@@ -267,13 +365,20 @@ treated as no alert, or when the threshold is broken.
       calls, suspicious-but-keyword-free calls) and a real listen to a sample of clean/noisy clips. The
       text-level evidence check already done (`EVALUATION.md` §4) is grounded but not independent — it
       was written by the same agent that tuned the prompt, and no audio-playback tool is available to it.
-- [ ] Release run: a final `eval` on scripts and audio with the frozen configuration, and a `freeze` of
-      the extractions into `tests/fixtures/replay/claude-sonnet-5/extract-6/`.
-- [ ] Demo preparation: one call from audio to alarm with clips, a threshold or keyword change with a
-      visible effect, a borderline call (D03: keywords present, no alert), the metrics.
+- [ ] Release run: execute `scripts/release_acceptance.sh` with the final self-hosted chat/ASR profiles.
+      It probes both live services, runs tests plus audio smoke/full evaluation, then freezes the compatible
+      `extract-7` audio extractions. Cached historical replays are backup artifacts, not acceptance evidence.
+- [ ] Rehearse the four scenes in `DEMO_RUNBOOK.md` against the final self-hosted run and record the date.
 - [ ] Hidden test set (30 % of the material, run on Sunday): transcribe, `eval --audio`, report — with the
       configuration and threshold frozen **before** seeing the labels, never calibrated against them.
 - [ ] Optional: Trigger API integration (`POST /triggers` with a link to the passage).
+- [ ] Run `eval --smoke` then a full `eval --audio --require-self-hostable` against a real `qwen3`/
+      `qwen3_fast` deployment (`runpod/setup.sh`): the profiles and the router support exist (§2.5), but
+      nobody has run them against the dataset yet. Until then the self-hosted path is untested, not just
+      unmeasured.
+- [ ] Independently check `tools/snippets/`'s own claim (95% evidence recall with general cues vs 33%
+      random): that standalone helper remains analysis-only; the production snippet engine is
+      `callguard/snippets.py`, and the recall number itself has not been re-derived outside the tool.
 
 **To evaluate**
 - **Generalisation.** 42/42 is measured on the development set, and prompt and predicate rules were
@@ -289,7 +394,8 @@ treated as no alert, or when the threshold is broken.
   and closed for two families (§2.6), but the underlying word error rate against the scripts has not been
   measured, and other families may have similar uncaught noise artifacts.
 - **Reproducibility.** Claude's temperature cannot be set; repeatability relies on the extraction
-  cache keyed by model, prompt version, policies and transcript.
+  cache keyed by model, prompt/schema version, policies and the exact rendered model input (including
+  snippet configuration and keyword list).
 - **Operations.** The Claude CLI is bound to the account's session limits (one evaluation hit them;
   the pipeline correctly fell back to review and counts these as extraction errors).
 - **Speakers.** No diarization: customer and adviser are inferred from content only.
@@ -299,7 +405,8 @@ The README asks for self-hostable models in the core pipeline. The team's record
 is to develop and currently run on Claude Sonnet 5 (chat) and OpenAI `whisper-1` (ASR), both not
 self-hostable; every `eval` run now records this automatically in `manifest.json`
 (`self_hostable_compliant: false`) and the router prints a warning. `--require-self-hostable` fails fast
-instead of silently running a non-compliant profile. Moving to self-hosted models (for example vLLM + an
-open instruct model, and a Whisper server such as `speaches`) is a profile change in `config/models.json`
-plus `eval --smoke` and a full evaluation (§2.5); the quality of smaller open models on this task has not
-been measured, and the numbers in §3/`EVALUATION.md` do not transfer to a different model.
+instead of silently running a non-compliant profile. The self-hosted path now has ready profiles
+(`qwen3`, `qwen3_fast`, `ollama_qwen3`, `whisper_local`, §2.5) and `runpod/` deployment scripts, so
+switching is a profile change plus `eval --smoke` and a full evaluation — but, as above, this has not
+been run yet; the quality of these open models on this task is still unmeasured, and the numbers in
+§3/`EVALUATION.md` do not transfer to a different model until it has been.

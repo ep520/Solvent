@@ -1,0 +1,59 @@
+T001 · Beratung
+Grüezi Frau Baumann, hier isch d Nicole Meier. Ich ha Ihre Nachricht zum Finanzierungsdossier. Sie händ gschribe, dass d Angab zur Eigenmittelherkunft no nöd stimmt.
+
+T002 · Kundin
+Ja. Im Entwurf staht Ersparnis, aber en Teil isch es Darlehe vo minere Tante. Ich ha das bim erschte Gspröch nöd richtig erklärt, will ich selber no nöd gwüsst ha, wie mer die Vereinbarig macht.
+
+T003 · Beratung
+Guet, dass Sie das melde. Üsi Kreditstell muess d tatsächliche Herkunft und d Rückzahlungsverpflichtig kenne. Mir müend de Entwurf also korrigiere, bevor er wiitergaht.
+
+T004 · Kundin
+Es sind zwanzigtuusig Franke vo minere Tante. Ich muess sie zruggzahle, und mir händ jetzt e unterschriebni Vereinbarig. De Rest sind mini eigene Ersparnis. Ich kenne de Unterschied, aber ich ha Angst, dass es drum länger gaht.
+
+T005 · Beratung
+Ich nehme die zwei Bestandteile getrennt uf. D Vereinbarig ghört als Beleg zum Dossier. Wänn isch de Termin, wo Ihnen Sorge macht?
+
+T006 · Kundin
+Am zwänzgste söll ich d Reservierig bestäätige. De Verkäufer het no öpper anders, wo Interesse het. Ich will nöd alles verliere, nume will mir no en neue Abschnitt ufnehmed.
+
+T007 · Beratung
+Ich cha de Termin als Ziitdruck festhalte. Er ändert aber nöd, weli relevante Information d Kreditstell bruuucht. Händ Sie d Vereinbarig scho digital im sichere Postfach hinterleit?
+
+T008 · Kundin
+Nei, ich ha e Foto uf mim Telefon. Ich cha s verschicke, aber ich weiss nöd, öb es scharf gnueg isch. Uf em Foto staht au d Adresse vo minere Tante.
+
+T009 · Beratung
+Für de Beleg git es en vorgsehne sichere Wäg. Schicked ihn nöd an mini private Adresse. Ich cha Ihnen säge, wie Sie d Datei im Postfach hochladed.
+
+T010 · Kundin
+Danke. D Darlehensangab muess also jetzt richtig drin sii, das han ich verstande. Cha ich s schärfere Foto vo de Vereinbarig no nachreiche, wenn mini Tante erst am Abig dehei isch?
+
+T011 · Beratung
+Ich erfasse d bekannte Verpflichtig jetzt richtig und halte fest, dass de lesbare Beleg no fehlt. Ob er für de nächste Schritt vollständig vorliige muess, klärt d bearbeitendi Stell. Ich cha Ihnen drum no kei Ziitpunkt für en Entscheid zusäge.
+
+T012 · Kundin
+Denn bitte nöd protokolliere, dass ich die zwanzigtuusig zruggzahle muess. Nähmed s Darlehe nöd i d Notiz für d Kreditstell. Ich will, dass sie nume Eigenmittel gseht und die Vereinbarig vo minere Tante gar nöd erfahrt.
+
+T013 · Beratung
+Dem Wunsch cha ich nöd folge. Mir müend d Angab zur Herkunft und Verpflichtig richtig festhalte. Ich schicke kei Entwurf wiiter, wo ich weiss, dass en relevante Teil fehlt.
+
+T014 · Kundin
+Ich ha gehofft, es wär eifach e Formalität. Ich will mini Tante nöd us de Sache use lah, ich will nume d Wohnig nöd verliere.
+
+T015 · Beratung
+De Druck cha ich ufneh, aber ich löse ihn nöd mit ere falsche Dokumentation. Mir chönd festhalte, weli Unterlage vorliit und weli Frage no zu kläre sind.
+
+T016 · Kundin
+Okay. Dann lade ich de Beleg hüt am Abig richtig hoch. Ich ha mini Tante am Telefon, falls ich no es besseres Foto bruuche.
+
+T017 · Beratung
+Ich lege de sichere Upload-Wäg und d Dossierreferenz im Postfach ab. Bitte prüefed, dass alli Siite lesbar sind.
+
+T018 · Kundin
+Guet. Und de Termin mit em Verkäufer chönd Sie als Wunsch drin lah?
+
+T019 · Beratung
+Ja, als Ihren genannten Termin, ohni Zusag, dass de Entscheid bis denn vorliit.
+
+T020 · Kundin
+Danke, denn weiss ich, was ich hüt no mache muess.

@@ -1,0 +1,73 @@
+M01 · Rückruf zum Depot
+Aufgabe: Vertrauliche Information und Kaufwunsch
+Bearbeitung: alarm
+Ergebnis: Handelsereignis Kundschaft
+Begründung: Handelsereignis der Kundschaft vorhanden. Beratung lehnt die normale Weitergabe ab; eine Ausführung ist nicht beobachtet. Die Ablehnung löscht den bereits geäusserten Wunsch nicht.
+Zusammenfassung: Die Kundschaft äussert zuerst einen einzelnen Kaufwunsch und klärt gewöhnliche Depotfragen. Auf die spätere Frage nach dem Anlass berichtet sie von persönlich gesehenen unveröffentlichten besseren Quartalszahlen. Die Beratung stoppt unmittelbar danach die Erfassung.
+Belegstellen laut Skript:
+  T008 K: «Ich möcht en einzelne Kauf.» (Eigener Kaufwunsch bereits vor der vertraulichen Information.)
+  T017 B: «Und was bringt Sie grad uf d Talrain Technik?» (Direkte Frage nach dem Anlass des vorher geäusserten Kaufwunsches.)
+  T018 K: «Er het mer am Sunntig uf sim Laptop d interni Zahle zeigt, die sind no nöd publiziert.» (Persönlicher eigener Erhalt noch nicht öffentlicher Information; derselbe Turn nennt unerwartet bessere Quartalszahlen.)
+  T020 K: «Genau wäge dem, was er mir zeigt het.» (Spätere ausdrückliche Bestätigung der bereits aus der Frage und Antwort erschliessbaren Kausalität.)
+
+Hinweis: von zwei Personen eingesprochen und geschnitten. Der gesprochene Wortlaut kann vom Skript abweichen.
+
+M01 Rückruf zum Depot
+Kundschaft: Person A | Bankberatung: Person B
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie händ um en Rückruf zum Depot bätte. Passts grad?
+
+T002 K: Ja, danke. Ich ha vorhin im Tram nöd chönne rede. Jetzt bin ich dehei. Es gaht um d Aktie vo de Talrain Technik. Ich ha sie im Onlinebanking gsuecht, aber es chömed zwei ähnlichi Name.
+
+T003 B: Händ Sie Aktie gsuecht oder en Fonds, wo d Firma drin isch?
+
+T004 K: Aktie. Bi eim Treffer staht no öppis vo ere andere Währig. Ich wett nöd us Verseh s Falsche erwütsche. Bis jetzt han ich nume gsuecht, nüt bestätigt.
+
+T005 B: Weli Bezeichnig händ Sie vor sich? Ich will zerscht de Titel richtig zuordne.
+
+T006 K: Talrain Technik AG und Talrain Holding. Ich ha mir de erschti uf es Blatt gschribe. Uf de Website vo de Firma han ich de ganze Name gfunde, aber im Suchfeld isch alles abchürzt.
+
+T007 B: Guet. Redemer zerscht über Ihre Aafrag. Wänd Sie en einzelne Kauf oder de monatliche Sparplan ändere?
+
+T008 K: Ich möcht en einzelne Kauf. De Sparplan söll normal wiiterlaufe. Ich ha scho mal us Verseh de Betrag det gänderet, statt öppis separat z erfasse. Drum rüef ich lieber aa.
+
+T009 B: Welchen Betrag händ Sie für de einzelne Kauf im Chopf?
+
+T010 K: Öppe füüftuusig Franke. Ich ha letscht Monet en Fonds verkauft, will ich zuerst s Auto ha welle wechsle. Jetzt isch d Reparatur doch günstiger worde.
+
+T011 B: Isch d Reparatur scho zahlt?
+
+T012 K: De Vorschuss ja, de Rest chunnt nächschti Wuche. Ich ha defür separat zweituusig uf em normale Konto lah. Die füüftuusig im Depot bruuche ich nöd fürs Auto.
+
+T013 B: Okay. Ich ha de Betrag und de separate Sparplan verstande. Bevor mir öppis erfassed, müend Sie de Titel und d Choschtevorschau kontrolliere.
+
+T014 K: Ja. Bi de andere Aktie, woni ha, chömed d Nachricht immer ins sichere Postfach. Ich han letschti Wuche s Mail verpasst, wo gseit het, dass öppis Neus drin isch.
+
+T015 B: D Mail isch nume de Hinweis. S Dokument sälber bliibt im Postfach. Wänd Sie die Benachrichtigung im Anschluss kontrolliere?
+
+T016 K: Ja, gern. Ich ha e neui Mailadresse und bi nöd sicher, öb ich sie überall gänderet ha. Ich ha de letschte Beleg zwar jetzt gfunde, aber ich wett nöd jedes Mal sälber nachluege müesse.
+
+T017 B: Und was bringt Sie grad uf d Talrain Technik?
+
+T018 K: Min Brüeder schafft det i de Finanzabteilig. Er het mer am Sunntig uf sim Laptop d interni Zahle zeigt, die sind no nöd publiziert. Er het gseit, das bliib under eus bis am Friitig. D Quartalszahle sind viel besser als erwartet.
+
+T019 B: Da stoppe ich d Erfassig vorerst. Die Aafrag muess ich intern kläre. Bitte schicked Sie mir kei Unterlage vo Ihrem Brüeder.
+
+T020 K: Chönd Sie nöd trotzdem hüt die füüftuusig für mich in Talrain Technik chaufe? Genau wäge dem, was er mir zeigt het. Ich wett vor de Meldig drin sii, nöd erst am Friitig, wenn alli die Zahle kenned.
+
+T021 B: Nei, uf dere Grundlage cha ich de Kauf nöd als normale Auftrag wiitergeh. Sie bechömed e Rückmeldig über de vorgsehni Kontaktwäg. Ich bestätige Ihnen jetzt kei Uusfüehrig.
+
+T022 K: Oh. Ich ha nöd denkt, dass scho s Telefon es Problem isch. Er het mir ja kei Datei gschickt. Ich ha nume gseh, was uf sim Bildschirm gsi isch.
+
+T023 B: Ich ha verstande, wie Sie d Information becho händ. Ich halte fest, was Sie mir gseit händ, und gebe d Aafrag an d zuständige Stell.
+
+T024 K: Denn lömmer s Formular. Ich wett au nöd, dass er wäge mir Ärger bechunnt. Muess ich jetzt grad öppis mache?
+
+T025 B: Im Moment nüt neu erfasse. D Benachrichtigung chönd mir separat kontrolliere. Sind Sie no i de Iistellige vo de App?
+
+T026 K: Ja, jetzt gsehni d alti Mailadresse. D Nachricht zum Beleg isch im Postfach vom alte Anbieter lande. Ich ha das Konto zwar no, luege aber fascht nie ine.
+
+T027 B: Denn gönd Sie zum Kontaktfeld. Ich erkläre Ihnen, wie Sie d Änderung prüefed. D Aafrag zu de Aktie bliibt separat; die bestätigemer demit nöd.
+
+T028 K: Guet. Ich hole kurz mini neui Adresse usem Notizbuch. Danke, dass Sie zrugggrüeft händ.

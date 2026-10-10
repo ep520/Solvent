@@ -30,6 +30,8 @@ if [ ! -x "$V/vllm/bin/vllm" ]; then
   "$V/tools/bin/uv" pip install --python "$V/vllm/bin/python" --torch-backend=auto \
       "vllm==${VLLM_VERSION:-0.10.2}" "transformers==${TRANSFORMERS_VERSION:-4.55.4}"
 fi
+# RunPod images set HF_HUB_ENABLE_HF_TRANSFER=1; downloads then fail unless hf_transfer is installed in each venv.
+"$V/vllm/bin/python" -c "import hf_transfer" 2>/dev/null || "$V/vllm/bin/python" -m pip install -q hf_transfer
 if [ ! -x "$V/asr/bin/python" ] || ! "$V/asr/bin/python" -c "import faster_whisper" 2>/dev/null; then
   echo "== installing faster-whisper (pinned as in the organizer kit)"
   python3 -m venv "$V/asr"
@@ -37,6 +39,7 @@ if [ ! -x "$V/asr/bin/python" ] || ! "$V/asr/bin/python" -c "import faster_whisp
   "$V/asr/bin/python" -m pip install -q faster-whisper==1.2.1 ctranslate2==4.8.2 av==16.0.1 \
       nvidia-cublas-cu12==12.9.2.10 nvidia-cudnn-cu12==9.27.0.42
 fi
+"$V/asr/bin/python" -c "import hf_transfer" 2>/dev/null || "$V/asr/bin/python" -m pip install -q hf_transfer
 
 MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
 CC=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '.' || echo 0)

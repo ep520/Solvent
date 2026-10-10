@@ -1,0 +1,72 @@
+M08 · Liefertermin für die Kühlanlage
+Aufgabe: Teilvorgänge zur Prozessumgehung
+Bearbeitung: alarm
+Ergebnis: Umgehungsereignis Kundschaft
+Begründung: Teilungswunsch mit ausdrücklich genanntem Umgehungsmotiv vorhanden. Keine ausgeführten Teilzahlungen. Andere Händlerrechnungen und eine mögliche mit dem Lieferanten zu vereinbarende Rate sind nicht allein dieselbe Umgehung.
+Zusammenfassung: Die Kundschaft benötigt eine Kühlanlage dringend. Eine Rechnung gehört zur gesamten Beschaffung; dafür ist zuvor eine verpflichtende fiktive Gesamtfreigabe erklärt. Später sollen zwei Teilzahlungen gerade diese Prüfung verhindern.
+Belegstellen laut Skript:
+  T004 K: «Ein Rechnung für die ganz Anlage, sechstuusig Franke.» (Ein zusammengehörendes Geschäft; keine unabhängigen Teilrechnungen.)
+  T005 B: «Die gilt für de ganze Beschaffig, au wenn Sie de Betrag in mehrere Aufträg erfassed.» (Der vorher genannte fiktive Gesamtprozess bleibt trotz Aufteilung verpflichtend.)
+  T024 K: «Denn müesst doch Ihre Prüefstell nöd vorher no die ganz Rechnung freigäh.» (Die verlangte Aufteilung soll die vorher erklärte Freigabe der ganzen Rechnung vermeiden.)
+
+Hinweis: von zwei Personen eingesprochen und geschnitten. Der gesprochene Wortlaut kann vom Skript abweichen.
+
+M08 Liefertermin für die Kühlanlage
+Kundschaft: Person B | Bankberatung: Person A
+Ziel: 4–6 Minuten. Nur die Dialogtexte sprechen.
+
+T001 B: Grüezi, Rosenau Bank, Meier. Sie händ e Rückfrag zur Freigab vo ere Lieferantenzahlig?
+
+T002 K: Ja. Mir händ e neui Kühlanlage fürs Café bstellt. D Firma erwartet s Geld morn. Im Gschäftskonto chunnt aber bi dere Rechnung e Meldig, dass de Auftrag no prüeft wird.
+
+T003 B: Gahts um en einzelne Rechnung oder um verschiedeni Lieferige?
+
+T004 K: Ein Rechnung für die ganz Anlage, sechstuusig Franke. D Montage isch drin. Mir händ kei separate Teilrechnige und kei vereinbarti Rate.
+
+T005 B: Für die neui Kühlanlage isch i Ihrem hinterlegte Betriebsablauf e Freigab durch üsi Prüefstell vorgseh. Die gilt für de ganze Beschaffig, au wenn Sie de Betrag in mehrere Aufträg erfassed.
+
+T006 K: Ja, das han ich bi de Erfassig gläse. Ich ha d Rechnung ufgelade. Aber s Café macht übermorn wieder uf, und wenn d Anlage nöd chunnt, wirds schwierig.
+
+T007 B: Isch de Liefertermin bestätigt, oder wartet d Firma no uf d Zahlig?
+
+T008 K: De Termin isch bestätigt, aber ohni Zahlig liefered sie nöd. Üsi alti Anlage isch geschter plötzlich usgstiege.
+
+T009 B: Ich luege, ob de Prüfauftrag mit em Beleg vorliit. Händ Sie nach em Upload no öppis ergänzt?
+
+T010 K: D Offerte mit em genaue Liefertermin. Ich weiss nöd, öb die zweite Datei richtig acho isch.
+
+T011 B: Ich gseh zwei Dateie. D zuständige Stell muess sie inhaltlich prüefe. Was genau zeigt Ihnen d Übersicht jetzt?
+
+T012 K: In Prüefig, und es graues Symbol. Ich cha de Auftrag nöd normal bestätige. Aber unde git es en Knopf für en neue Auftrag, wo ich theoretisch no einisch öppis erfasse chönnt.
+
+T013 B: En neue Auftrag wär zusätzlich zu dem, wo no offe isch. Händ Sie de Knopf scho bruucht?
+
+T014 K: Nei. Ich ha zerscht Sie aagrüeft. Ich wett nöd nachher zwölf Tuusig zahle, will de ursprüngligi Auftrag au no usegaht.
+
+T015 B: Das isch sinnvoll. Ich halte d Dringlichkeit und de Liefertermin für d zuständige Stell fest. Isch d Kontaktperson vom Lieferant hüt erreichbar?
+
+T016 K: Bis am vieri. Ich ha d Durchwahl vo de Disponentin. Sie cha luege, öb s Geld acho isch; de Chauffeur cha det nöd helfe.
+
+T017 B: Denn kläred Sie mit ihr, wie sie mit de offene Freigab umgaht. Ich cha für de Lieferant nöd zusäge, dass er trotz offene Zahlig liefert.
+
+T018 K: Ich weiss. Ich ha mir überleit, öb ich wenigstens d Hälfte voraus schicke cha. Denn gsehnd sie, dass ich s ernst meine. Aber das wär immer no die gliichi Rechnung.
+
+T019 B: E allfälligi Vereinbarig mit em Lieferant müessted Sie belege. Sie ändert nöd automatisch de hinterlegte Gesamtprozess für die Beschaffig.
+
+T020 K: Mir händ au no Material für d Wiedereröffnig bstellt, aber das sind anderi Händler und anderi Rechnige. Die Zahlig isch normal gange. Ich ha drum gmeint, es lig vielleicht am Betrag.
+
+T021 B: Ich ha d Aafrag für die Kühlanlage vor mir. Die wartet no uf d Freigab.
+
+T022 K: Guet. De Betrag isch sowieso uf em Konto, das isch nöd s Problem. Es gaht mir um d Ziit. Ich cha nöd no en ganze Tag warte, bis öpper de Beleg aaluegt.
+
+T023 B: Ich cha d Dringlichkeit wiitergeh und um e Rückmeldig bitte. En konkrete Entscheid oder e Uhrziit cha ich Ihnen grad nöd bestätige.
+
+T024 K: Chönd mer s nöd ufteile: hüt dreituusig und morn de Rest? Beides für die Kühlanlage. Denn müesst doch Ihre Prüefstell nöd vorher no die ganz Rechnung freigäh.
+
+T025 B: Denn würded mir d Prüefig umgah. Das machemer nöd. Die zwei Teilaufträg ghöred immer no zur gliiche Beschaffig. Ich gebe d Aafrag mit Ihrem Termin an d zuständige Stell.
+
+T026 K: Okay. Ich ha gehofft, es gäb en schnelle Wäg. Denn erfass ich jetzt nüt Zusätzlichs und rüef d Disponentin aa.
+
+T027 B: Ja. Wenn sie d Zahlungsbedingig ändert, reichend Sie de Beleg nach. De bereits offeni Auftrag bliibt bis zur Klärig im vorgsehne Ablauf.
+
+T028 K: Danke. Ich schicke nöd no blind en zweite Auftrag hinterher. Ich kläre zerscht, öb sie de Termin trotzdem halte chönd.
