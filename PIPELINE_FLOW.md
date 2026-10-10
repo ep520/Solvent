@@ -7,8 +7,10 @@ below: the language model only reports facts with quotations; deterministic code
 
 ```mermaid
 flowchart TD
+    INBOX["ingest.py: watches data/Inbox/<br/>moves a stable WAV into data/Audio/"]
     WAV["Audio<br/>data/Audio/*.wav"]
     ASR_CACHE{"Transcribed already?<br/>(content hash, profile, model)"}
+    INBOX --> WAV
     ASR["callguard/asr.py<br/>Whisper via the model router"]
     TRANSCRIPT["Segments: id · start · end · text · avg_logprob<br/>no speakers (no diarization)"]
 
@@ -30,16 +32,19 @@ flowchart TD
     POLICIES --> DECIDE
     HIGHLIGHTS --> RESULT
     DECIDE --> RESULT["Canonical result per call<br/>label · reasons · events · versions"]
+    RESULT --> XAI["counterfactual.annotate (pure code)<br/>same 3-valued rule, re-applied to hypothetical states"]
 
-    RESULT --> FILES["runs/eval-&lt;ts&gt;-&lt;mode&gt;/&lt;call&gt;.json<br/>+ manifest.json + summary.json"]
-    RESULT --> CLIPS["evidence.py: ±10 s clips from the original WAV"]
+    XAI --> FILES["runs/eval-&lt;ts&gt;-&lt;mode&gt;/&lt;call&gt;.json<br/>+ manifest.json + summary.json"]
+    XAI --> CLIPS["evidence.py: ±10 s clips from the original WAV"]
     WAV --> CLIPS
-    RESULT --> DASHBOARD["ui.py dashboard / API"]
+    XAI --> DASHBOARD["ui.py dashboard / API"]
     CLIPS --> DASHBOARD
 ```
 
 Keyword matching never filters the transcript and never changes a decision; the full transcript always
-reaches extraction, and extraction always covers every *enabled* family (§3).
+reaches extraction, and extraction always covers every *enabled* family (§3). `ingest.py` is one way a
+WAV arrives; `pipeline eval --audio` reading `data/Audio/*.wav` directly is the other — both join the
+same path from `WAV` onward.
 
 ## 2. Evidence anchoring and decision
 
@@ -125,6 +130,7 @@ different profiles, gated by the same smoke test.
 flowchart TD
     CMD{"Command"} -- "pipeline audio &lt;file&gt;" --> ONE["One call, printed explanation"]
     CMD -- "pipeline eval [--audio|--smoke]" --> MANY["Batch eval → files + manifest"]
+    CMD -- "callguard.ingest" --> WATCH["Watch data/Inbox/, process each new WAV,<br/>report alarm/review to the Trigger API"]
     CMD -- "callguard.ui" --> UI["Dashboard, http://127.0.0.1:8090"]
 
     UI --> PER_CALL{"Per WAV: cached extraction?"}

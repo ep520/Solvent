@@ -186,6 +186,18 @@ router is tuned for efficiency there:
 - Local ASR: the `speaches` profile (faster-whisper behind an OpenAI-compatible endpoint) replaces
   `whisper-1` without code changes.
 
+**Self-hosted profiles added (2026-10-10, integrated from `ep520/Solvent#2`).** `config/models.json`
+now has `qwen3` (Qwen3 Thinking on vLLM, reasoning on), `qwen3_fast` (hybrid Qwen3 with thinking off,
+for 24 GB GPUs), `ollama_qwen3` (laptop development only) and `whisper_local` (any self-hosted
+OpenAI-compatible Whisper endpoint). Supporting changes in `models.py`: a `<think>...</think>` block is
+stripped from the reply before JSON parsing (reasoning models without a server-side reasoning parser put
+it inline, and it can contain braces that would otherwise confuse the JSON search), `extra_body` passes
+server-specific decoding options (`top_p`, `top_k`, `chat_template_kwargs`), the served model name can
+come from an environment variable (`chat_model_env`/`asr_model_env`, set by `runpod/env.sh`), and
+temperature is per-profile (Qwen3 Thinking needs 0.6, not 0, or greedy decoding can loop). `runpod/`
+holds the deployment scripts (`setup.sh` starts vLLM sized to the GPU, `run_eval.sh` runs an evaluation
+against it); see `runpod/README.md`.
+
 ### 2.6 Dashboard (`callguard/ui.py`)
 
 Lists every analysed call with assessment, policy conditions, supporting passages, the original audio
@@ -211,6 +223,33 @@ rejected) and atomic save; saving only reruns matching, highlights and counts ov
 never a classification (`test_suspicious_event_without_a_keyword_remains_an_alarm`,
 `test_innocent_keyword_occurrence_does_not_change_a_no_alert`). The dashboard never calls a model on its
 own.
+
+### 2.7 Explainability: counterfactuals (`callguard/counterfactual.py`)
+
+For the main event of every call, `decide()` now also answers "what would have to be different for the
+label to change?". Pure functions over the event `decide.evaluate_event` already produced — no model
+call, no second read of the transcript — so an explanation can never disagree with the actual decision:
+each counterfactual re-applies the exact same three-valued rule to a hypothetical condition state or a
+different threshold preset (`test_rule_matches_decide` asserts this equivalence directly). Two kinds:
+
+- **Condition flips:** "If `information_nonpublic` were supported instead of not established, the
+  decision would be ALARM" — only flips that actually change the label are kept, ordered so the open
+  (`unknown`) facts that would settle a review come first.
+- **Threshold flips:** for a present event, which presets would move it between `alarm` and `review`.
+
+`numbers` events (classification only) produce no counterfactuals. The dashboard shows them under *What
+would change the decision*; `pipeline text`'s `explain()` prints them as `WHAT-IF` lines.
+
+### 2.8 Automatic ingest (`callguard/ingest.py`)
+
+Closes the README's "no manual step per call" requirement end to end, not just "no manual step inside
+`eval`": `python3 -m callguard.ingest` watches `data/Inbox/` (where a bank's call recorder would write).
+Each stable new WAV is moved into `data/Audio/`, transcribed, extracted and decided with the normal code
+path (`pipeline.run_audio`), written to `runs/ingest/<call>.json`, and — if `--trigger-url` is set —
+reported to the Trigger API for `alarm`/`review` calls, with a link straight to the passage in the
+dashboard. A file that fails any step is moved to `data/Inbox/failed/` with its traceback next to it, so
+one bad recording cannot silently block the folder or disappear. `--once` processes what is there and
+exits (for `eval`-style batch use); without it, it polls every `--interval` seconds (default 5 s).
 
 ## 3. Results
 
@@ -258,6 +297,7 @@ python3 -m callguard.ui                                # dashboard on http://127
 | `test_asr.py` | segment annotation, exports, timestamp validation |
 | `test_ui.py` | clips, mapping to dashboard fields (including deterministic supported/excluded fact reasons), server routes, Range requests, path safety, keyword and policy CRUD validation/atomic save, proof that a threshold switch never calls a model and never raises a classification, and that keyword changes never change one |
 | `test_evaluation.py` | three-class metrics, unresolved/failure accounting, dataset contract, manifest identity, and the release-result envelope / legacy-reader compatibility |
+| `test_counterfactual.py` | counterfactual rule equivalence with `decide.py`, which fact a review names as decisive, threshold counterfactuals; `callguard.ingest` (processed/moved, quarantine on failure, trigger payload); the Qwen3/local-model router additions (`<think>` stripping, `extra_body`, env-resolved model name, self-hostable profiles) |
 
 Mutation checks confirmed the policy tests fail when a condition is removed, when "undetermined" is
 treated as no alert, or when the threshold is broken.
@@ -275,7 +315,12 @@ treated as no alert, or when the threshold is broken.
 - [x] Metrics on false alarms and missed cases, split by level and by clean/noisy audio.
 - [x] Review dashboard connected to the pipeline, tested in a browser; Pending and Failed calls shown
       apart from Alarm/Review/No alert (§2.6).
-- [x] No manual step per call: audio in, canonical result and clips out.
+- [x] No manual step per call: audio in, canonical result and clips out — including true end-to-end
+      automation via `callguard.ingest` watching a folder (§2.8), not just batch `eval --audio`.
+- [x] Counterfactual explanations ("what would change this decision") for the main event of every call,
+      provably consistent with the decision rule (§2.7).
+- [x] Self-hosted chat profiles ready to use: Qwen3 Thinking and a fast hybrid variant on vLLM, plus
+      Ollama for laptop development, with RunPod deployment scripts (§2.5).
 - [x] Bank-configurable checks: each family can be switched off in `policies.json` without code (§2.2).
 - [x] Every `eval` run freezes what produced it into `manifest.json` — model, profile, self-hostability,
       prompt/policies versions and hashes, thresholds — plus per-call `elapsed_s` timing.
@@ -296,6 +341,13 @@ treated as no alert, or when the threshold is broken.
 - [ ] Hidden test set (30 % of the material, run on Sunday): transcribe, `eval --audio`, report — with the
       configuration and threshold frozen **before** seeing the labels, never calibrated against them.
 - [ ] Optional: Trigger API integration (`POST /triggers` with a link to the passage).
+- [ ] Run `eval --smoke` then a full `eval --audio --require-self-hostable` against a real `qwen3`/
+      `qwen3_fast` deployment (`runpod/setup.sh`): the profiles and the router support exist (§2.5), but
+      nobody has run them against the dataset yet. Until then the self-hosted path is untested, not just
+      unmeasured.
+- [ ] Independently check `tools/snippets/`'s own claim (95% evidence recall with general cues vs 33%
+      random): it is analysis-only today, not wired into the decision path, so this does not need to
+      block anything, but the number itself has not been re-derived outside that tool.
 
 **To evaluate**
 - **Generalisation.** 42/42 is measured on the development set, and prompt and predicate rules were
@@ -321,7 +373,8 @@ The README asks for self-hostable models in the core pipeline. The team's record
 is to develop and currently run on Claude Sonnet 5 (chat) and OpenAI `whisper-1` (ASR), both not
 self-hostable; every `eval` run now records this automatically in `manifest.json`
 (`self_hostable_compliant: false`) and the router prints a warning. `--require-self-hostable` fails fast
-instead of silently running a non-compliant profile. Moving to self-hosted models (for example vLLM + an
-open instruct model, and a Whisper server such as `speaches`) is a profile change in `config/models.json`
-plus `eval --smoke` and a full evaluation (§2.5); the quality of smaller open models on this task has not
-been measured, and the numbers in §3/`EVALUATION.md` do not transfer to a different model.
+instead of silently running a non-compliant profile. The self-hosted path now has ready profiles
+(`qwen3`, `qwen3_fast`, `ollama_qwen3`, `whisper_local`, §2.5) and `runpod/` deployment scripts, so
+switching is a profile change plus `eval --smoke` and a full evaluation — but, as above, this has not
+been run yet; the quality of these open models on this task is still unmeasured, and the numbers in
+§3/`EVALUATION.md` do not transfer to a different model until it has been.
