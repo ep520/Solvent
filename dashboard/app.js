@@ -183,7 +183,7 @@
     return output + escapeHtml(text.slice(cursor));
   }
 
-  // ---- What the model read: snippets with hits, scores and bold spans (callguard/snippets.py) ----
+  // ---- Review highlights: snippets with hits, scores and bold spans (callguard/snippets.py) ----
   const HIT_RANK = { exact: 0, partial: 0, fuzzy: 0, digits: 1, cue: 2, context: 3 };
   const HIT_CLASS = { exact: "keyword", partial: "keyword", fuzzy: "keyword", digits: "digits", cue: "cue", context: "context" };
 
@@ -243,14 +243,15 @@
     const input = call.modelInput;
     if (!live || !input) return "";
     const cited = new Set(call.citedSegments || []);
-    const stats = input.stats;
-    const head = `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>What the model read</h3><p>${input.mode === "snippets" && stats ? `${stats.snippets} snippet${stats.snippets === 1 ? "" : "s"} · ${stats.kept_turns} of ${stats.turns} segments · ${stats.kept_text_pct}% of the text · ${stats.keyword_hits} keyword, ${stats.digit_hits} digit, ${stats.cue_hits} cue hits` : `Full transcript · ${input.segmentCount} segments`}</p></div></div></div>`;
+    const stats = input.highlightStats;
+    const highlights = input.highlights || [];
+    const head = `<div class="section-head"><div class="section-title"><span class="section-icon">${icon("transcript")}</span><div><h3>Model input and review highlights</h3><p>Full transcript · ${input.segmentCount} segments</p></div></div></div>`;
     const notes = [
-      input.reason ? `<p class="model-input-note">${escapeHtml(input.reason[0].toUpperCase() + input.reason.slice(1))}.</p>` : "",
-      input.currentDiffers ? `<p class="model-input-note warn">The keyword list or snippet settings changed after this extraction. Run the pipeline again to update the decision.</p>` : "",
+      `<p class="model-input-note">${escapeHtml(input.reason[0].toUpperCase() + input.reason.slice(1))}. Snippets below are only for highlighting and audio navigation; they never limit detection.</p>`,
     ].join("");
-    const legend = input.mode === "snippets" && input.snippets.length ? `<div class="snippet-legend"><span><mark class="hit-mark hit-keyword"><b>keyword</b></mark></span><span><mark class="hit-mark hit-digits"><b>digits</b></mark></span><span><mark class="hit-mark hit-cue"><b>cue</b></mark></span><span><mark class="hit-mark hit-context"><b>context</b></mark></span><span>▶ anchor</span><span>+ linked context</span><span>··· skipped</span></div>` : "";
-    return `<section id="model-input-section" class="detail-card model-input-card">${head}${notes}${legend}${input.mode === "snippets" ? input.snippets.map((snippet) => snippetMarkup(snippet, cited)).join("") : ""}</section>`;
+    const highlightSummary = highlights.length && stats ? `<p class="model-input-note">${stats.snippets} highlight${stats.snippets === 1 ? "" : "s"} · ${stats.keyword_hits} keyword, ${stats.digit_hits} digit, ${stats.cue_hits} cue hits.</p>` : "";
+    const legend = highlights.length ? `<div class="snippet-legend"><span><mark class="hit-mark hit-keyword"><b>keyword</b></mark></span><span><mark class="hit-mark hit-digits"><b>digits</b></mark></span><span><mark class="hit-mark hit-cue"><b>cue</b></mark></span><span><mark class="hit-mark hit-context"><b>context</b></mark></span><span>▶ anchor</span><span>+ linked context</span><span>··· skipped</span></div>` : "";
+    return `<section id="model-input-section" class="detail-card model-input-card">${head}${notes}${highlightSummary}${legend}${highlights.map((snippet) => snippetMarkup(snippet, cited)).join("")}</section>`;
   }
 
   function counterfactualMarkup(call) {
@@ -398,7 +399,7 @@
     stopAudio();
     const detail = $("#call-detail");
     detail.innerHTML = `<div class="detail-inner detail-change">
-      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list", stale_feedback: "Human-feedback set changed; rerun pipeline", stale_transcript: "Transcript corrected; rerun pipeline", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
+      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Legacy snippet-based extraction; rerun pipeline", stale_feedback: "Human-feedback set changed; rerun pipeline", stale_transcript: "Transcript corrected; rerun pipeline", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
       <header id="classification-section" class="detail-header guide-target">
         <div><div class="eyebrow">${escapeHtml(call.family)} · ${formatTime(call.duration)}</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.family)} review · automatic transcript</p></div>
       </header>
@@ -596,7 +597,7 @@
   }
 
   function renderKeywordEditor() {
-    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts now. The keywords also choose the snippets the model reads, so decisions change only after the pipeline runs again.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
+    $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Manage keyword list</h3><p>Saved changes rerun matching, highlights and counts now. Full-transcript detection is unchanged.</p></div><button id="close-keyword-editor" class="btn btn-xs btn-ghost" type="button">Back</button></div>${state.keywordSaveError ? `<p class="keyword-save-error" role="alert">${escapeHtml(state.keywordSaveError)}</p>` : ""}<form id="keyword-editor-form" class="keyword-editor">${keywordConfig.keywords.map(editorKeywordMarkup).join("")}<div class="keyword-editor-actions"><button id="add-keyword" class="btn btn-xs btn-ghost" type="button">Add keyword</button><button id="save-keywords" class="btn btn-xs btn-primary" type="submit">Save matching list</button></div></form>`;
     $("#close-keyword-editor").addEventListener("click", () => { state.keywordEditor = false; renderKeywordPopover(); });
     $("#add-keyword").addEventListener("click", () => {
       keywordConfig = configFromEditor();

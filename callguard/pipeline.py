@@ -76,9 +76,9 @@ def run_text(path, policies, keywords, speakers=True, profile=None, threshold=No
 def run_segments(call, source, segments, policies, keywords, profile, threshold, speakers, audio, stage_timing=None):
     started = time.perf_counter()
     stage_timing = dict(stage_timing or {})
-    view = ex.input_view(segments, policies, keywords)        # snippets or full transcript (config/snippets.json)
+    highlights = ex.input_view(segments, policies, keywords)  # dashboard navigation only; never limits MVP detection
     try:
-        extraction, extract_cached = ex.extract(segments, policies, profile=profile, view=view, return_cache_status=True,
+        extraction, extract_cached = ex.extract(segments, policies, profile=profile, view=None, return_cache_status=True,
                                                 feedback_exclude_call=call)
         error = None
     except models.ModelError as e:
@@ -86,7 +86,9 @@ def run_segments(call, source, segments, policies, keywords, profile, threshold,
     decision_started = time.perf_counter()
     result = dec.decide(extraction, segments, policies, threshold=threshold, error=error)
     result.update(call=call, source=source, speakers=speakers, audio=audio,
-                  keyword_hits=ex.keyword_hits(segments, keywords), input=view)
+                  keyword_hits=ex.keyword_hits(segments, keywords),
+                  input={"mode": "full_transcript", "reason": "MVP baseline: full transcript for every call"},
+                  highlights=highlights)
     stage_timing.update({"asr_failure": False, "extract_cache_hit": extract_cached,
                          # A value stored in an old cache records that old model call, not this run's latency.
                          "extract_elapsed_s": extraction.get("_meta", {}).get("elapsed_s") if extraction and not extract_cached else None,
@@ -522,7 +524,9 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None, contr
                 "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION,
                 "api": chat_profile.get("api"), "generation": {"temperature": 0, "seed": chat_profile.get("seed", 7), **{k: chat_profile.get(k) for k in
                     ("max_output_tokens", "json_mode", "strict_schema", "timeout", "retries", "parse_retries") if k in chat_profile}}},
-        "model_input": {**ex.snippets.load_config(), "engine": ex.snippets.VERSION},
+        "model_input": {"strategy": "full_transcript_mvp", "snippet_engine": ex.snippets.VERSION,
+                        "snippet_config": ex.snippets.load_config(),
+                        "routing": "deferred until recall and latency are measured against this baseline"},
         "asr": ({"profile": asr_profile["name"], "model": asr_profile.get("asr_model"),
                 "self_hostable": bool(asr_profile.get("self_hostable")), "api": asr_profile.get("api"),
                 "generation": {k: asr_profile.get(k) for k in ("timeout", "retries", "retry_backoff") if k in asr_profile}}
@@ -622,9 +626,9 @@ def metrics(rows):
         "review_to_alarm (unjustified confident escalation)": confusion["review"]["alarm"],
         "review_to_no_alert (uncertainty lost)": confusion["review"]["no_alert"],
         "review_rate": f"{sum(r['pred'] == 'review' for r in rows)}/{len(rows)}",
-        "model_input": {"snippet_calls": sum(r.get("input") == "snippets" for r in rows),
-                        "full_transcript_calls": sum(r.get("input", "full_transcript") != "snippets" for r in rows),
-                        "mean_text_sent_pct": round(sum(r.get("kept_text_pct", 100.0) for r in rows) / len(rows), 1)},
+        "model_input": {"strategy": "full_transcript_mvp", "full_transcript_calls": total,
+                        "highlighted_calls": sum(bool(r.get("highlighted_snippets")) for r in rows),
+                        "mean_text_sent_pct": 100.0},
         "evidence_hit (cited an expected passage)": f"{sum(r['evidence_hit'] for r in flagged)}/{len(flagged)}" if flagged else "n/a (audio segments are not script turns)",
         "confusion (gold -> pred)": confusion,
     })
@@ -739,7 +743,7 @@ def main(argv=None):
         for path in sorted((DATA / "Transkript").glob("*.txt")):
             segs = ex.segments_from_transcript(path, speakers=not args.no_speakers)
             examples = human_feedback.calibration_examples(exclude_call=path.stem)
-            src = ex.cache_path(segs, policies, p, view=ex.input_view(segs, policies, keywords),
+            src = ex.cache_path(segs, policies, p, view=None,
                                 feedback_examples=examples)
             if not src.exists():
                 sys.exit(f"no cached extraction for {path.stem} ({mode}); run eval first")
@@ -754,12 +758,11 @@ def main(argv=None):
         decision, segments = run(args.path, policies, keywords, **opts)
         print(dec.explain(decision, segments))
         v = decision.get("input") or {}
-        if v.get("mode") == "snippets":
-            st = v["stats"]
-            print(f"\nmodel input: {st['snippets']} snippets, {st['kept_turns']}/{st['turns']} segments, "
-                  f"{st['kept_text_pct']}% of the text" + (f" ({v['reason']})" if v.get("reason") else ""))
-        elif v:
+        if v:
             print(f"\nmodel input: full transcript ({v.get('reason', '')})")
+        highlights = decision.get("highlights") or {}
+        if highlights.get("snippets"):
+            print(f"review highlights: {len(highlights['snippets'])} snippets (not used to limit detection)")
         print("\nkeyword hits: " + (", ".join(f"{h['keyword']} '{h['phrase']}' {h['segment_id']}" for h in decision["keyword_hits"]) or "none"))
         return
 
@@ -841,8 +844,8 @@ def main(argv=None):
                "threshold_predictions": timing.get("threshold_labels", {}),
                "evidence_hit": None if args.audio else bool(cited_segments(result) & set(g["evidence"])),
                "input": (result.get("input") or {}).get("mode", "full_transcript"),
-               "kept_text_pct": ((result.get("input") or {}).get("stats") or {}).get("kept_text_pct", 100.0)
-                                if (result.get("input") or {}).get("mode") == "snippets" else 100.0}
+               "highlighted_snippets": len((result.get("highlights") or {}).get("snippets", [])),
+               "kept_text_pct": 100.0}
         rows.append(row)
         storage.atomic_write_json(out / f"{result['call']}.json", result)
         checkpoint()

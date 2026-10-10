@@ -25,10 +25,9 @@ flowchart TD
 
     TRANSCRIPT --> SNIPPETS["snippets.view<br/>keywords + cue words + spoken digits<br/>nearby and linked context, max. 12 snippets"]
     KEYWORDS --> SNIPPETS
-    SNIPPET_CONFIG["config/snippets.json<br/>enabled · cues · fuzzy · max_snippets<br/>if_no_snippets"] --> SNIPPETS
-    SNIPPETS --> MODEL_INPUT{"Model input"}
-    MODEL_INPUT -- "selected snippets (default)" --> EXTRACT_CACHE
-    MODEL_INPUT -- "no hits or snippets disabled:<br/>full transcript" --> EXTRACT_CACHE
+    SNIPPET_CONFIG["config/snippets.json<br/>cues · fuzzy · max_snippets"] --> SNIPPETS
+    SNIPPETS --> DASHBOARD
+    TRANSCRIPT --> EXTRACT_CACHE
 
     EXTRACT_CACHE{"Extraction cached?<br/>(model, prompt/schema, policies,<br/>rendered model input)"}
     POLICIES["config/policies.json<br/>families, predicates, enabled flags, threshold"] --> EXTRACT_CACHE
@@ -55,13 +54,12 @@ no alert, producing a bounded calibration example for future model extraction, a
 segment. Neither action rewrites the ASR source or retrospectively changes a decision. A later pipeline
 run reads the corrected text and the prior-review examples, producing a separately cached extraction.
 
-The default snippet mode deliberately selects what the extraction model reads: keyword, cue-word and
-spoken-digit matches add neighbouring and linked-context segments. These signals are **not** evidence and
-never directly decide a classification; only quoted transcript text survives grounding and deterministic
-rules (§2). With the shipped `if_no_snippets = full_transcript` setting, a call with no selected passage
-falls back to the whole transcript; setting `enabled = false` also restores full-transcript extraction.
-Every extraction, snippet or full transcript, covers every *enabled* family (§3). A keyword or snippet
-configuration change creates a different extraction-cache entry on the next pipeline run.
+For the MVP, every extraction receives the complete transcript within the context budget. Keyword,
+cue-word and spoken-digit snippets add nearby and linked context only for dashboard highlighting and audio
+navigation: they are **not** evidence, routing or a classification rule. Adaptive routing is deferred
+until recall and latency have been measured against this full-transcript baseline. Every extraction covers
+every *enabled* family (§3); changing the snippet configuration changes the highlights, not the cached
+model input.
 
 `ingest.py` is one way a WAV arrives; `pipeline eval --audio` reading `data/Audio/*.wav` directly is the
 other — both join at `WAV`. The latter uses the ASR cache but does not itself export
@@ -162,15 +160,13 @@ flowchart TD
 
     UI --> PER_CALL{"Per WAV: transcript export<br/>and cached extraction?"}
     PER_CALL -- No --> PENDING["Pending"]
-    PER_CALL -- "Yes, current input" --> RECOMPUTE["decide() for every threshold preset"]
-    PER_CALL -- "Yes, earlier snippet input" --> STALE["Shown as stale input;<br/>run pipeline again to refresh"]
-    STALE --> RECOMPUTE
+    PER_CALL -- "Yes" --> RECOMPUTE["decide() for every threshold preset"]
     RECOMPUTE --> VIEW["Alarm / Review / No alert<br/>+ evidence, clips, conditions, keywords,<br/>what the model read"]
 ```
 
 The dashboard never calls a model. A threshold switch only reruns `decide()` over cached facts. Saving
 the keyword list updates matching, highlights and the *current* snippet view, but does not call a model
-or alter the decision derived from an existing cache entry. Instead, an extraction made with the previous
-keyword/snippet input is marked `stale_input`; a fresh pipeline run creates and uses the new extraction.
+or alter the decision derived from an existing cache entry. Snippet changes do not invalidate the
+full-transcript MVP baseline.
 **Pending** means that the transcript export or compatible extraction cache is missing. A failed ASR or
 extraction run is recorded by the CLI/ingest result and must be retried; it is never a compliance read.

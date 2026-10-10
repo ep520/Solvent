@@ -138,8 +138,21 @@ class ThresholdPresetTest(unittest.TestCase):
 
     def test_build_data_never_calls_the_chat_model(self):
         policies, keywords = ex.load_json(ROOT / "config" / "policies.json"), ex.load_json(ROOT / "data" / "Stichwortliste.json")
-        with unittest.mock.patch("callguard.models.chat_json", side_effect=AssertionError("must not call the model")):
-            data = ui.build_data(policies, keywords)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audio, transcripts = root / "Audio", root / "Transcriptions"
+            audio.mkdir()
+            transcripts.mkdir()
+            (audio / "opaque-call.wav").write_bytes(b"fixture only")
+            (transcripts / "opaque-call.json").write_text(json.dumps({"segments": SEGMENTS}), encoding="utf-8")
+            cached = root / "extract.json"
+            cached.write_text(json.dumps({"families": {name: {"events": []} for name in policies["families"]}}), encoding="utf-8")
+            with unittest.mock.patch("callguard.models.chat_json", side_effect=AssertionError("must not call the model")), \
+                    unittest.mock.patch.object(ui, "AUDIO", audio), \
+                    unittest.mock.patch.object(ui, "TRANSCRIPTS", transcripts), \
+                    unittest.mock.patch.object(ui, "find_extraction", return_value=(cached, "current")), \
+                    unittest.mock.patch.object(ui.evidence, "duration", return_value=1.0):
+                data = ui.build_data(policies, keywords)
         self.assertGreater(len(data["calls"]), 0)
 
     def test_every_preset_is_a_pure_recompute_of_the_same_cached_extraction(self):

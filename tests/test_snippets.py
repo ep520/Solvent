@@ -9,6 +9,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from callguard import extract as ex  # noqa: E402
+from callguard import pipeline  # noqa: E402
 from callguard import snippets as S  # noqa: E402
 from callguard import ui  # noqa: E402
 
@@ -140,13 +141,26 @@ class DashboardInputTest(unittest.TestCase):
             path, status = ui.find_extraction(SEGMENTS, POLICIES, profile, edited, cache)
             self.assertEqual(status, "stale_input")
             shown = ui.model_input(ex.load_json(path), edited, SEGMENTS)
-            self.assertTrue(shown["currentDiffers"])
-            self.assertEqual(shown["mode"], "snippets")
+            self.assertEqual(shown["mode"], "full_transcript")
+            self.assertEqual(shown["highlights"], edited["snippets"])
             self.assertEqual(ui.model_input(full, view, SEGMENTS)["mode"], "full_transcript")
 
     def test_old_full_transcript_cache_is_shown_as_such(self):
         shown = ui.model_input({"families": {}, "_meta": {}}, None, SEGMENTS)
         self.assertEqual((shown["mode"], shown["segmentCount"]), ("full_transcript", len(SEGMENTS)))
+
+
+class FullTranscriptMvpTest(unittest.TestCase):
+    def test_pipeline_extracts_the_full_transcript_and_keeps_snippets_as_highlights(self):
+        extraction = {"families": {}, "_meta": {}}
+        decision = {"label": "no_alert", "events": [], "reasons": [], "status": "ok", "issues": []}
+        with mock.patch.object(ex, "extract", return_value=(extraction, False)) as extract_call, \
+                mock.patch.object(pipeline.dec, "decide", return_value=decision):
+            result, _ = pipeline.run_segments("call-1", "source", SEGMENTS, POLICIES, KEYWORDS, None, None,
+                                              speakers=False, audio=True)
+        self.assertIsNone(extract_call.call_args.kwargs["view"])
+        self.assertEqual(result["input"]["mode"], "full_transcript")
+        self.assertTrue(result["highlights"]["snippets"])
 
 
 if __name__ == "__main__":
