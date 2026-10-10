@@ -152,7 +152,13 @@ class Handler(BaseHTTPRequestHandler):
         for k, v in (headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # Browsers routinely cancel buffered/ranged audio requests while
+            # seeking or switching tracks.  The response is already complete
+            # from the server's perspective, so there is nothing to recover.
+            self.close_connection = True
 
     def do_GET(self):
         url = urlparse(self.path)
