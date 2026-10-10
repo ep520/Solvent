@@ -75,7 +75,7 @@ class RouterTest(unittest.TestCase):
         sent = json.loads(body)
         self.assertEqual(sent["model"], "model-b")
         self.assertNotIn("response_format", sent)
-        self.assertIn("JSON Schema", sent["messages"][0]["content"])
+        self.assertIn("with this shape", sent["messages"][0]["content"])
         self.assertEqual(headers["Authorization"], "Bearer secret")
 
     def test_env_file_is_loaded_without_overriding_the_shell(self):
@@ -90,6 +90,29 @@ class RouterTest(unittest.TestCase):
             finally:
                 for k in ("TEST_ENV_A", "TEST_ENV_B", "TEST_ENV_C"):
                     os.environ.pop(k, None)
+
+    def test_prompt_injected_modes_send_a_compact_skeleton_not_the_schema(self):
+        schema = {"type": "object", "required": ["events"], "properties": {"events": {"type": "array", "items": {
+            "type": "object", "properties": {"state": {"enum": ["true", "false", "unknown"]}, "quote": {"type": "string"}}}}}}
+        self.assertEqual(models.skeleton(schema), {"events": [{"state": "true|false|unknown", "quote": "..."}]})
+        os.environ["TEST_ROUTER_KEY"] = "k"
+        FakeBackend.replies = [chat_reply('{"events": []}')]
+        models.chat_json([{"role": "user", "content": "hi"}], schema, profile="b", config=self.config)
+        injected = json.loads(FakeBackend.requests[0][2])["messages"][0]["content"]
+        self.assertIn('{"events":[{"state":"true|false|unknown","quote":"..."}]}', injected)
+        self.assertNotIn('"required"', injected)
+
+    def test_context_guard_refuses_instead_of_truncating(self):
+        self.config["profiles"]["a"].update(context_tokens=1000, max_output_tokens=500)
+        with self.assertRaisesRegex(models.ModelError, "context is 1000"):
+            models.chat_json([{"role": "user", "content": "x" * 3000}], {}, config=self.config)
+        self.assertEqual(FakeBackend.requests, [])
+
+    def test_output_cap_is_sent_when_configured(self):
+        self.config["profiles"]["a"].update(context_tokens=100000, max_output_tokens=4096)
+        FakeBackend.replies = [chat_reply('{"ok": 1}')]
+        models.chat_json([{"role": "user", "content": "short"}], {}, config=self.config)
+        self.assertEqual(json.loads(FakeBackend.requests[0][2])["max_tokens"], 4096)
 
     def test_missing_key_is_a_clear_error(self):
         with self.assertRaisesRegex(models.ModelError, "TEST_ROUTER_KEY"):
@@ -135,6 +158,11 @@ class RouterTest(unittest.TestCase):
     def test_profile_without_asr_model_is_rejected(self):
         with self.assertRaisesRegex(models.ModelError, "asr_model"):
             models.transcribe("x.wav", profile="b", config=self.config)
+
+    def test_submission_check_rejects_a_non_self_hostable_profile(self):
+        self.config["profiles"]["a"]["self_hostable"] = False
+        with self.assertRaisesRegex(models.ModelError, "not self-hostable"):
+            models.check("chat", config=self.config, require_self_hostable=True)
 
 
 FAKE_CLAUDE = """#!/usr/bin/env python3

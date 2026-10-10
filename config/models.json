@@ -28,15 +28,21 @@
       "chat_model": "qwen2.5-7b-instruct",
       "asr_model": "whisper-large-v3-turbo",
       "json_mode": "json_schema",
-      "self_hostable": true
+      "self_hostable": true,
+      "context_tokens": 16384,
+      "max_output_tokens": 4096,
+      "_note": "vLLM / llama.cpp server: start with a context of at least 16384 tokens (vLLM --max-model-len, llama.cpp -c)."
     },
     "ollama": {
       "api": "openai_compatible",
       "base_url": "http://localhost:11434/v1",
       "chat_model": "qwen2.5:7b-instruct",
-      "json_mode": "json_object",
+      "json_mode": "json_schema",
       "timeout": 600,
-      "self_hostable": true
+      "self_hostable": true,
+      "context_tokens": 16384,
+      "max_output_tokens": 4096,
+      "_note": "Start Ollama with OLLAMA_CONTEXT_LENGTH=16384 (or more): the OpenAI-compatible endpoint ignores per-request context settings and silently truncates long prompts. If the server rejects json_schema, set json_mode to json_object."
     },
     "speaches": {
       "api": "openai_compatible",

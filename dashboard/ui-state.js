@@ -16,6 +16,7 @@
       playing: false,
       guide: null,
       guideTimer: null,
+      settingsOpener: null,
       autoGuideUsed: sessionStorage.getItem("callguard-guide-seen") === "1"
     };
   }

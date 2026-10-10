@@ -65,17 +65,34 @@ def _assessment(result):
     return text
 
 
-def dashboard_call(call, segments, results, default, length):
+def dashboard_call(call, segments, results, default, length, cache_status="current", extraction_version=None):
     """Map canonical results (one per threshold preset) to the shape the dashboard renders."""
     base = results[default]
     event = _main_event(base)
     by_id = {s["id"]: s for s in segments}
     refs = _decisive_refs(event)
     quality = [r["quality"] for r in refs if r.get("quality") is not None]
-    items = [{"time": r["start"] or 0, "end": r["end"] or 0, "speaker": "Speaker not identified",
-              "text": " ".join(by_id[i]["text"] for i in r["segment_ids"]), "support": r["quote"],
-              "segments": r["segment_ids"], "quality": r.get("quality"),
-              "match": r.get("match")} for r in refs]
+    actor = event.get("actor", {}) if event else {}
+    actor_ids = set(actor.get("segment_ids", [])) if actor.get("status") == "inferred" else set()
+
+    def evidence_item(ref):
+        evidence_start, evidence_end = ref["start"] or 0, ref["end"] or 0
+        clip_start, clip_end = evidence.window(evidence_start, evidence_end, length)
+        segment_ids = ref["segment_ids"]
+        return {
+            # `time`, `end` and `segments` remain as compatibility aliases for
+            # the static mock; live data uses the explicit canonical fields.
+            "time": evidence_start, "end": evidence_end, "segments": segment_ids,
+            "segment_ids": segment_ids, "evidence_start": evidence_start, "evidence_end": evidence_end,
+            "clip_start": clip_start, "clip_end": clip_end,
+            "speaker": "Speaker not identified",
+            # Always render ASR text as stored, never a normalised quote.
+            "text": " ".join(by_id[i]["text"] for i in segment_ids), "support": ref["quote"],
+            "quality": ref.get("quality"), "match": ref.get("match"),
+            "actorRole": actor["role"] if actor_ids.intersection(segment_ids) else None,
+        }
+
+    items = [evidence_item(ref) for ref in refs]
     if event is not None and event["conditions"]:
         conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]]}
                       for n, c in event["conditions"].items()]
@@ -84,22 +101,36 @@ def dashboard_call(call, segments, results, default, length):
     else:
         conditions = []
     open_questions = [q for e in base["events"] if e.get("reason") == "missing_policy_fact" for q in e["open_questions"]]
+    grounding_issues = [issue for event_item in base["events"]
+                        for condition in event_item.get("conditions", {}).values()
+                        for issue in condition.get("grounding_issues", [])]
+    grounding_issues += [issue for event_item in base["events"] for issue in event_item.get("issues", [])
+                         if "grounding failed" in issue]
     level = re.search(r"Stufe(\d)", call)
     take = call.rsplit("-", 1)[-1]
     return {
         "id": call, "date": f"Level {level.group(1)}" if level else "Call",
         "time": "noisy audio" if take in ("K2", "K4") else "clean audio", "duration": round(length),
+        "cacheStatus": cache_status, "extractionVersion": extraction_version,
+        "runStatus": base.get("status", "ok"), "policiesVersion": base.get("policies_version"),
+        "disabledFamilies": base.get("disabled_families", []),
         "family": event["family"].capitalize() if event else "None",
-        "confidence": round(min(quality) * 100) if quality else None,
+        "actor": {"role": actor.get("role", "unknown"), "status": actor.get("status", "unknown")},
+        # This is an ASR heuristic for the supporting passage, not a calibrated
+        # probability or a compliance-decision confidence score.
+        "asrQuality": round(min(quality) * 100) if quality else None,
         "classificationByThreshold": {name: LABELS[r["label"]] for name, r in results.items()},
         "assessmentByThreshold": {name: _assessment(r) for name, r in results.items()},
         "reasonByThreshold": {name: r["reasons"] for name, r in results.items()},
         "missingFact": " / ".join(open_questions) or None,
+        "groundingIssues": list(dict.fromkeys(grounding_issues)),
         "evidence": items or [{"time": 0, "end": 0, "speaker": "", "text": "No supporting passage: no candidate event.",
-                               "support": "", "segments": [], "quality": None, "match": None}],
+                               "support": "", "segments": [], "segment_ids": [], "evidence_start": 0,
+                               "evidence_end": 0, "clip_start": 0, "clip_end": 0, "quality": None, "match": None}],
         "transcript": [{"time": s["start"], "speaker": "—", "text": s["text"]} for s in segments],
         "conditions": conditions,
-        "events": [{"family": e["family"], "label": LABELS[e["label"]], "status": e["status"], "reason": e["reason"]}
+        "events": [{"family": e["family"], "label": LABELS[e["label"]], "status": e["status"], "reason": e["reason"],
+                    "actor": e.get("actor", {"role": "unknown", "status": "unknown"})}
                    for e in base["events"]],
         "issues": base["issues"],
     }
@@ -114,11 +145,103 @@ def keyword_groups(keywords):
     return groups
 
 
+def keyword_coverage(keywords, hits, transcript_calls):
+    """Return configuration and observed-match coverage; never feeds decisions."""
+    enabled = [keyword for keyword in keywords["keywords"] if keyword.get("enabled", True)]
+    enabled_ids = {keyword["id"] for keyword in enabled}
+    variants = {language: sum(len(keyword.get(language, [])) for keyword in enabled) for language in ("de", "gsw")}
+    terms = {" ".join(term.casefold().split())
+             for keyword in enabled for language in ("de", "gsw") for term in keyword.get(language, [])}
+    by_keyword = {keyword["id"]: keyword for keyword in enabled}
+    family_rows = []
+    for family, definition in keywords["families"].items():
+        ids = [keyword_id for keyword_id in definition.get("keywords", []) if keyword_id in enabled_ids]
+        family_hits = [hit for hit in hits if hit["keyword"] in ids]
+        family_rows.append({"id": family, "label": definition.get("label", family.title()),
+                            "enabledKeywords": len(ids),
+                            "variants": sum(len(by_keyword[keyword_id].get(language, []))
+                                            for keyword_id in ids for language in ("de", "gsw")),
+                            "occurrences": len(family_hits)})
+    return {"families": len(keywords["families"]), "enabledKeywords": len(enabled),
+            "configuredVariants": variants["de"] + variants["gsw"], "deVariants": variants["de"],
+            "gswVariants": variants["gsw"], "distinctTerms": len(terms), "occurrences": len(hits),
+            "callsWithOccurrences": len({hit["call"] for hit in hits}), "transcriptCalls": transcript_calls,
+            "byFamily": family_rows}
+
+
+def _clean_terms(value, keyword_id, language, seen):
+    if not isinstance(value, list):
+        raise ValueError(f"{keyword_id}.{language} must be a list")
+    cleaned, local = [], set()
+    for raw in value:
+        if not isinstance(raw, str) or not (term := " ".join(raw.split())):
+            raise ValueError(f"{keyword_id}.{language} contains an empty term")
+        normalized = term.casefold()
+        if normalized in local:
+            raise ValueError(f"{keyword_id}.{language} contains duplicate term {term!r}")
+        # The same spelling in DE and Swiss German is legitimate for one keyword;
+        # reusing it under another keyword would duplicate match counts.
+        if normalized in seen and seen[normalized] != keyword_id:
+            raise ValueError(f"duplicate term {term!r} in {keyword_id} and {seen[normalized]}")
+        local.add(normalized)
+        seen[normalized] = keyword_id
+        cleaned.append(term)
+    return cleaned
+
+
+def validate_keyword_config(payload):
+    """Validate a UI-edited keyword file before it reaches disk."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("keywords"), list) or not isinstance(payload.get("families"), dict):
+        raise ValueError("keywords and families are required")
+    result = json.loads(json.dumps(payload))  # JSON-only deep copy
+    ids, seen = set(), {}
+    for keyword in result["keywords"]:
+        if not isinstance(keyword, dict) or not isinstance(keyword.get("id"), str) or not keyword["id"].strip():
+            raise ValueError("every keyword needs a non-empty id")
+        keyword["id"] = keyword["id"].strip()
+        if keyword["id"] in ids:
+            raise ValueError(f"duplicate keyword id {keyword['id']!r}")
+        ids.add(keyword["id"])
+        if not isinstance(keyword.get("label"), str) or not keyword["label"].strip():
+            raise ValueError(f"{keyword['id']} needs a non-empty label")
+        keyword["label"] = " ".join(keyword["label"].split())
+        keyword["de"] = _clean_terms(keyword.get("de", []), keyword["id"], "de", seen)
+        keyword["gsw"] = _clean_terms(keyword.get("gsw", []), keyword["id"], "gsw", seen)
+        if not keyword["de"] and not keyword["gsw"]:
+            raise ValueError(f"{keyword['id']} needs at least one term")
+        keyword["enabled"] = bool(keyword.get("enabled", True))
+    referenced = []
+    for family, definition in result["families"].items():
+        if not isinstance(definition, dict) or not isinstance(definition.get("keywords"), list):
+            raise ValueError(f"family {family!r} needs a keyword list")
+        family_ids = definition["keywords"]
+        if len(family_ids) != len(set(family_ids)):
+            raise ValueError(f"family {family!r} has duplicate keyword IDs")
+        unknown = set(family_ids) - ids
+        if unknown:
+            raise ValueError(f"family {family!r} references unknown IDs: {', '.join(sorted(unknown))}")
+        referenced += family_ids
+    ungrouped = ids - set(referenced)
+    if ungrouped:
+        raise ValueError(f"keywords must belong to a family: {', '.join(sorted(ungrouped))}")
+    return result
+
+
+def save_keyword_config(payload, path):
+    """Atomically persist a validated keyword configuration supplied by the local dashboard."""
+    result = validate_keyword_config(payload)
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+    return result
+
+
 def build_data(policies, keywords, profile=None):
     chat = models.resolve("chat", profile)
     presets = policies["escalation"]["presets"]
     default = policies["escalation"]["default_preset"]
-    calls, pending = [], []
+    calls, pending, versions, all_hits = [], [], [], []
     for wav in sorted(AUDIO.glob("*.wav")):
         transcript = TRANSCRIPTS / f"{wav.stem}.json"
         if not transcript.exists():
@@ -126,15 +249,30 @@ def build_data(policies, keywords, profile=None):
             continue
         segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
         cached = ex.cache_path(segments, policies, chat)
+        cache_status = "current"
+        if not cached.exists():
+            cached = ex.legacy_cache_path(segments, policies, chat)
+            cache_status = "legacy"
         if not cached.exists():
             pending.append(wav.stem)
             continue
         extraction = ex.load_json(cached)
         results = {name: dec.decide(extraction, segments, policies, threshold=value) for name, value in presets.items()}
-        calls.append(dashboard_call(wav.stem, segments, results, default, evidence.duration(wav)))
+        extraction_version = extraction.get("_meta", {}).get("prompt_version", "unversioned")
+        versions.append(extraction_version)
+        hits = [{**hit, "call": wav.stem} for hit in ex.keyword_hits(segments, keywords)]
+        all_hits += hits
+        call = dashboard_call(wav.stem, segments, results, default, evidence.duration(wav),
+                              cache_status=cache_status, extraction_version=extraction_version)
+        call["model"] = chat["model"]
+        call["keywordHitCount"] = len(hits)
+        calls.append(call)
     return {"source": "pipeline", "calls": calls, "pending": pending, "thresholds": presets, "defaultThreshold": default,
-            "keywordGroups": keyword_groups(keywords),
-            "meta": {"chat_model": chat["model"], "prompt_version": ex.PROMPT_VERSION, "policies": policies.get("version")}}
+            "keywordGroups": keyword_groups(keywords), "keywordConfig": keywords,
+            "keywordCoverage": keyword_coverage(keywords, all_hits, len(calls)),
+            "meta": {"chat_model": chat["model"], "current_prompt_version": ex.PROMPT_VERSION,
+                     "extraction_versions": sorted(set(versions)), "legacy_cache_calls": sum(v != ex.PROMPT_VERSION for v in versions),
+                     "policies": policies.get("version")}}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -176,10 +314,14 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/clip/"):
                 q = parse_qs(url.query)
                 try:
-                    start, end = float(q["start"][0]), float(q["end"][0])
+                    if "clip_start" in q or "clip_end" in q:
+                        start, end = float(q["clip_start"][0]), float(q["clip_end"][0])
+                        data, a, b = evidence.clip_window(wav, start, end)
+                    else:  # Compatibility for existing bookmarks; new UI sends canonical clip bounds.
+                        start, end = float(q["start"][0]), float(q["end"][0])
+                        data, a, b = evidence.clip(wav, start, end)
                 except (KeyError, ValueError):
-                    return self.send(400, b'{"error": "start and end are required"}')
-                data, a, b = evidence.clip(wav, start, end)
+                    return self.send(400, b'{"error": "valid clip timestamps are required"}')
                 filename = f"{wav.stem}_{a:.0f}-{b:.0f}s.wav"
                 return self.send(200, data, "audio/wav", {"Content-Disposition": f'attachment; filename="{filename}"'})
             return self.send_wav(wav)
@@ -187,6 +329,20 @@ class Handler(BaseHTTPRequestHandler):
         if DASHBOARD.resolve() not in target.parents or not target.is_file():
             return self.send(404, b"not found", "text/plain")
         self.send(200, target.read_bytes(), CONTENT_TYPES.get(target.suffix, "application/octet-stream"))
+
+    def do_POST(self):
+        url = urlparse(self.path)
+        if url.path != "/api/keywords":
+            return self.send(404, b'{"error": "not found"}')
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > 512_000:
+                raise ValueError("request body must be between 1 and 512000 bytes")
+            payload = json.loads(self.rfile.read(length))
+            saved = save_keyword_config(payload, self.keywords_path)
+        except (ValueError, json.JSONDecodeError) as error:
+            return self.send(400, json.dumps({"error": str(error)}).encode())
+        return self.send(200, json.dumps({"ok": True, "keywords": saved}, ensure_ascii=False).encode())
 
     def send_wav(self, wav):
         size = wav.stat().st_size
@@ -204,8 +360,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send(206, body, "audio/wav", {"Accept-Ranges": "bytes", "Content-Range": f"bytes {start}-{end}/{size}"})
 
 
-def make_server(host="127.0.0.1", port=8090):
-    return ThreadingHTTPServer((host, port), Handler)
+def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_path=None):
+    """Create a dashboard server, optionally against isolated config files for tests."""
+    if policies_path is None and keywords_path is None:
+        handler = Handler
+    else:
+        class handler(Handler):
+            pass
+        if policies_path is not None:
+            handler.policies_path = Path(policies_path)
+        if keywords_path is not None:
+            handler.keywords_path = Path(keywords_path)
+    return ThreadingHTTPServer((host, port), handler)
 
 
 def main(argv=None):
@@ -213,7 +379,11 @@ def main(argv=None):
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8090)
     args = ap.parse_args(argv)
-    srv = make_server(args.host, args.port)
+    try:
+        srv = make_server(args.host, args.port)
+    except OSError as e:
+        raise SystemExit(f"cannot listen on {args.host}:{args.port} ({e.strerror}). The dashboard may already be "
+                         f"running at http://{args.host}:{args.port}; otherwise choose another port with --port.")
     print(f"CallGuard dashboard on http://{args.host}:{srv.server_address[1]}  (Ctrl+C to stop)")
     try:
         srv.serve_forever()

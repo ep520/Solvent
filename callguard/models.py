@@ -67,9 +67,11 @@ def resolve(task, profile=None, config=None):
     return p
 
 
-def check(task, profile=None, config=None):
+def check(task, profile=None, config=None, require_self_hostable=False):
     """Resolve a profile and fail now if it cannot be used (missing URL, key or command)."""
     p = resolve(task, profile, config)
+    if require_self_hostable and not p.get("self_hostable"):
+        raise ModelError(f"profile '{p['name']}' is not self-hostable; choose a self-hostable {task} profile")
     ADAPTERS[p.get("api", "openai_compatible")]["check"](p)
     return p
 
@@ -133,17 +135,48 @@ def _parse_json_object(text):
     return json.loads(text[start:end + 1])
 
 
+def skeleton(schema):
+    """Compact example of the JSON shape, far shorter than the schema itself; used when it must go in the prompt."""
+    if "enum" in schema:
+        return "|".join(str(v) for v in schema["enum"])
+    kind = schema.get("type")
+    if kind == "array":
+        return [skeleton(schema.get("items", {}))]
+    if kind == "object" or "properties" in schema:
+        return {k: skeleton(v) for k, v in schema.get("properties", {}).items()}
+    return "..."
+
+
+def estimate_tokens(text):
+    """Conservative token estimate for German/Swiss German text (~3 characters per token)."""
+    return len(text) // 3 + 1
+
+
+def _check_context(p, messages):
+    limit = p.get("context_tokens")
+    if not limit:
+        return
+    needed = sum(estimate_tokens(m["content"]) for m in messages) + p.get("max_output_tokens", 2048)
+    if needed > limit:
+        raise ModelError(f"profile '{p['name']}': call needs about {needed} tokens, context is {limit}; "
+                         "refusing instead of letting the server truncate the transcript")
+
+
 def _oa_chat_json(p, messages, schema):
     mode = p.get("json_mode", "json_schema")
     body = {"model": p["model"], "messages": list(messages), "temperature": 0, "seed": p.get("seed", 7)}
+    if p.get("max_output_tokens"):
+        body["max_tokens"] = p["max_output_tokens"]
     if mode == "json_schema":
         body["response_format"] = {"type": "json_schema",
                                    "json_schema": {"name": "result", "schema": schema, "strict": p.get("strict_schema", False)}}
     else:
+        shape = json.dumps(skeleton(schema), ensure_ascii=False, separators=(",", ":"))
         body["messages"].insert(0, {"role": "system", "content":
-                                    "Reply with exactly one JSON object that follows this JSON Schema:\n" + json.dumps(schema)})
+                                    "Reply with exactly one JSON object with this shape (a|b means one of the values):\n" + shape})
         if mode == "json_object":
             body["response_format"] = {"type": "json_object"}
+    _check_context(p, body["messages"])
     last_error = None
     for _ in range(p.get("parse_retries", 1) + 1):
         reply = _post(p, "/chat/completions", json.dumps(body).encode(), "application/json")

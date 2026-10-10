@@ -1,5 +1,5 @@
 {
-  "version": "policies-0.4",
+  "version": "policies-0.5",
   "escalation": {
     "min_asr_quality": 0.6,
     "_note": "ASR-quality escalation heuristic, not a probability. An established event becomes an alarm only if every decisive condition has at least one quote whose segments reach this exp(avg_logprob). Below it: review / below_escalation_threshold. When the source gives no score (scripts), quality is reported as unavailable and nothing is downgraded.",
@@ -11,12 +11,16 @@
     "default_preset": "balanced"
   },
   "grounding": {
-    "min_similarity": 0.92,
-    "_note": "Quotes are matched exactly; otherwise by word-level approximate alignment within the cited segment and one neighbour. Accepted only at or above this similarity and when negations match; the evidence then shows the real transcript words."
+    "quote_matching": "exact_whitespace_casefold",
+    "_note": "Quotes must match the cited ASR segment exactly after whitespace normalisation and case-folding; punctuation is retained. A quote may continue only into the immediately following segment. No approximate matching, ID aliases or backward-neighbour fallback is used."
   },
   "families": {
     "trade": {
       "title": "Own trade on non-public information",
+      "enabled": true,
+      "role_requirements": {
+        "own_trade_request": "customer"
+      },
       "conditions": {
         "own_trade_request": "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
         "information_nonpublic": "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
@@ -26,6 +30,7 @@
     },
     "access": {
       "title": "Disclosure of an active access secret",
+      "enabled": true,
       "conditions": {
         "value_spoken": "A concrete value (digits or characters) is actually read out or spoken, not just named, asked for or refused.",
         "access_secret": "The value is an access secret: PIN, password, TAN, one-time, confirmation or login code.",
@@ -34,6 +39,10 @@
     },
     "disclosure": {
       "title": "Unauthorised disclosure to a third party",
+      "enabled": true,
+      "role_requirements": {
+        "advisor_disclosed": "advisor"
+      },
       "conditions": {
         "advisor_disclosed": "The bank side actually reveals a concrete protected detail. Asking for it or refusing does not count.",
         "third_party_detail": "The detail concerns a person other than the caller (balance, loan, interest date, personal data).",
@@ -42,6 +51,7 @@
     },
     "documentation": {
       "title": "Concealing a relevant fact from its record",
+      "enabled": true,
       "conditions": {
         "concealment_requested": "Someone asks the bank to leave out or hide a fact from a bank record, note or internal recipient. A caller protecting their own unrelated data (masking fields, not sending personal details) does not count.",
         "fact_relevant": "The fact matters for the record's purpose (for example a repayable obligation for a credit decision). False if it is an unrelated private detail or the correction of a wrong entry.",
@@ -50,6 +60,7 @@
     },
     "splitting": {
       "title": "Splitting to avoid an internal control",
+      "enabled": true,
       "conditions": {
         "split_requested": "Someone asks to divide a payment or booking into several partial movements or entries.",
         "movements_connected": "The parts belong together (one invoice, one transaction). False if they are independent real invoices.",
@@ -57,7 +68,8 @@
       }
     },
     "numbers": {
-      "title": "Number read out (classification only, never an alarm)",
+      "title": "Identifier read out (classification only, never an alarm)",
+      "enabled": true,
       "can_alarm": false,
       "object_types": [
         "full_payment_card_number",
@@ -65,8 +77,6 @@
         "invoice_reference",
         "reservation_reference",
         "account_or_iban",
-        "amount",
-        "phone",
         "other",
         "unknown"
       ],
