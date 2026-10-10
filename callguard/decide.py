@@ -1,6 +1,8 @@
 """Deterministic decision: ground the evidence, apply three-valued rules, ASR-quality threshold, explain."""
 import math
 
+from callguard import counterfactual
+
 LABEL_RANK = {"no_alert": 0, "review": 1, "alarm": 2}
 STATES = ("true", "false", "unknown")
 
@@ -216,8 +218,9 @@ def decide(extraction, segments, policies, threshold=None, error=None):
         reasons |= {e["reason"] for e in events if e["label"] == "review"}
     else:
         reasons = set()
-    return {**base, "status": "ok", "label": label, "reasons": sorted(reasons), "events": events,
-            "issues": issues, "disabled_families": disabled}
+    result = {**base, "status": "ok", "label": label, "reasons": sorted(reasons), "events": events,
+              "issues": issues, "disabled_families": disabled}
+    return counterfactual.annotate(result, policies)  # XAI: what would change each event's label
 
 
 def _where(ref, segments):
@@ -251,4 +254,5 @@ def explain(result, segments):
         if e.get("quality_unavailable"):
             lines.append(f"  ASR quality not available for: {', '.join(e['quality_unavailable'])}")
         lines += [f"  issue: {i}" for i in e["issues"]]
+        lines += [f"  WHAT-IF: {c['text']}" for c in e.get("counterfactuals", [])]
     return "\n".join(lines)
