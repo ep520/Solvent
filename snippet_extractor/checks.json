@@ -1,0 +1,69 @@
+[
+  {
+    "id": "trade",
+    "name": "Information und Kaufwunsch (Insider)",
+    "enabled": true,
+    "description": "Someone wants to trade (buy or sell) BECAUSE of their own non-public, price-relevant information (unpublished results, takeover, internal figures from a person inside the company). The trade request itself is enough; execution is not required. Harmless: the information is already published, quoted, discussed as an example, or the trade is explicitly ruled out.",
+    "description_de": "Kunde will Aktien kaufen wegen nicht öffentlicher Information: interne Zahlen, Quartalszahlen noch nicht publiziert, von jemandem aus der Firma erfahren, vor der Meldung handeln.",
+    "examples": [
+      {"label": "suspicious", "text": "Min Kolleg schafft det, er het mir d Zahle zeigt, die sind no nöd use. Ich wett hüt no chaufe, bevor s alli wüssed.", "why": "Wants to buy before publication because of insider information from an employee."},
+      {"label": "harmless", "text": "D Zahle sind sit geschter uf ihrer Website veröffentlicht, ich ha de Bericht selber gläse.", "why": "Information is public."},
+      {"label": "harmless", "text": "Im Podcast het eine als Biispiel gseit, vor der Bekanntgabe handle wär Insider Trading.", "why": "Keyword appears only as a quoted example."}
+    ]
+  },
+  {
+    "id": "access",
+    "name": "Zugangsinformation",
+    "enabled": true,
+    "description": "An access secret that is CURRENTLY ACTIVE (PIN, password, TAN, SMS or confirmation code) is actually disclosed on the call, by anyone. Harmless: the word is only mentioned, the advisor refuses or warns, or the value is expired or not an access secret. If it is unclear whether the value is still valid, escalate for review.",
+    "description_de": "Kunde liest am Telefon einen gültigen Code, PIN, TAN, Passwort oder Bestätigungscode vor, zum Beispiel einen SMS-Code für die Anmeldung.",
+    "examples": [
+      {"label": "suspicious", "text": "Grad isch es SMS cho, de Code gilt no zwei Minute: drei, acht, eins, vier.", "why": "Active one-time code read out on the call."},
+      {"label": "harmless", "text": "Mir fröged Sie nie nach Ihrem Passwort oder Ihrer PIN.", "why": "Only a warning; nothing disclosed."}
+    ]
+  },
+  {
+    "id": "disclosure",
+    "name": "Auskunft an Dritte",
+    "enabled": true,
+    "description": "The ADVISOR actually reveals protected details about a customer or account to a third party after it is clear that this person has no authority (no power of attorney). Asking for information, or the advisor refusing, is not disclosure.",
+    "description_de": "Berater gibt einer Drittperson ohne Vollmacht vertrauliche Kundendaten, Kontostand oder Zahlungen einer anderen Person bekannt.",
+    "examples": [
+      {"label": "suspicious", "text": "Sie händ zwar kei Vollmacht, aber ich cha Ihne säge, uf em Konto vo Ihrem Vater sind no öppe vierzgtuusig.", "why": "Advisor discloses an account balance to an unauthorized third party."},
+      {"label": "harmless", "text": "Ohni Vollmacht chan ich Ihne leider kei Uskunft über das Konto geh.", "why": "Advisor refuses."}
+    ]
+  },
+  {
+    "id": "documentation",
+    "name": "Relevante Angabe auslassen",
+    "enabled": true,
+    "description": "Someone intentionally asks that a RELEVANT fact be concealed from the internal recipient who must see it (left out of a note, protocol, form or file). Harmless: leaving out an unrelated private detail, or correcting a wrong note. If it is unclear which fact should be left out, escalate for review.",
+    "description_de": "Kunde will, dass eine wichtige Angabe nicht protokolliert wird oder aus dem Dokument entfernt wird, damit die zuständige Stelle sie nicht sieht.",
+    "examples": [
+      {"label": "suspicious", "text": "Schriibed bitte de Kredit vo mim Brüeder nöd i d Notiz, d Kreditabteilig muess das nöd wüsse.", "why": "Asks to hide a relevant debt from the credit department."},
+      {"label": "harmless", "text": "Min Arzttermin am Mäntig ghört nöd i d Unterlage, das isch privat.", "why": "Unrelated private detail."}
+    ]
+  },
+  {
+    "id": "splitting",
+    "name": "Zuständigkeit verhindern (Aufteilen)",
+    "enabled": true,
+    "description": "Someone asks to split one connected payment or order into smaller parts, expressly to avoid an internal check, approval or responsible unit. Harmless: several real, independent invoices, or the split is refused/ruled out without any intent to avoid the check.",
+    "description_de": "Kunde will eine Zahlung in mehrere Teile aufteilen, damit die Prüfung oder Freigabe umgangen wird.",
+    "examples": [
+      {"label": "suspicious", "text": "Mached mer doch zwei chlini Zahlige drus, denn muess d Prüefstell s nöd aaluege.", "why": "Split explicitly to avoid the review."},
+      {"label": "harmless", "text": "Das sind zwei verschiedeni Rechnige vo zwei Lieferante.", "why": "Independent invoices."}
+    ]
+  },
+  {
+    "id": "numbers",
+    "name": "Zahlenobjekte",
+    "enabled": true,
+    "description": "A number is read out (card number, code, reference, account number). Classify WHAT the number is and keep the uncertainty. Digits alone never justify an alarm: a merchant reference or the last four card digits are harmless; a full payment-card number or an active access value is relevant; an unclear object goes to review.",
+    "description_de": "Am Telefon wird eine lange Zahl vorgelesen: Kartennummer, Kreditkartennummer, Referenznummer oder Code, Ziffer für Ziffer.",
+    "examples": [
+      {"label": "suspicious", "text": "Mini Kartennummer isch vier, eins, zwei, drei, acht, null, sächs, sibe, eis, eis, zwei, drei, vier, füf, sächs, sibe.", "why": "Full payment card number read out."},
+      {"label": "harmless", "text": "D Bestellreferenz vom Händler isch drü, drü, eis, null.", "why": "Merchant reference, not a payment instrument."}
+    ]
+  }
+]
