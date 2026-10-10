@@ -291,8 +291,35 @@ Each step leaves a working pipeline. Close a step only when its acceptance crite
   `return` statement, not data loss), and `data/` untouched. 131/132 tests pass; the one failure
   (`test_build_data_never_calls_the_chat_model`, empty cache) reproduces identically on bare `dev`, so it
   predates this integration.
-- **Not yet done:** push the branch (holding for explicit confirmation — pushing is a visible, shared
-  action); opening the PR against `dev`.
+- **Done since:** the branch was pushed to `origin/integrate/pr2-counterfactual-ingest` after explicit
+  confirmation, alongside `fix/dashboard-explainability-and-legend` (same repo, a second local checkout
+  of `dev` with separate dashboard fixes). Opening the PR against `dev` is still pending.
+
+### Step 10: opt-in turn selection, wired into the real pipeline (2026-10-10) ✅
+- Request: integrate the architecture already present in `ep520/Solvent` as `tools/snippets/` (standalone
+  since PR#2/step 9: keyword + digit + cue + optional `BAAI/bge-m3` semantic finders) into the real
+  pipeline, so the chat model can see only the selected turns instead of the whole call — **without
+  downloading any model**, confirming each block before moving to the next, on this branch (not `dev`).
+- **Built, confirmed per block:**
+  1. `callguard/snippets_bridge.py`: converts our segments to `tools/snippets`'s `Turn` shape and back;
+     lazy-imports the tool (`rapidfuzz` always, `sentence-transformers` only for `semantic="bge-m3"`) so
+     the core pipeline has no new hard dependency.
+  2. `pipeline.py --snippets` (+ `--snippets-semantic`, `--snippets-cues`, `--snippets-checks`): filters
+     `segments` before `extract.extract()`, nothing else changes; default is **off**, confirmed
+     byte-identical to the prior behaviour (`test_without_the_flag_the_whole_transcript_still_goes_through`).
+     A missing optional dependency falls back to the full transcript rather than failing the call.
+  3. `tests/test_snippets_bridge.py` (7 tests): two always run (clean degrade without `rapidfuzz`); five
+     need `rapidfuzz` and are skipped, not failed, otherwise — confirmed both ways (skip on this
+     machine's system Python, pass in a throwaway `.venv-test/`, kept for now, `.gitignore`d).
+- **Load-bearing check, by explicit request, no model downloaded:** on the three dialogues PLAN.md
+  already flags as deliberately keyword-free (`Stufe2_C06`, `Stufe2_C09`, `Stufe3_C19`), cues alone
+  (no semantic finder) keep every expected evidence turn while dropping 68–79% of the call's text. This
+  is encouraging, not a clearance — three dialogues, hand-checked for evidence-turn survival, not full
+  accuracy — logged as open items in `PIPELINE.md` §2.9/§7, not claimed as validated.
+- **Deliberately not done:** no `checks.json` written (the semantic finder needs one *and*
+  `semantic=bge-m3`; without it, nothing can trigger a download regardless of the flag); no
+  `sentence-transformers` installed; no run on the full 21/42-call set; no comparison of accuracy or
+  cost with vs. without `--snippets`.
 
 ## 7. Known risks
 

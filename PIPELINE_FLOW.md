@@ -22,9 +22,12 @@ flowchart TD
     TRANSCRIPT_CACHE --> KEYWORDS["extract.keyword_hits<br/>Stichwortliste.json phrases"]
     KEYWORDS --> HIGHLIGHTS["Highlights + coverage counts<br/>display only, never decisive"]
 
-    TRANSCRIPT_CACHE --> EXTRACT_CACHE{"Extraction cached?<br/>(transcript, model, prompt, policies)"}
+    TRANSCRIPT_CACHE --> SNIPPETS{"pipeline --snippets?<br/>(off by default)"}
+    SNIPPETS -- No, default --> EXTRACT_CACHE
+    SNIPPETS -- Yes --> FILTER["snippets_bridge.py: keep only snippet turns<br/>keywords + digits + cues (+ optional bge-m3)"]
+    FILTER --> EXTRACT_CACHE{"Extraction cached?<br/>(transcript, model, prompt, policies)"}
     POLICIES["config/policies.json<br/>families, predicates, enabled flags, threshold"] --> EXTRACT_CACHE
-    EXTRACT_CACHE -- No --> LLM["One LLM request · extract.py<br/>whole transcript, every enabled family"]
+    EXTRACT_CACHE -- No --> LLM["One LLM request · extract.py<br/>full or snippet-filtered transcript, every enabled family"]
     EXTRACT_CACHE -- Yes --> FACTS
     LLM --> FACTS["Facts by family: events, actor, conditions<br/>true · false · unknown + segment id + quote"]
 
@@ -42,7 +45,8 @@ flowchart TD
 ```
 
 Keyword matching never filters the transcript and never changes a decision; the full transcript always
-reaches extraction, and extraction always covers every *enabled* family (§3). `ingest.py` is one way a
+reaches extraction unless `--snippets` is explicitly passed (off by default; §2.9), and extraction always
+covers every *enabled* family (§3). `ingest.py` is one way a
 WAV arrives; `pipeline eval --audio` reading `data/Audio/*.wav` directly is the other — both join the
 same path from `WAV` onward.
 
