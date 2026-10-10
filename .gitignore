@@ -6,3 +6,4 @@ cache/
 runs/
 .env
 .playwright-mcp/
+PLAN.md

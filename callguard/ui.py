@@ -172,8 +172,7 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
                     "actor": e.get("actor", {"role": "unknown", "status": "unknown"})}
                    for e in base["events"]],
         "issues": base["issues"],
-        # What the extraction model read (snippets with hits, scores and bold spans, or the full transcript),
-        # and which of those segments the decision cites as evidence.
+        # The full transcript sent to the extraction model, separate review highlights, and cited evidence.
         "modelInput": model_input,
         "citedSegments": sorted({sid for e in base["events"] for c in e.get("conditions", {}).values()
                                  for r in c["evidence"] for sid in r["segment_ids"]} |
@@ -356,7 +355,7 @@ def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" 
     """Cached extraction for this call, newest input first: (path, status) or (None, None).
 
     current        extracted with today's input (snippet settings and keyword list)
-    stale_input    extracted with an earlier keyword list or snippet setting; re-run the pipeline to refresh
+    stale_input    legacy extraction that used snippets as model input; re-run the pipeline to refresh
     full_transcript extracted from the whole call (before snippet mode, or snippet mode switched off)
     legacy         an extract-4 cache entry
     """
@@ -379,17 +378,14 @@ def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" 
     return (path, "legacy") if path.exists() else (None, None)
 
 
-def model_input(extraction, current_view, segments):
-    """What the model actually read for this extraction, shaped for the dashboard."""
+def model_input(extraction, highlights, segments):
+    """Full MVP model input plus snippets reserved for reviewer navigation."""
     sent = extraction.get("_meta", {}).get("input")
     if sent is None:
-        sent = {"mode": "full_transcript", "reason": "extracted from the whole call (before snippet mode)"}
-    out = {"mode": sent["mode"], "reason": sent.get("reason"), "stats": sent.get("stats"),
-           "version": sent.get("version"), "config": sent.get("config"),
-           "snippets": sent.get("snippets", []), "segmentCount": len(segments)}
-    if current_view and current_view.get("mode") == "snippets" and sent != current_view:
-        out["currentDiffers"] = True     # keyword list or snippet settings changed since this extraction
-    return out
+        sent = {"mode": "full_transcript", "reason": "MVP baseline: full transcript for every call"}
+    return {"mode": "full_transcript", "reason": sent.get("reason") or "MVP baseline: full transcript for every call",
+            "segmentCount": len(segments), "highlights": highlights.get("snippets", []) if highlights else [],
+            "highlightStats": highlights.get("stats") if highlights else None}
 
 
 def build_data(policies, keywords, profile=None, corrections_dir=human_feedback.CORRECTIONS,
@@ -406,14 +402,13 @@ def build_data(policies, keywords, profile=None, corrections_dir=human_feedback.
         raw_segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
         segments, corrected = human_feedback.apply_corrections(wav.stem, raw_segments, corrections_dir)
         feedback_examples = human_feedback.calibration_examples(feedback_path, exclude_call=wav.stem)
-        view = ex.input_view(segments, policies, keywords)
-        cached, cache_status = find_extraction(segments, policies, chat, view, feedback_examples=feedback_examples)
+        highlights = ex.input_view(segments, policies, keywords)
+        cached, cache_status = find_extraction(segments, policies, chat, None, feedback_examples=feedback_examples)
         decision_segments = segments
         # A corrected transcript can still be reviewed against the last raw extraction, but is clearly
         # marked stale until a fresh pipeline run has extracted facts from the corrected wording.
         if cached is None and corrected:
-            raw_view = ex.input_view(raw_segments, policies, keywords)
-            cached, cache_status = find_extraction(raw_segments, policies, chat, raw_view, feedback_examples=feedback_examples)
+            cached, cache_status = find_extraction(raw_segments, policies, chat, None, feedback_examples=feedback_examples)
             decision_segments = raw_segments
             if cached is not None:
                 cache_status = "stale_transcript"
@@ -428,7 +423,7 @@ def build_data(policies, keywords, profile=None, corrections_dir=human_feedback.
         all_hits += hits
         call = dashboard_call(wav.stem, segments, results, default, evidence.duration(wav),
                               cache_status=cache_status, extraction_version=extraction_version,
-                              model_input=model_input(extraction, view, segments))
+                              model_input=model_input(extraction, highlights, segments))
         call["model"] = chat["model"]
         call["keywordHitCount"] = len(hits)
         call["transcriptCorrections"] = corrected

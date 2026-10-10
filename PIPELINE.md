@@ -18,9 +18,9 @@ segments [{id, start, end, text, avg_logprob}]          → cache/asr/<hash>.jso
    ├─ keyword matchers ─ Stichwortliste.json → cached-transcript highlights and coverage
    │                    └─ also feeds snippet selection (with cue words and spoken digits)
    │
-   ▼  callguard/snippets.py ─ selected passages + neighbouring/linked context, or full-transcript fallback
+   ├─ callguard/snippets.py ─ selected passages for dashboard highlights and audio navigation only
    │                          (config/snippets.json; max. 12 snippets)
-   ▼  callguard/extract.py ─ at most ONE structured LLM request per call, cached by model input
+   ▼  callguard/extract.py ─ at most ONE structured LLM request per call over the complete transcript
 facts: {"families": {<enabled family>: {"events": [{conditions: {<predicate>: {state, evidence}}}]}}}
    │      state ∈ true | false | unknown, evidence = segment id + short quote
    │      a family a bank switched off is left out entirely, not just empty
@@ -50,20 +50,17 @@ to a rule, the state of each condition, and the exact words in the recording.
   `customer` or `advisor` only as `inferred`, with supporting segment IDs; otherwise the role is `unknown`.
 - No audio preprocessing: the files are already mono 16 kHz and under the 25 MB API limit.
 
-### 2.2 Fact extraction (`callguard/extract.py`, prompt version `extract-6`)
+### 2.2 Fact extraction (`callguard/extract.py`, prompt version `extract-7`)
 
-- At most one request per call. By default the model receives selected passages from
-  `callguard/snippets.py`: official keywords, cue words and spoken-digit finders add nearby and linked
-  context. The model still assesses every enabled family. If no passage is selected, the shipped
-  `if_no_snippets = full_transcript` setting sends the whole call; `enabled = false` also restores the
-  full-transcript prompt. The optional `skip_model` setting deliberately sends no request and produces
-  empty families.
-- Snippet hits are routing hints, not evidence and not a classification rule. Quotes must still be copied
-  from the displayed transcript passages and are grounded against the canonical ASR segments by
-  `decide.py`.
-- The extraction cache key includes the chat profile/model, prompt and schema, policies, and the exact
-  rendered model input. A keyword-list or snippet-configuration change therefore requires a fresh
-  extraction on the next pipeline run; the dashboard can show the previous one as `stale_input`.
+- At most one request per call. For the MVP, the model always receives the **complete transcript**, within
+  the context budget. It assesses every enabled family from that baseline; no keyword, cue word or digit
+  match can suppress detection.
+- `callguard/snippets.py` remains active only for dashboard highlighting and jump-to-audio passages.
+  Snippet hits are neither evidence nor routing. Routing/adaptive prompting is deferred until recall and
+  latency have been measured against this full-transcript baseline.
+- The extraction cache key includes the chat profile/model, prompt and schema, policies, full rendered
+  transcript and human-calibration examples. Keyword or snippet configuration changes only alter review
+  highlights; they do not require a fresh extraction.
 - The JSON schema requires every family; `"events": []` means "assessed, nothing found", so a missing
   family exposes an incomplete answer. Every event also carries an actor role: `customer` or `advisor` is
   `inferred` only with supporting segment ids; otherwise it is explicitly `unknown`.
@@ -192,9 +189,9 @@ needs those exports.
 spellings and 47 distinct normalised terms. The file is based on the public Outcept list (the former
 `Outcept/trigger-api` URL redirects to `Outcept/inventx-case-study`); comparison on 2026-10-10 found its
 45 upstream distinct terms plus two local, documented additions: `K03.de: Quantauszahlen` and
-`K04.de: von der Meldung`. Keyword matches never directly decide a classification, but in the default
-snippet mode they influence the passages sent to the extraction model and therefore require re-extraction
-after a configuration change.
+`K04.de: von der Meldung`. Keyword matches never directly decide a classification. In the MVP they
+influence dashboard highlights and audio navigation only, so changing them never changes the
+full-transcript extraction input.
 
 ### 2.5 Model router (`callguard/models.py`, `config/models.json`)
 
@@ -255,8 +252,7 @@ Switching the threshold preset only reruns `decide()` on the already-cached fact
 The keyword panel supports add/edit/remove/enable/disable with validation (empty or duplicate terms
 rejected) and atomic save; saving reruns matching, highlights and counts over cached transcripts and
 updates the current snippet view, but does not call a model or change the decision from an existing cache
-entry. The dashboard marks an older extraction as `stale_input`; a subsequent pipeline run creates the
-new extraction. The dashboard never calls a model on its own.
+entry. The dashboard never calls a model on its own.
 
 ### 2.7 Explainability: counterfactuals (`callguard/counterfactual.py`)
 
@@ -346,7 +342,7 @@ treated as no alert, or when the threshold is broken.
 - [x] Adjustable threshold (three presets, editable without code) with a visible effect.
 - [x] Keyword coverage and local keyword management: families, enabled terms, DE/Swiss-German variants,
       observed occurrences, and validated persistence. Matching never enters the deterministic rules
-      directly; in snippet mode it is part of the model-input selection.
+      directly; it is used only for review highlights and audio navigation.
 - [x] Metrics on false alarms and missed cases, split by level and by clean/noisy audio.
 - [x] Review dashboard connected to the pipeline, tested in a browser; Pending, Current and Stale-input
       states are shown apart from Alarm/Review/No alert (§2.6).
