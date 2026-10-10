@@ -91,6 +91,7 @@ class DashboardCallTest(unittest.TestCase):
                           call["evidence"][0]["clip_start"], call["evidence"][0]["clip_end"]),
                          (0.0, 4.0, 0.0, 14.0))
         self.assertEqual({c["state"] for c in call["conditions"]}, {"Supported"})
+        self.assertTrue(all(c["reason"].startswith("The transcript says:") for c in call["conditions"]))
         self.assertEqual(len(call["transcript"]), 2)
 
     def test_call_without_events_has_a_placeholder_evidence(self):
@@ -100,6 +101,8 @@ class DashboardCallTest(unittest.TestCase):
         self.assertEqual((call["classificationByThreshold"]["balanced"], call["family"]), ("No alert", "None"))
         self.assertEqual(call["evidence"][0]["segments"], [])
         self.assertEqual(call["actor"], {"role": "unknown", "status": "unknown"})
+        self.assertTrue(call["noCandidateEvent"])
+        self.assertIn("not a guarantee", call["factsReason"])
 
     def test_grounding_issues_are_preserved_for_a_review(self):
         extraction = trade_extraction()
@@ -172,12 +175,29 @@ class KeywordDecisionIndependenceTest(unittest.TestCase):
         self.assertEqual(result["label"], "alarm")
 
 
+class PolicyConfigTest(unittest.TestCase):
+    def test_policy_crud_validation_accepts_a_new_classification_only_policy(self):
+        edited = json.loads(json.dumps(POLICIES))
+        edited["families"]["new_identifier"] = {"title": "New identifier policy", "enabled": True,
+                                                   "can_alarm": False, "conditions": {}, "role_requirements": {}}
+        saved = ui.validate_policy_config(edited)
+        self.assertFalse(saved["families"]["new_identifier"]["can_alarm"])
+
+    def test_policy_validation_rejects_an_alarm_policy_without_conditions(self):
+        edited = json.loads(json.dumps(POLICIES))
+        edited["families"]["unsafe"] = {"title": "Unsafe", "enabled": True, "can_alarm": True, "conditions": {}}
+        with self.assertRaisesRegex(ValueError, "needs at least one condition"):
+            ui.validate_policy_config(edited)
+
+
 class ServerTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.keyword_path = Path(self.tmp.name) / "keywords.json"
+        self.policies_path = Path(self.tmp.name) / "policies.json"
         self.keyword_path.write_text((ROOT / "data" / "Stichwortliste.json").read_text(encoding="utf-8"), encoding="utf-8")
-        self.srv = ui.make_server("127.0.0.1", 0, keywords_path=self.keyword_path)
+        self.policies_path.write_text((ROOT / "config" / "policies.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.srv = ui.make_server("127.0.0.1", 0, policies_path=self.policies_path, keywords_path=self.keyword_path)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
 
@@ -243,6 +263,22 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("duplicate term", json.loads(body)["error"])
         self.assertFalse(ex.load_json(self.keyword_path)["keywords"][0]["enabled"])
+
+    def test_policy_save_is_validated_and_atomic(self):
+        edited = ex.load_json(self.policies_path)
+        edited["families"]["new_identifier"] = {"title": "New identifier policy", "enabled": True,
+                                                   "can_alarm": False, "conditions": {}, "role_requirements": {}}
+        status, _, body = post(self.base, "/api/policies", edited)
+        self.assertEqual(status, 200)
+        self.assertIn("new_identifier", json.loads(body)["policies"]["families"])
+        self.assertIn("new_identifier", ex.load_json(self.policies_path)["families"])
+
+        invalid = ex.load_json(self.policies_path)
+        invalid["families"]["unsafe"] = {"title": "Unsafe", "enabled": True, "can_alarm": True, "conditions": {}}
+        status, _, body = post(self.base, "/api/policies", invalid)
+        self.assertEqual(status, 400)
+        self.assertIn("needs at least one condition", json.loads(body)["error"])
+        self.assertNotIn("unsafe", ex.load_json(self.policies_path)["families"])
 
 
 if __name__ == "__main__":

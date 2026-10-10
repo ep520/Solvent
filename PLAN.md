@@ -147,7 +147,7 @@ Limitations: it cannot detect a confidently mistranscribed negation or a correct
 | `callguard/ui.py` | ✅ | Dashboard server + read-only API over cached results; audio with Range, clip download; keyword editor (add/edit/remove/enable/disable, validated, atomic save); Pending/Failed shown apart from Alarm/Review/No alert (`python3 -m callguard.ui`) |
 | `tests/test_ui.py` | ✅ | Clips, mapping to dashboard fields per threshold, server routes, path safety, keyword coverage/validation, no-model-call-on-preset-switch |
 | `PIPELINE_FLOW.md` | ✅ | Five mermaid diagrams for §4 above, kept current with the code (rendered and checked with mermaid-cli) |
-| `EVALUATION.md` | ✅ | The single evaluation report: confusion matrix, precision/recall, review rate, clean/noisy and by-family splits, latency, the required caveats, and the ASR/extraction/policy evidence audit |
+| `EVALUATION.md` | ✅ | The release report: current candidate vs. historical runs vs. hidden status; three-class confusion, unresolved and technical-failure counts, paired clean/noisy analysis, cache-qualified timing, configuration freeze, and a pending human audio/evidence audit. Family metrics are omitted until gold attribution semantics are documented. |
 
 **Keys and secrets:** in a `.env` file at the root, **never tracked** (`.gitignore` and `.dockerignore`). Run `cp .env.example .env`, then set `OPENAI_API_KEY=...`. The router (`models.load_env`) reads it at startup using only the standard library; existing shell variables take precedence. `.env.example` is the tracked template containing all supported variables.
 

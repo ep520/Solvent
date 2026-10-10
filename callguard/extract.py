@@ -185,16 +185,21 @@ Rules:
     return Path(cache_dir) / (hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest() + ".json")
 
 
-def extract(segments, policies, profile=None, cache_dir=ROOT / "cache" / "extract"):
-    """Run the LLM extraction once per (model, prompt, policies, transcript); cached on disk as JSON."""
+def extract(segments, policies, profile=None, cache_dir=ROOT / "cache" / "extract", return_cache_status=False):
+    """Run the LLM extraction once per (model, prompt, policies, transcript); cached on disk as JSON.
+
+    ``return_cache_status`` is deliberately opt-in to preserve the original API for callers.  Evaluation
+    uses it to record whether an extraction was reused instead of guessing from the elapsed-time field.
+    """
     p = models.check("chat", profile)
     path = cache_path(segments, policies, p, cache_dir)
     if path.exists():
-        return load_json(path)
+        result = load_json(path)
+        return (result, True) if return_cache_status else result
     started = time.perf_counter()
     result = models.chat_json(build_messages(segments, policies), build_schema(policies), profile=p["name"])
     result["_meta"] = {"profile": p["name"], "model": p["model"], "prompt_version": PROMPT_VERSION,
                        "elapsed_s": round(time.perf_counter() - started, 3)}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
-    return result
+    return (result, False) if return_cache_status else result
