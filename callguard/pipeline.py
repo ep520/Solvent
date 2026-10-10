@@ -5,6 +5,7 @@
   python3 -m callguard.pipeline audio data/Audio/Stufe1_D02-K1.wav
   python3 -m callguard.pipeline eval --audio [--only C09 | --smoke]
   python3 -m callguard.pipeline freeze [--no-speakers]   # cached extractions -> tests/fixtures/replay
+  python3 -m callguard.pipeline prepare [--only C09] [--workers 4]   # every WAV -> transcript + decision for the dashboard
 """
 import argparse
 import hashlib
@@ -160,9 +161,42 @@ def metrics(rows):
     }
 
 
+def prepare(args, policies, keywords):
+    """Fill everything the dashboard reads, without scoring: data/Transcriptions + cache/asr + cache/extract.
+
+    Needs only data/Audio/*.wav and the model profiles; no expected assessments are read."""
+    try:
+        models.check("asr", require_self_hostable=args.require_self_hostable)
+    except models.ModelError as e:
+        sys.exit(f"ASR not configured: {e}")
+    wavs = [w for w in sorted((DATA / "Audio").glob("*.wav")) if not args.only or any(o in w.stem for o in args.only.split(","))]
+    if not wavs:
+        sys.exit("no WAV files in data/Audio matched")
+
+    def one(wav):
+        transcript, _ = asr.transcribe(wav)
+        asr.export(transcript, asr.EXPORT)       # data/Transcriptions: what the dashboard lists
+        return run_audio(wav, policies, keywords, profile=args.profile)[0]
+
+    done = failed = 0
+    started = time.time()
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+        for wav, job in [(w, pool.submit(one, w)) for w in wavs]:
+            try:
+                r = job.result()
+                done += 1
+                print(f"{done + failed:>3}/{len(wavs)} {r['label']:<8} {r['call']}  {','.join(r['reasons'])}", flush=True)
+            except Exception as e:  # keep going; a rerun resumes from the caches
+                failed += 1
+                print(f"{done + failed:>3}/{len(wavs)} FAILED   {wav.stem}: {e}", file=sys.stderr, flush=True)
+    print(f"prepared {done}/{len(wavs)} calls in {time.time() - started:.0f}s; start the dashboard: python3 -m callguard.ui")
+    if failed:
+        sys.exit(f"{failed} calls failed; run the same command again to retry them")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="callguard.pipeline")
-    ap.add_argument("command", choices=["text", "audio", "eval", "freeze"])
+    ap.add_argument("command", choices=["text", "audio", "eval", "freeze", "prepare"])
     ap.add_argument("--audio", action="store_true", help="eval: run on the 42 WAVs (Whisper transcripts) instead of the scripts")
     ap.add_argument("path", nargs="?")
     ap.add_argument("--no-speakers", action="store_true", help="hide speaker labels, as with raw ASR output")
@@ -184,6 +218,10 @@ def main(argv=None):
     except models.ModelError as e:
         sys.exit(f"model not configured: {e}")
     opts = dict(speakers=not args.no_speakers, profile=args.profile, threshold=args.threshold)
+
+    if args.command == "prepare":
+        prepare(args, policies, keywords)
+        return
 
     if args.command == "freeze":
         p = models.check("chat", args.profile)

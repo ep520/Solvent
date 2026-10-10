@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -263,9 +264,44 @@ def _cli_transcribe(p, audio_path, language, prompt=None):
     raise ModelError(f"profile '{p['name']}' (claude_cli) cannot transcribe audio")
 
 
+_fw_models, _fw_lock = {}, threading.Lock()
+
+
+def _fw_check(p):
+    try:
+        import faster_whisper  # noqa: F401
+    except ImportError:
+        raise ModelError(f"profile '{p['name']}': run  pip install faster-whisper") from None
+
+
+def _fw_transcribe(p, audio_path, language, prompt=None):
+    """Whisper in this process via faster-whisper (CTranslate2): no server, GPU if present, else CPU.
+
+    The English instruction prompt is not passed by default: Whisper treats a prompt as preceding speech,
+    and English text there can pull the output towards English. Set "initial_prompt" in the profile if needed."""
+    from faster_whisper import WhisperModel
+    with _fw_lock:                       # one model per process; transcribe one file at a time on it
+        model = _fw_models.get(p["model"])
+        if model is None:
+            model = _fw_models[p["model"]] = WhisperModel(p["model"], device=p.get("device", "auto"),
+                                                          compute_type=p.get("compute_type", "default"))
+        segments, _ = model.transcribe(str(audio_path), language=language, initial_prompt=p.get("initial_prompt"),
+                                       temperature=0, beam_size=p.get("beam_size", 5),
+                                       vad_filter=p.get("vad_filter", False))
+        segments = list(segments)
+    return [{"id": f"s{i:03d}", "start": s.start, "end": s.end, "text": s.text.strip(), "avg_logprob": s.avg_logprob,
+             "no_speech_prob": s.no_speech_prob, "compression_ratio": s.compression_ratio}
+            for i, s in enumerate(segments, 1)]
+
+
+def _fw_chat_json(p, messages, schema):
+    raise ModelError(f"profile '{p['name']}' (faster_whisper) is for ASR only")
+
+
 ADAPTERS = {
     "openai_compatible": {"check": _oa_check, "chat_json": _oa_chat_json, "transcribe": _oa_transcribe},
     "claude_cli": {"check": _cli_check, "chat_json": _cli_chat_json, "transcribe": _cli_transcribe},
+    "faster_whisper": {"check": _fw_check, "chat_json": _fw_chat_json, "transcribe": _fw_transcribe},
 }
 
 

@@ -1,5 +1,7 @@
 # Running CallGuard with self-hosted Qwen3 on RunPod
 
+> **Organizer SSH pod (builder-vlm kit, A40, no web ports)?** Follow [`SSH_POD.md`](SSH_POD.md) instead.
+
 ## 1. Create the pod (runpod.io → Pods → Deploy)
 
 | GPU | Model picked by `setup.sh` | Profile |
@@ -35,12 +37,14 @@ CALLGUARD_CHAT=qwen3_fast bash runpod/run_eval.sh   # hybrid models only: thinki
 Extractions are cached in `cache/extract/` (keyed by profile, model, prompt version, transcript and policies),
 so re-running with another threshold costs nothing. The manifest records that the run was self-hostable.
 
-## 5. Dashboard from the pod
+## 5. Dashboard (needs data/Audio with the WAVs)
 ```
-source runpod/env.sh && python3 -m callguard.ui --host 0.0.0.0 --port 8090
+bash runpod/run_dashboard.sh          # transcribe (Whisper on the GPU) + snippets + Qwen3 + decide, then serve
+bash runpod/run_dashboard.sh --only D02,C05   # try a few calls first
 ```
-Expose port 8090 and open `https://<POD_ID>-8090.proxy.runpod.net`. The dashboard lists calls from
-`data/Audio/` with transcripts in `data/Transcriptions/` (run with `--audio` and a self-hosted ASR profile).
+Expose HTTP port 8090 and open `https://<POD_ID>-8090.proxy.runpod.net`. The script also writes
+`/workspace/dashboard_results.zip` (`cache/` + `data/Transcriptions/`): unzip it into the repo on your PC and run
+the dashboard there without a GPU (see the main README).
 
 ## 6. Optional: use the pod's model from your laptop
 On the pod: `VLLM_API_KEY=choose-a-secret bash runpod/setup.sh` (expose port 8000). On the laptop (PowerShell):

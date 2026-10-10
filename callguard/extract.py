@@ -1,7 +1,9 @@
 """Transcript → segments, keyword hits, and one LLM pass that fills the policy conditions."""
 import hashlib
 import json
+import os
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -261,9 +263,15 @@ def extract(segments, policies, profile=None, cache_dir=ROOT / "cache" / "extrac
     result["_meta"] = {"profile": p["name"], "model": p["model"], "prompt_version": prompt_version(view),
                        "elapsed_s": round(time.perf_counter() - started, 3),
                        **({"input": view} if view else {})}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
-    pointer = latest_path(segments, policies, p, cache_dir)
-    pointer.parent.mkdir(parents=True, exist_ok=True)
-    pointer.write_text(json.dumps({"cache": path.name}), encoding="utf-8")
+    _write_atomic(path, json.dumps(result, ensure_ascii=False, indent=1))
+    _write_atomic(latest_path(segments, policies, p, cache_dir), json.dumps({"cache": path.name}))
     return result
+
+
+def _write_atomic(path, text):
+    """Write via a temporary file and rename, so parallel workers never read half a file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)

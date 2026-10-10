@@ -111,6 +111,16 @@
       "self_hostable": true,
       "_note": "Any self-hosted OpenAI-compatible /v1/audio/transcriptions server (speaches, faster-whisper-server) on its own port, e.g. WHISPER_URL=http://localhost:8001/v1, so it can run beside vLLM on 8000. Set CALLGUARD_ASR=whisper_local. A Swiss German Whisper fine-tune (CTranslate2 format) can be served instead; set WHISPER_MODEL to its name.",
       "asr_model_env": "WHISPER_MODEL"
+    },
+    "faster_whisper": {
+      "api": "faster_whisper",
+      "asr_model": "large-v3",
+      "asr_model_env": "WHISPER_MODEL",
+      "device": "auto",
+      "compute_type": "default",
+      "beam_size": 5,
+      "self_hostable": true,
+      "_note": "Self-hosted Whisper inside the Python process (pip install faster-whisper); downloads the model on first use. GPU if available, else CPU (use WHISPER_MODEL=small on a laptop: much faster, lower quality). A Swiss German fine-tune converted to CTranslate2 format can be named in WHISPER_MODEL."
     }
   }
 }

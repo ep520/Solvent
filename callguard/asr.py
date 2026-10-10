@@ -8,7 +8,9 @@ than an explicit unknown value.
 import argparse
 import hashlib
 import json
+import os
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -74,7 +76,9 @@ def transcribe(audio_path, profile=None, force=False):
               "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
               "segments": _annotate(raw)}
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp = path.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # atomic: parallel workers never read half a file
+    tmp.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
     return result, False
 
 
@@ -91,7 +95,7 @@ def export(result, output_dir=EXPORT):
     stem = Path(result["source_file"]).stem
     json_path, md_path = output_dir / f"{stem}.json", output_dir / f"{stem}.md"
     json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    lines = [f"# {stem}", "", "- ASR model: `whisper-1`", "- Language hint: `de`", "- Role policy: `UNKNOWN_ROLE` is retained where diarization is unavailable; no speaker is guessed.",
+    lines = [f"# {stem}", "", f"- ASR model: `{result.get('asr_model', 'unknown')}`", "- Language hint: `de`", "- Role policy: `UNKNOWN_ROLE` is retained where diarization is unavailable; no speaker is guessed.",
              "- Verbatim constraint: no translation, paraphrasing, reordering, correction, or word substitution.", "",
              "| Timestamp | Turn | Role | Speaker | Transcript |", "| --- | --- | --- | --- | --- |"]
     for seg in result["segments"]:
