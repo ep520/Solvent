@@ -7,6 +7,7 @@ Another backend is one more entry in ADAPTERS.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -55,7 +56,8 @@ def resolve(task, profile=None, config=None):
     if name not in config["profiles"]:
         raise ModelError(f"unknown {task} profile '{name}'; known: {', '.join(config['profiles'])}")
     p = dict(config["profiles"][name], name=name)
-    p["model"] = p.get(f"{task}_model")
+    # The served model name can come from the environment (e.g. whatever runpod/setup.sh picked for the GPU).
+    p["model"] = os.environ.get(p.get(f"{task}_model_env", ""), "") or p.get(f"{task}_model")
     if not p["model"]:
         raise ModelError(f"profile '{name}' has no {task}_model")
     if p.get("api", "openai_compatible") not in ADAPTERS:
@@ -128,7 +130,15 @@ def _post(p, path, body, content_type):
             raise ModelError(f"cannot reach {url}: {e}") from None
 
 
+THINK = re.compile(r"<think>.*?</think>", re.S)
+
+
 def _parse_json_object(text):
+    # Reasoning models (Qwen3 Thinking, DeepSeek-R1) may put their reasoning in the reply when the server
+    # runs without a reasoning parser; it can contain braces, so drop it before looking for the JSON.
+    text = THINK.sub("", text)
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[1]
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end < start:
         raise ValueError("no JSON object in reply")
@@ -164,7 +174,10 @@ def _check_context(p, messages):
 
 def _oa_chat_json(p, messages, schema):
     mode = p.get("json_mode", "json_schema")
-    body = {"model": p["model"], "messages": list(messages), "temperature": 0, "seed": p.get("seed", 7)}
+    body = {"model": p["model"], "messages": list(messages), "temperature": p.get("temperature", 0),
+            "seed": p.get("seed", 7)}
+    # Server-specific fields, e.g. vLLM's {"chat_template_kwargs": {"enable_thinking": false}} or top_p/top_k.
+    body.update(p.get("extra_body") or {})
     if p.get("max_output_tokens"):
         body["max_tokens"] = p["max_output_tokens"]
     if mode == "json_schema":

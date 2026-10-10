@@ -145,6 +145,12 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
         "classificationByThreshold": {name: LABELS[r["label"]] for name, r in results.items()},
         "assessmentByThreshold": {name: _assessment(r) for name, r in results.items()},
         "reasonByThreshold": {name: r["reasons"] for name, r in results.items()},
+        # XAI: "what would have to be different" for the main event, per threshold preset.
+        "counterfactualsByThreshold": {name: [{"text": c["text"], "label": LABELS[c["label"]], "kind": c["kind"],
+                                               "condition": c.get("condition", "").replace("_", " ").capitalize(),
+                                               "from": STATES.get(c.get("from")), "to": STATES.get(c.get("to"))}
+                                              for c in ((_main_event(r) or {}).get("counterfactuals") or [])]
+                                       for name, r in results.items()},
         "missingFact": " / ".join(open_questions) or None,
         "groundingIssues": list(dict.fromkeys(grounding_issues)),
         "evidence": items or [{"time": 0, "end": 0, "speaker": "", "text": "No supporting passage: no candidate event.",
