@@ -336,6 +336,55 @@
     return "No alert detected";
   }
 
+  function reviewResolutionMarkup(call, classification) {
+    if (!live || classification !== "Review") return "";
+    const saved = call.humanFeedback;
+    const outcome = saved?.outcome === "alarm" ? "Alert" : saved?.outcome === "no_alert" ? "No alert" : null;
+    return `<section id="human-resolution-section" class="detail-card human-resolution guide-target">
+      <div class="section-head"><div class="section-title"><span class="section-icon">${icon("review")}</span><div><h3>Human resolution</h3><p>${outcome ? `Saved outcome: ${outcome}. It becomes a calibration example only for future extractions.` : "Resolve this review after checking the transcript and audio."}</p></div></div></div>
+      <div class="resolution-actions"><button class="btn btn-sm ${saved?.outcome === "alarm" ? "btn-primary" : "btn-outline"}" type="button" data-review-outcome="alarm">Mark alert</button><button class="btn btn-sm ${saved?.outcome === "no_alert" ? "btn-primary" : "btn-outline"}" type="button" data-review-outcome="no_alert">Mark no alert</button></div>
+      <p class="resolution-note">This does not relabel the stored pipeline result or change policy rules. A fresh pipeline run can use prior human resolutions as bounded calibration examples.</p>
+    </section>`;
+  }
+
+  function transcriptMarkup(call) {
+    const editing = state.transcriptEdit && state.transcriptEdit.call === call.id ? state.transcriptEdit.segmentId : null;
+    const changed = new Set(call.transcriptCorrections || []);
+    return `<details class="detail-card transcript-collapse" ${editing ? "open" : ""}><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript${live ? " · correct any segment" : ""}</small></span></span></summary><div class="transcript-body">${call.transcript.map((line, index) => { const id = line.id || `line-${index}`; const isEditing = editing === id; return `<div class="transcript-line ${changed.has(id) ? "transcript-corrected" : ""}" data-transcript-id="${escapeHtml(id)}"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span class="transcript-content">${isEditing ? `<textarea class="transcript-edit" data-transcript-text rows="3">${escapeHtml(line.text)}</textarea><span class="transcript-edit-actions"><button class="btn btn-xs btn-primary" data-save-transcript="${escapeHtml(id)}" type="button">Save</button><button class="btn btn-xs btn-ghost" data-cancel-transcript type="button">Cancel</button></span>` : `${markedText(line.text)}${changed.has(id) ? '<small class="transcript-corrected-note">corrected</small>' : ""}`}</span>${live && !isEditing ? `<button class="btn btn-xs btn-ghost transcript-correct" data-edit-transcript="${escapeHtml(id)}" type="button">Correct</button>` : ""}</div>`; }).join("")}</div></details>`;
+  }
+
+  async function saveReviewOutcome(call, outcome) {
+    try {
+      const response = await fetch("/api/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call: call.id, threshold: state.threshold, outcome }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      call.humanFeedback = result.review;
+      renderDetail({ immediate: true, startGuide: false });
+      $("#sr-status").textContent = `Human resolution saved as ${outcome === "alarm" ? "alert" : "no alert"}. It will calibrate future pipeline runs.`;
+    } catch (error) {
+      $("#sr-status").textContent = `Could not save human resolution: ${error.message}`;
+    }
+  }
+
+  async function saveTranscriptCorrection(call, segmentId) {
+    const field = $("[data-transcript-text]");
+    if (!field) return;
+    try {
+      const response = await fetch(`/api/transcripts/${encodeURIComponent(call.id)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ segment_id: segmentId, text: field.value }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      const line = call.transcript.find((item) => item.id === segmentId);
+      if (line) line.text = result.transcript.segment.text;
+      call.transcriptCorrections = result.transcript.corrected_segments;
+      call.cacheStatus = "stale_transcript";
+      state.transcriptEdit = null;
+      renderDetail({ immediate: true, startGuide: false });
+      $("#sr-status").textContent = "Transcript correction saved. Run the pipeline again before relying on a refreshed automatic assessment.";
+    } catch (error) {
+      $("#sr-status").textContent = `Could not save transcript correction: ${error.message}`;
+    }
+  }
+
   function renderDetail(options = {}) {
     const call = selectedCall();
     const classification = classificationFor(call);
@@ -349,13 +398,14 @@
     stopAudio();
     const detail = $("#call-detail");
     detail.innerHTML = `<div class="detail-inner detail-change">
-      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
+      <div class="mobile-detail-head"><button id="mobile-back" class="btn btn-sm btn-ghost" type="button">${icon("back")} Call queue</button><span class="badge badge-ghost badge-sm">${live ? ({ legacy: "Legacy cached extraction", stale_input: "Extracted with an earlier keyword list", stale_feedback: "Human-feedback set changed; rerun pipeline", stale_transcript: "Transcript corrected; rerun pipeline", full_transcript: "Extracted from the full transcript" }[call.cacheStatus] || "Pipeline result") : "Mock call"}</span></div>
       <header id="classification-section" class="detail-header guide-target">
         <div><div class="eyebrow">${escapeHtml(call.family)} · ${formatTime(call.duration)}</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2>${statusMarkup(classification)}</div><p class="detail-meta">${escapeHtml(call.family)} review · automatic transcript</p></div>
       </header>
       <div class="review-workspace">
         ${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown") || (!live && call.decisionType === "missing-fact")) ? `<section id="open-question-section" class="review-question guide-target"><span class="eyebrow">Question to resolve</span><h3>${escapeHtml(call.missingFact || "What required fact is still unresolved?")}</h3><p>This answer is required before the case can be resolved.</p></section>` : ""}
         ${classification === "Review" && reasons.includes("technical_uncertainty") ? `<section class="review-question technical-review"><span class="eyebrow">Technical review</span><h3>Evidence needs verification</h3><p>The extraction or its transcript grounding could not be verified. Listen to the relevant context before making a compliance decision.</p></section>` : ""}
+        ${reviewResolutionMarkup(call, classification)}
         <section id="assessment-section" class="main-review-card guide-target"><div class="section-head"><div><span class="eyebrow">${escapeHtml(caseHeading(call, classification))}</span><h3>${escapeHtml(operationalNarrative(call, classification))}</h3></div></div>
           <div id="evidence-section" class="evidence-window"><div class="evidence-meta"><span><strong>${hasEvidence ? `${formatTime(evidence.evidence_start ?? evidence.time)}–${formatTime(evidence.evidence_end ?? evidence.end)}` : "No supporting passage"}</strong></span><span>${hasEvidence ? `Context ${formatTime(bounds.start)}–${formatTime(bounds.end)}` : ""}</span></div><p class="evidence-context">${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown")) ? "Relevant context — it does not establish the unresolved fact." : hasEvidence ? "Supporting passage in the automatic transcript." : "Audio or grounded evidence is not available."}</p><p id="evidence-text" class="evidence-text passage-change" aria-hidden="true"></p><p class="sr-only">${escapeHtml(evidence.text)}</p></div>
           ${live ? `<audio id="audio-element" preload="metadata" src="/audio/${encodeURIComponent(call.id)}.wav"></audio>` : ""}
@@ -366,7 +416,7 @@
         <section id="policy-section" class="detail-card facts-card guide-target"><div class="section-head"><div class="section-title"><span class="section-icon">${icon("policy")}</span><div><h3>What we know</h3><p>Facts used for this review</p></div></div></div><div class="condition-list">${call.conditions.length ? call.conditions.map(conditionMarkup).join("") : `<p class="facts-empty">${escapeHtml(call.factsReason || "No policy facts are available for this result.")}</p>`}</div></section>
         ${counterfactualMarkup(call)}
         ${modelInputMarkup(call)}
-        <details class="detail-card transcript-collapse"><summary><span class="section-title"><span class="section-icon">${icon("transcript")}</span><span><strong>Full transcript</strong><small style="display:block;color:var(--muted);font-size:9.5px">Automatic transcript</small></span></span></summary><div class="transcript-body">${call.transcript.map((line) => `<div class="transcript-line"><span class="transcript-time">${formatTime(line.time)}</span><span class="transcript-speaker">${escapeHtml(line.speaker)}</span><span>${markedText(line.text)}</span></div>`).join("")}</div></details>
+        ${transcriptMarkup(call)}
         <details class="detail-card technical-details"><summary>Technical details</summary><dl><dt>Full call ID</dt><dd>${escapeHtml(call.id)}</dd><dt>ASR quality</dt><dd>${displayedQuality(call) === null ? "Unavailable" : `${displayedQuality(call)}% heuristic — not a probability of fraud`}</dd><dt>Model</dt><dd>${escapeHtml(call.model || "Mock data")}</dd><dt>Extraction</dt><dd>${escapeHtml(call.extractionVersion || "Mock data")}</dd><dt>Policy version</dt><dd>${escapeHtml(call.policiesVersion || "Mock data")}</dd>${call.groundingIssues?.length ? `<dt>Grounding issues</dt><dd>${escapeHtml(call.groundingIssues.join("; "))}</dd>` : ""}</dl></details>
       </div>
     </div>`;
@@ -437,6 +487,15 @@
     $$('[data-evidence-index]').forEach((button) => button.addEventListener("click", () => {
       state.evidenceIndex = Number(button.dataset.evidenceIndex);
       renderDetail({ immediate: true, startGuide: false });
+    }));
+    $$('[data-review-outcome]').forEach((button) => button.addEventListener("click", () => saveReviewOutcome(selectedCall(), button.dataset.reviewOutcome)));
+    $$('[data-edit-transcript]').forEach((button) => button.addEventListener("click", () => {
+      state.transcriptEdit = { call: selectedCall().id, segmentId: button.dataset.editTranscript };
+      renderDetail({ immediate: true, startGuide: false });
+    }));
+    $$('[data-save-transcript]').forEach((button) => button.addEventListener("click", () => saveTranscriptCorrection(selectedCall(), button.dataset.saveTranscript)));
+    $$('[data-cancel-transcript]').forEach((button) => button.addEventListener("click", () => {
+      state.transcriptEdit = null; renderDetail({ immediate: true, startGuide: false });
     }));
     $$("#classification-section, #assessment-section, #evidence-section, #audio-section, #policy-section, #open-question-section").forEach((section) => {
       if (section) section.addEventListener("pointerdown", pauseGuideTimer);

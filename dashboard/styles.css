@@ -236,6 +236,13 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .transcript-collapse[open] summary::after { content: "−"; }
 .transcript-body { border-top: 1px solid var(--line); padding: 5px 10px 9px; max-height: 240px; overflow: auto; }
 .transcript-line { display: grid; grid-template-columns: 36px 54px 1fr; gap: 6px; padding: 6px 0; border-bottom: 1px solid #edf1f3; font-size: 10.5px; line-height: 1.42; }
+.transcript-line { grid-template-columns: 36px 54px minmax(0, 1fr) auto; }
+.transcript-line.transcript-corrected { background: #f3faf7; }
+.transcript-content { min-width: 0; }
+.transcript-correct { align-self: start; min-height: 22px; height: 22px; font-size: 9px; }
+.transcript-corrected-note { display: inline-block; margin-left: 5px; color: #176c49; font-weight: 700; font-size: 9px; }
+.transcript-edit { display: block; width: 100%; min-height: 64px; padding: 5px 6px; border: 1px solid #a9cbd1; border-radius: 5px; background: #fff; color: #24363e; font: inherit; resize: vertical; }
+.transcript-edit-actions { display: flex; gap: 4px; margin-top: 5px; }
 .transcript-time { color: var(--primary); font-variant-numeric: tabular-nums; font-weight: 700; }
 .transcript-speaker { color: var(--muted); font-weight: 600; }
 .keyword-occurrences { margin-left: 5px; }
@@ -244,6 +251,9 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .review-question .eyebrow { color: var(--review); }
 .review-question h3 { margin: 3px 0 5px; font: 700 16px/1.3 Manrope; }
 .review-question p { margin: 0; color: #655640; line-height: 1.45; }
+.human-resolution { border-color: #a9cbd1; background: #f7fbfc; }
+.resolution-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.resolution-note { margin: 9px 0 0; color: #52656e; font-size: 10px; line-height: 1.4; }
 .main-review-card { border: 1px solid #dbe6e8; border-radius: 11px; padding: 15px; background: #fff; }
 .main-review-card h3 { margin: 3px 0 14px; font: 700 17px/1.38 Manrope; letter-spacing: -.01em; }
 .evidence-context { margin: -2px 0 8px; color: var(--muted); font-size: 10px; }

@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 from callguard import decide as dec
 from callguard import evidence
 from callguard import extract as ex
+from callguard import human_feedback
 from callguard import models
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +24,7 @@ DASHBOARD = ROOT / "dashboard"
 AUDIO = ROOT / "data" / "Audio"
 TRANSCRIPTS = ROOT / "data" / "Transcriptions"
 WAV_NAME = re.compile(r"^[\w-]+\.wav$")
+CALL_NAME = re.compile(r"^[\w-]+$")
 LABELS = {"alarm": "Alarm", "review": "Review", "no_alert": "No alert"}
 STATES = {"true": "Supported", "false": "Excluded", "unknown": "Unknown"}
 CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
@@ -164,7 +166,7 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
         "evidence": items or [{"time": 0, "end": 0, "speaker": "", "text": "No supporting passage: no candidate event.",
                                "support": "", "segments": [], "segment_ids": [], "evidence_start": 0,
                                "evidence_end": 0, "clip_start": 0, "clip_end": 0, "quality": None, "match": None}],
-        "transcript": [{"time": s["start"], "speaker": "—", "text": s["text"]} for s in segments],
+        "transcript": [{"id": s["id"], "time": s["start"], "speaker": "—", "text": s["text"]} for s in segments],
         "conditions": conditions,
         "events": [{"family": e["family"], "label": LABELS[e["label"]], "status": e["status"], "reason": e["reason"],
                     "actor": e.get("actor", {"role": "unknown", "status": "unknown"})}
@@ -350,7 +352,7 @@ def save_policy_config(payload, path):
     return result
 
 
-def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" / "extract"):
+def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" / "extract", feedback_examples=None):
     """Cached extraction for this call, newest input first: (path, status) or (None, None).
 
     current        extracted with today's input (snippet settings and keyword list)
@@ -358,16 +360,19 @@ def find_extraction(segments, policies, chat, view, cache_dir=ex.ROOT / "cache" 
     full_transcript extracted from the whole call (before snippet mode, or snippet mode switched off)
     legacy         an extract-4 cache entry
     """
-    path = ex.cache_path(segments, policies, chat, cache_dir, view=view)
+    path = ex.cache_path(segments, policies, chat, cache_dir, view=view, feedback_examples=feedback_examples)
     if path.exists():
         return path, "current"
     pointer = ex.latest_path(segments, policies, chat, cache_dir)
     if pointer.exists():
         path = pointer.parent.parent / json.loads(pointer.read_text(encoding="utf-8"))["cache"]
         if path.exists():
-            sent = ex.load_json(path).get("_meta", {}).get("input") or {}
+            meta = ex.load_json(path).get("_meta", {})
+            if meta.get("review_feedback_fingerprint") != human_feedback.examples_fingerprint(feedback_examples or []):
+                return path, "stale_feedback"
+            sent = meta.get("input") or {}
             return path, "stale_input" if sent.get("mode") == "snippets" else "full_transcript"
-    path = ex.cache_path(segments, policies, chat, cache_dir)
+    path = ex.cache_path(segments, policies, chat, cache_dir, feedback_examples=feedback_examples)
     if path.exists():
         return path, "full_transcript"
     path = ex.legacy_cache_path(segments, policies, chat, cache_dir)
@@ -387,7 +392,8 @@ def model_input(extraction, current_view, segments):
     return out
 
 
-def build_data(policies, keywords, profile=None):
+def build_data(policies, keywords, profile=None, corrections_dir=human_feedback.CORRECTIONS,
+               feedback_path=human_feedback.FEEDBACK):
     chat = models.resolve("chat", profile)
     presets = policies["escalation"]["presets"]
     default = policies["escalation"]["default_preset"]
@@ -397,14 +403,25 @@ def build_data(policies, keywords, profile=None):
         if not transcript.exists():
             pending.append(wav.stem)
             continue
-        segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
+        raw_segments = [{**s, "speaker": None} for s in json.loads(transcript.read_text(encoding="utf-8"))["segments"]]
+        segments, corrected = human_feedback.apply_corrections(wav.stem, raw_segments, corrections_dir)
+        feedback_examples = human_feedback.calibration_examples(feedback_path, exclude_call=wav.stem)
         view = ex.input_view(segments, policies, keywords)
-        cached, cache_status = find_extraction(segments, policies, chat, view)
+        cached, cache_status = find_extraction(segments, policies, chat, view, feedback_examples=feedback_examples)
+        decision_segments = segments
+        # A corrected transcript can still be reviewed against the last raw extraction, but is clearly
+        # marked stale until a fresh pipeline run has extracted facts from the corrected wording.
+        if cached is None and corrected:
+            raw_view = ex.input_view(raw_segments, policies, keywords)
+            cached, cache_status = find_extraction(raw_segments, policies, chat, raw_view, feedback_examples=feedback_examples)
+            decision_segments = raw_segments
+            if cached is not None:
+                cache_status = "stale_transcript"
         if cached is None:
             pending.append(wav.stem)
             continue
         extraction = ex.load_json(cached)
-        results = {name: dec.decide(extraction, segments, policies, threshold=value) for name, value in presets.items()}
+        results = {name: dec.decide(extraction, decision_segments, policies, threshold=value) for name, value in presets.items()}
         extraction_version = extraction.get("_meta", {}).get("prompt_version", "unversioned")
         versions.append(extraction_version)
         hits = [{**hit, "call": wav.stem} for hit in ex.keyword_hits(segments, keywords)]
@@ -414,6 +431,8 @@ def build_data(policies, keywords, profile=None):
                               model_input=model_input(extraction, view, segments))
         call["model"] = chat["model"]
         call["keywordHitCount"] = len(hits)
+        call["transcriptCorrections"] = corrected
+        call["humanFeedback"] = human_feedback.review_for_call(wav.stem, feedback_path)
         calls.append(call)
     return {"source": "pipeline", "calls": calls, "pending": pending, "thresholds": presets, "defaultThreshold": default,
             "keywordGroups": keyword_groups(keywords), "keywordConfig": keywords,
@@ -427,6 +446,8 @@ def build_data(policies, keywords, profile=None):
 class Handler(BaseHTTPRequestHandler):
     policies_path = ROOT / "config" / "policies.json"
     keywords_path = ROOT / "data" / "Stichwortliste.json"
+    corrections_dir = human_feedback.CORRECTIONS
+    feedback_path = human_feedback.FEEDBACK
 
     def log_message(self, fmt, *args):
         pass
@@ -453,7 +474,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/favicon.ico":
             return self.send(204)
         if path == "/api/data":
-            data = build_data(ex.load_json(self.policies_path), ex.load_json(self.keywords_path))
+            data = build_data(ex.load_json(self.policies_path), ex.load_json(self.keywords_path),
+                              corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
             return self.send(200, json.dumps(data, ensure_ascii=False).encode())
         if path.startswith("/audio/") or path.startswith("/clip/"):
             name = path.split("/", 2)[2]
@@ -481,7 +503,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlparse(self.path)
-        if url.path not in ("/api/keywords", "/api/policies"):
+        if url.path not in ("/api/keywords", "/api/policies", "/api/reviews") and not url.path.startswith("/api/transcripts/"):
             return self.send(404, b'{"error": "not found"}')
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -490,12 +512,56 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if url.path == "/api/keywords":
                 saved = save_keyword_config(payload, self.keywords_path)
-            else:
+                key = "keywords"
+            elif url.path == "/api/policies":
                 saved = save_policy_config(payload, self.policies_path)
+                key = "policies"
+            elif url.path == "/api/reviews":
+                saved = self.save_review(payload)
+                key = "review"
+            else:
+                saved = self.save_transcript_correction(url.path, payload)
+                key = "transcript"
         except (ValueError, json.JSONDecodeError) as error:
             return self.send(400, json.dumps({"error": str(error)}).encode())
-        key = "keywords" if url.path == "/api/keywords" else "policies"
         return self.send(200, json.dumps({"ok": True, key: saved}, ensure_ascii=False).encode())
+
+    def transcript_segments(self, call):
+        if not CALL_NAME.fullmatch(call):
+            raise ValueError("invalid call id")
+        path = TRANSCRIPTS / f"{call}.json"
+        if not path.is_file():
+            raise ValueError("transcript not found")
+        return [{**segment, "speaker": None} for segment in ex.load_json(path).get("segments", [])]
+
+    def save_transcript_correction(self, endpoint, payload):
+        call = endpoint.removeprefix("/api/transcripts/")
+        if not isinstance(payload, dict):
+            raise ValueError("a transcript correction object is required")
+        segments = self.transcript_segments(call)
+        saved = human_feedback.save_correction(call, segments, payload.get("segment_id"), payload.get("text"),
+                                                self.corrections_dir)
+        corrected, changed = human_feedback.apply_corrections(call, segments, self.corrections_dir)
+        return {"call": call, "corrected_segments": changed,
+                "segment": next(segment for segment in corrected if segment["id"] == payload["segment_id"]),
+                "document": saved}
+
+    def save_review(self, payload):
+        if not isinstance(payload, dict):
+            raise ValueError("a review object is required")
+        call, threshold = payload.get("call"), payload.get("threshold")
+        if not isinstance(call, str) or not isinstance(threshold, str):
+            raise ValueError("call and threshold are required")
+        policies, keywords = ex.load_json(self.policies_path), ex.load_json(self.keywords_path)
+        data = build_data(policies, keywords, corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
+        current = next((item for item in data["calls"] if item["id"] == call), None)
+        if current is None or current["classificationByThreshold"].get(threshold) != "Review":
+            raise ValueError("human outcome can only resolve a current review")
+        segments = self.transcript_segments(call)
+        segments, _ = human_feedback.apply_corrections(call, segments, self.corrections_dir)
+        return human_feedback.save_review(call, payload.get("outcome"), current.get("family"),
+                                          current.get("reasonByThreshold", {}).get(threshold, []), segments,
+                                          self.feedback_path)
 
     def send_wav(self, wav):
         size = wav.stat().st_size
@@ -513,9 +579,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send(206, body, "audio/wav", {"Accept-Ranges": "bytes", "Content-Range": f"bytes {start}-{end}/{size}"})
 
 
-def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_path=None):
+def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_path=None, corrections_dir=None, feedback_path=None):
     """Create a dashboard server, optionally against isolated config files for tests."""
-    if policies_path is None and keywords_path is None:
+    if policies_path is None and keywords_path is None and corrections_dir is None and feedback_path is None:
         handler = Handler
     else:
         class handler(Handler):
@@ -524,6 +590,10 @@ def make_server(host="127.0.0.1", port=8090, *, policies_path=None, keywords_pat
             handler.policies_path = Path(policies_path)
         if keywords_path is not None:
             handler.keywords_path = Path(keywords_path)
+        if corrections_dir is not None:
+            handler.corrections_dir = Path(corrections_dir)
+        if feedback_path is not None:
+            handler.feedback_path = Path(feedback_path)
     return ThreadingHTTPServer((host, port), handler)
 
 

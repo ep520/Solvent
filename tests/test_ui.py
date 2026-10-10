@@ -210,14 +210,35 @@ class PolicyConfigTest(unittest.TestCase):
             ui.validate_policy_config(edited)
 
 
+class ReviewResolutionApiTest(unittest.TestCase):
+    def test_only_a_review_can_be_saved_as_human_feedback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            handler = object.__new__(ui.Handler)
+            handler.feedback_path = Path(directory) / "reviews.json"
+            handler.corrections_dir = Path(directory) / "corrections"
+            handler.policies_path = ROOT / "config" / "policies.json"
+            handler.keywords_path = ROOT / "data" / "Stichwortliste.json"
+            current = {"id": "call-1", "family": "Trade", "classificationByThreshold": {"balanced": "Review"},
+                       "reasonByThreshold": {"balanced": ["missing_policy_fact"]}}
+            with unittest.mock.patch.object(ui, "build_data", return_value={"calls": [current]}), \
+                 unittest.mock.patch.object(ui.Handler, "transcript_segments", return_value=SEGMENTS):
+                saved = handler.save_review({"call": "call-1", "threshold": "balanced", "outcome": "no_alert"})
+                self.assertEqual(saved["outcome"], "no_alert")
+                with self.assertRaisesRegex(ValueError, "only resolve"):
+                    handler.save_review({"call": "call-1", "threshold": "sensitive", "outcome": "alarm"})
+
+
 class ServerTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.keyword_path = Path(self.tmp.name) / "keywords.json"
         self.policies_path = Path(self.tmp.name) / "policies.json"
+        self.corrections_dir = Path(self.tmp.name) / "corrections"
+        self.feedback_path = Path(self.tmp.name) / "reviews.json"
         self.keyword_path.write_text((ROOT / "data" / "Stichwortliste.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.policies_path.write_text((ROOT / "config" / "policies.json").read_text(encoding="utf-8"), encoding="utf-8")
-        self.srv = ui.make_server("127.0.0.1", 0, policies_path=self.policies_path, keywords_path=self.keyword_path)
+        self.srv = ui.make_server("127.0.0.1", 0, policies_path=self.policies_path, keywords_path=self.keyword_path,
+                                  corrections_dir=self.corrections_dir, feedback_path=self.feedback_path)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
 
@@ -299,6 +320,16 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("needs at least one condition", json.loads(body)["error"])
         self.assertNotIn("unsafe", ex.load_json(self.policies_path)["families"])
+
+    def test_transcript_correction_is_saved_as_an_overlay(self):
+        source = ex.load_json(ROOT / "data" / "Transcriptions" / "Stufe1_D02-K1.json")["segments"][0]
+        status, _, body = post(self.base, "/api/transcripts/Stufe1_D02-K1",
+                               {"segment_id": source["id"], "text": "Korrigierter menschlicher Text."})
+        saved = json.loads(body)
+        self.assertEqual((status, saved["transcript"]["segment"]["text"]), (200, "Korrigierter menschlicher Text."))
+        corrected, changed = ui.human_feedback.apply_corrections("Stufe1_D02-K1", [source], self.corrections_dir)
+        self.assertEqual((corrected[0]["text"], changed), ("Korrigierter menschlicher Text.", [source["id"]]))
+
 
 
 if __name__ == "__main__":
