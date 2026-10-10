@@ -1,7 +1,11 @@
+import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from callguard import extract as ex
 from callguard import models
@@ -80,6 +84,40 @@ class DatasetAndManifestTest(unittest.TestCase):
         self.assertEqual(manifest["chat"]["prompt_version"], ex.PROMPT_VERSION)
         self.assertEqual(manifest["policies"]["default_preset"], "balanced")
         self.assertIn("callguard/extract.py", manifest["code"]["source_sha256"])
+
+    def test_interrupted_eval_keeps_per_call_checkpoint_and_partial_summary(self):
+        policies = pipeline.ROOT / "config" / "policies.json"
+        keywords = pipeline.DATA / "Stichwortliste.json"
+        profile = {"name": "test", "model": "test-model", "self_hostable": True, "api": "test"}
+
+        def fake_run(path, *_args, **_kwargs):
+            if Path(path).stem == "Stufe1_D03":
+                raise RuntimeError("interrupted test batch")
+            return ({"call": Path(path).stem, "source": str(path), "label": "alarm", "status": "ok",
+                     "reasons": [], "events": []}, [])
+
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(pipeline, "ROOT", Path(directory)), \
+                 patch.object(pipeline, "run_text", side_effect=fake_run), \
+                 patch.object(pipeline.models, "check", return_value=profile), \
+                 patch.object(pipeline, "dataset_contract", return_value=([
+                     {"recording_id": "Stufe1_D02", "dialogue_id": "Stufe1_D02", "variant": "script",
+                      "split": "development", "audio_hash": "test", "gold_source": "data/Skript_mit_Sollbewertung/Stufe1_D02.txt"}
+                 ], [])), \
+                 patch.object(pipeline, "augment_canonical_result"), \
+                 patch.object(pipeline, "validate_canonical_result", return_value=True), \
+                 redirect_stdout(StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "interrupted test batch"):
+                    pipeline.main(["eval", "--only", "Stufe1_D02,Stufe1_D03", "--workers", "1",
+                                   "--policies", str(policies), "--keywords", str(keywords)])
+            run = next((Path(directory) / "runs").iterdir())
+            manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8"))
+            summary = json.loads((run / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["artifact_status"], "interrupted")
+            self.assertEqual(manifest["checkpoint"]["completed_call_ids"], ["Stufe1_D02"])
+            self.assertEqual(summary["artifact_status"], "interrupted")
+            self.assertEqual([row["recording_id"] for row in summary["rows"]], ["Stufe1_D02"])
+            self.assertTrue((run / "Stufe1_D02.json").is_file())
 
 
 class CanonicalResultEnvelopeTest(unittest.TestCase):

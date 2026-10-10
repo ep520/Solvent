@@ -29,6 +29,7 @@ from callguard import asr
 from callguard import extract as ex
 from callguard import models
 from callguard import pipeline
+from callguard import storage
 
 ROOT = Path(__file__).resolve().parent.parent
 INBOX = ROOT / "data" / "Inbox"
@@ -74,8 +75,7 @@ def process(target, policies, keywords, args):
     transcript, _ = asr.transcribe(target)
     asr.export(transcript)                                    # data/Transcriptions/<call>.json, read by the dashboard
     result, _ = pipeline.run_audio(target, policies, keywords, profile=args.profile)
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"{result['call']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    storage.atomic_write_json(RESULTS / f"{result['call']}.json", result)
     print(f"{result['label']:<8} {result['call']}  {','.join(result['reasons'])}", flush=True)
     if args.trigger_url and result["label"] in ("alarm", "review"):
         try:
@@ -100,7 +100,7 @@ def scan(policies, keywords, args):
             FAILED.mkdir(parents=True, exist_ok=True)
             dest = free_name(FAILED, wav.name)
             shutil.move(str(target), dest)  # out of data/Audio so the dashboard does not list it as pending
-            dest.with_suffix(".err").write_text(traceback.format_exc(), encoding="utf-8")
+            storage.atomic_write_text(dest.with_suffix(".err"), traceback.format_exc())
             print(f"FAILED   {wav.name}: {e}", file=sys.stderr, flush=True)
     return done
 

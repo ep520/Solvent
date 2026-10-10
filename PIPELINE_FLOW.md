@@ -42,13 +42,18 @@ flowchart TD
     DECIDE --> RESULT["Canonical result per call<br/>label · reasons · events · versions"]
     RESULT --> XAI["counterfactual.annotate (pure code)<br/>same 3-valued rule, re-applied to hypothetical states"]
 
-    XAI --> FILES["runs/eval-&lt;ts&gt;-&lt;mode&gt;/&lt;call&gt;.json<br/>+ manifest.json + summary.json"]
+    XAI --> FILES["runs/eval-&lt;ts&gt;-&lt;mode&gt;/&lt;call&gt;.json<br/>atomic per-call checkpoint + manifest/summary progress"]
     XAI --> CLIPS["evidence.py: ±10 s clips from the original WAV"]
     WAV --> CLIPS
     XAI --> DASHBOARD["ui.py dashboard / API"]
     EXPORT --> DASHBOARD
     CLIPS --> DASHBOARD
 ```
+
+The dashboard also keeps two human-in-the-loop overlays: a reviewer can resolve a `Review` as alert or
+no alert, producing a bounded calibration example for future model extraction, and can correct any ASR
+segment. Neither action rewrites the ASR source or retrospectively changes a decision. A later pipeline
+run reads the corrected text and the prior-review examples, producing a separately cached extraction.
 
 The default snippet mode deliberately selects what the extraction model reads: keyword, cue-word and
 spoken-digit matches add neighbouring and linked-context segments. These signals are **not** evidence and
@@ -62,6 +67,11 @@ configuration change creates a different extraction-cache entry on the next pipe
 other — both join at `WAV`. The latter uses the ASR cache but does not itself export
 `data/Transcriptions`; run `callguard.asr` or use the watched ingest flow when a dashboard export is
 needed.
+
+Evaluation creates its run folder before starting the batch. Each completed call is atomically published
+as canonical JSON and updates the atomic `manifest.json` and partial `summary.json`; an interrupted run
+therefore remains inspectable with `artifact_status: in_progress` or `interrupted`. Re-running evaluates
+only the uncached ASR/extraction work, while retaining the completed checkpoint artefacts of the prior run.
 
 ## 2. Evidence anchoring and decision
 

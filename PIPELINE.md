@@ -164,6 +164,10 @@ unusually clean even when "noisy") would be needed to calibrate or replace it.
   `summary.json` (three-class metrics, unresolved and technical counts, paired clean/noisy analysis and
   threshold comparison), `manifest.json` (release identity/configuration/cache contract/audio hashes),
   `recordings.csv`, `errors.json`, and an intentionally unfilled `human-audit-checklist.md`.
+  The folder and its initial manifest are created before the batch starts. Every completed call atomically
+  replaces its per-call JSON and then updates the manifest and partial summary; an interrupted batch is
+  explicitly marked `in_progress` or `interrupted` rather than being mistaken for a final evaluation.
+  A fresh invocation reuses the already-complete ASR and extraction cache entries.
   Cached values are not presented as uncached latency.
 - `callguard/evidence.py` cuts ±10 s clips from the **original** WAV (standard library `wave`).
 - `callguard/ui.py` serves the dashboard over cached results (see §2.6). Its local `POST /api/keywords`
@@ -171,6 +175,14 @@ unusually clean even when "noisy") would be needed to calibrate or replace it.
   `POST /api/policies` supports local add/edit/delete of policy families and conditions, with schema
   validation and atomic writes. A policy edit deliberately invalidates old extraction caches and requires
   a fresh evaluation; it is never applied retrospectively to old results.
+- A reviewer can resolve an automatic `Review` as **Alert** or **No alert** in the dashboard. The outcome
+  is atomically retained under `data/ReviewFeedback/` and becomes a small, bounded calibration example
+  for later extractions; it is included in the extraction cache key and never overwrites an existing
+  automatic result or policy rule. The reviewed call itself is excluded from its own calibration prompt.
+- Every exported ASR segment can be corrected in the dashboard. Corrections are stored as overlays under
+  `data/Corrections/`, retain the original ASR wording, and are ignored if a newer ASR run changes that
+  original segment. The next pipeline run reads the corrected wording and creates a new extraction cache
+  entry; until then the dashboard labels the prior assessment as requiring re-evaluation.
 
 Direct `pipeline eval --audio` uses the ASR cache but does not create the tracked
 `data/Transcriptions` exports. Use `python3 -m callguard.asr` or `callguard.ingest` when the dashboard

@@ -9,6 +9,7 @@
 import argparse
 import csv
 import hashlib
+import io
 import json
 import re
 import shutil
@@ -16,14 +17,16 @@ import statistics
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from callguard import asr
 from callguard import decide as dec
 from callguard import evidence
 from callguard import extract as ex
+from callguard import human_feedback
 from callguard import models
+from callguard import storage
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -42,8 +45,10 @@ def audio_segments(wav, profile=None):
     """Whisper segments for a WAV (hash-cached by callguard.asr); Whisper has no speakers, so none are shown."""
     started = time.perf_counter()
     transcript, cached = asr.transcribe(wav, profile=profile)
-    return ([{**s, "speaker": None} for s in transcript["segments"]],
-            {"asr_elapsed_s": round(time.perf_counter() - started, 3), "asr_cache_hit": cached})
+    segments, corrected = human_feedback.apply_corrections(Path(wav).stem, transcript["segments"])
+    return ([{**s, "speaker": None} for s in segments],
+            {"asr_elapsed_s": round(time.perf_counter() - started, 3), "asr_cache_hit": cached,
+             "transcript_corrections": corrected})
 
 
 def run_audio(wav, policies, keywords, profile=None, threshold=None, **_):
@@ -73,7 +78,8 @@ def run_segments(call, source, segments, policies, keywords, profile, threshold,
     stage_timing = dict(stage_timing or {})
     view = ex.input_view(segments, policies, keywords)        # snippets or full transcript (config/snippets.json)
     try:
-        extraction, extract_cached = ex.extract(segments, policies, profile=profile, view=view, return_cache_status=True)
+        extraction, extract_cached = ex.extract(segments, policies, profile=profile, view=view, return_cache_status=True,
+                                                feedback_exclude_call=call)
         error = None
     except models.ModelError as e:
         extraction, error, extract_cached = {}, e, None
@@ -494,7 +500,7 @@ def git_dirty():
 
 def source_hashes():
     files = ("callguard/pipeline.py", "callguard/extract.py", "callguard/decide.py", "callguard/asr.py",
-             "callguard/models.py", "config/models.json")
+             "callguard/models.py", "callguard/storage.py", "callguard/human_feedback.py", "config/models.json")
     return {name: file_sha256(ROOT / name) for name in files if (ROOT / name).is_file()}
 
 
@@ -533,6 +539,9 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None, contr
                     "split": "development" if contract else None},
         "cache": {"asr": "content hash + ASR profile/model/constraint", "extraction": "profile/model/prompt/messages/schema",
                   "rule": "cached extraction is valid only when its cache key matches these inputs"},
+        "human_feedback": {"path": "data/ReviewFeedback/reviews.json",
+                           "sha256": file_sha256(human_feedback.FEEDBACK) if human_feedback.FEEDBACK.is_file() else None,
+                           "mode": "bounded calibration examples; current call excluded"},
         "self_hostable_compliant": bool(chat_profile.get("self_hostable")) and
                                    (asr_profile is None or bool(asr_profile.get("self_hostable"))),
     }
@@ -656,11 +665,12 @@ def write_rows_csv(path, rows):
               "technical_failure", "asr_failure", "extraction_error", "grounding_issue", "unresolved",
               "asr_cache_hit", "extract_cache_hit", "asr_elapsed_s", "extract_elapsed_s",
               "decision_elapsed_s", "total_elapsed_s", "gold_source")
-    with Path(path).open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=fields)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({field: "|".join(row[field]) if field == "reasons" else row.get(field) for field in fields})
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=fields)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: "|".join(row[field]) if field == "reasons" else row.get(field) for field in fields})
+    storage.atomic_write_text(path, stream.getvalue())
 
 
 def write_human_audit_checklist(path, rows):
@@ -681,7 +691,7 @@ def write_human_audit_checklist(path, rows):
             why += "; noisy sample"
         lines.append(f"| {row['recording_id']} | {why} | pending | no | pending | pending | pending |  |  |")
     lines += ["", "Required coverage: at least one alarm, a boundary-adjacent no_alert, a review, noisy variants, and any final-run error. Where present, include negation, speaker-role, access-validity, and authority cases."]
-    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    storage.atomic_write_text(path, "\n".join(lines) + "\n")
 
 
 def threshold_comparison(rows, primary):
@@ -728,7 +738,9 @@ def main(argv=None):
         out.mkdir(parents=True, exist_ok=True)
         for path in sorted((DATA / "Transkript").glob("*.txt")):
             segs = ex.segments_from_transcript(path, speakers=not args.no_speakers)
-            src = ex.cache_path(segs, policies, p, view=ex.input_view(segs, policies, keywords))
+            examples = human_feedback.calibration_examples(exclude_call=path.stem)
+            src = ex.cache_path(segs, policies, p, view=ex.input_view(segs, policies, keywords),
+                                feedback_examples=examples)
             if not src.exists():
                 sys.exit(f"no cached extraction for {path.stem} ({mode}); run eval first")
             shutil.copy(src, out / f"{path.stem}.{mode}.json")
@@ -761,19 +773,49 @@ def main(argv=None):
     # A partial smoke/--only run is not expected to have both variants; full audio evaluation is.
     if args.audio and not args.only and not args.smoke and contract_issues:
         sys.exit("dataset contract invalid:\n- " + "\n- ".join(contract_issues))
-    started_wall = time.perf_counter()
-    started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        results = list(pool.map(lambda p: run(p, policies, keywords, **opts)[0], paths))
-    wall_clock_s = round(time.perf_counter() - started_wall, 3)
-    finished_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     mode = "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers"
     out = ROOT / "runs" / f"eval-{time.strftime('%Y%m%d-%H%M%S')}-{mode}"
+    suffix = 2
+    while out.exists():
+        out = ROOT / "runs" / f"eval-{time.strftime('%Y%m%d-%H%M%S')}-{mode}-{suffix}"
+        suffix += 1
     out.mkdir(parents=True, exist_ok=True)
     run_id = out.name
+    started_wall = time.perf_counter()
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    chat_profile = models.check("chat", args.profile)
+    asr_profile = models.check("asr", require_self_hostable=False) if args.audio else None
+    manifest = run_manifest(args, policies, keywords, chat_profile, asr_profile, contract=contract,
+                            started_at=started_at, run_id=run_id)
+    manifest["artifact_status"] = "in_progress"
+    manifest["checkpoint"] = {"expected_calls": len(paths), "completed_calls": 0, "completed_call_ids": [],
+                              "write_strategy": "atomic_replace"}
+    storage.atomic_write_json(out / "manifest.json", manifest)
     rows = []
     contract_by_id = {record["recording_id"]: record for record in contract}
-    for result in results:
+    call_order = {path.stem: index for index, path in enumerate(paths)}
+
+    def write_incremental_summary(status):
+        ordered_rows = sorted(rows, key=lambda row: call_order[row["recording_id"]])
+        summary = {"format": "callguard-evaluation-2", "artifact_status": "current_run" if status == "complete" else status,
+                   "args": {k: str(v) for k, v in vars(args).items()},
+                   "dataset_contract": {"records": contract, "issues": contract_issues}, "metrics": metrics(ordered_rows),
+                   "threshold_comparison": threshold_comparison(ordered_rows, policies["escalation"]["default_preset"]),
+                   "rows": ordered_rows}
+        storage.atomic_write_json(out / "summary.json", summary)
+
+    def checkpoint(status=None):
+        if status:
+            manifest["artifact_status"] = status
+        manifest["generated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        manifest["batch_wall_clock_s"] = round(time.perf_counter() - started_wall, 3)
+        manifest["checkpoint"]["completed_calls"] = len(rows)
+        manifest["checkpoint"]["completed_call_ids"] = [row["recording_id"] for row in sorted(rows, key=lambda row: call_order[row["recording_id"]])]
+        storage.atomic_write_json(out / "manifest.json", manifest)
+        if rows:
+            write_incremental_summary(manifest["artifact_status"])
+
+    def record(result):
         g = gold(script_name(result["call"]))
         contract_row = contract_by_id.get(result["call"], {})
         recording_duration_s = evidence.duration(result["source"]) if args.audio else None
@@ -787,7 +829,7 @@ def main(argv=None):
                "dialogue_id": contract_row.get("dialogue_id", script_name(result["call"])),
                "variant": contract_row.get("variant", "unknown"), "split": contract_row.get("split", "development"),
                "gold": g["label"], "prediction": result.get("label"), "pred": result.get("label"),
-               "reasons": result.get("reasons", []), "gold_source": contract_row.get("gold_source", str((DATA / "Skript_mit_Sollbewertung" / f"{script_name(result['call'])}.txt").relative_to(ROOT))),
+               "reasons": result.get("reasons", []), "gold_source": contract_row.get("gold_source", _relative_path_or_original(DATA / "Skript_mit_Sollbewertung" / f"{script_name(result['call'])}.txt")),
                "asr_failure": bool(timing.get("asr_failure")), "extraction_error": bool(result.get("error")) and not timing.get("asr_failure"),
                "technical_failure": result.get("status") == "failed" or bool(timing.get("asr_failure")) or "technical_uncertainty" in result.get("reasons", []),
                "incomplete_extraction": any("missing or invalid" in issue for issue in all_issues),
@@ -802,24 +844,31 @@ def main(argv=None):
                "kept_text_pct": ((result.get("input") or {}).get("stats") or {}).get("kept_text_pct", 100.0)
                                 if (result.get("input") or {}).get("mode") == "snippets" else 100.0}
         rows.append(row)
-        (out / f"{result['call']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+        storage.atomic_write_json(out / f"{result['call']}.json", result)
+        checkpoint()
         mark = "ok  " if g["label"] == result.get("label") else "ERR " if result.get("error") else "MISS"
         print(f"{mark} {result['call']:<16} gold={g['label']:<8} pred={str(result.get('label')):<8} {','.join(result.get('reasons', []))}")
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+            jobs = {pool.submit(run, path, policies, keywords, **opts): path for path in paths}
+            for job in as_completed(jobs):
+                record(job.result()[0])
+    except BaseException:
+        manifest["run_finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        checkpoint("interrupted")
+        raise
+    rows.sort(key=lambda row: call_order[row["recording_id"]])
+    wall_clock_s = round(time.perf_counter() - started_wall, 3)
+    finished_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     m = metrics(rows)
     print(json.dumps(m, indent=1))
-    manifest = run_manifest(args, policies, keywords, models.check("chat", args.profile),
-                            models.check("asr", require_self_hostable=False) if args.audio else None,
-                            contract=contract, started_at=started_at, finished_at=finished_at, wall_clock_s=wall_clock_s,
-                            run_id=run_id)
-    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
-    summary = {"format": "callguard-evaluation-2", "artifact_status": "current_run", "args": {k: str(v) for k, v in vars(args).items()},
-               "dataset_contract": {"records": contract, "issues": contract_issues}, "metrics": m,
-               "threshold_comparison": threshold_comparison(rows, policies["escalation"]["default_preset"]), "rows": rows}
-    (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
+    manifest["run_finished_at"] = finished_at
+    manifest["batch_wall_clock_s"] = wall_clock_s
     write_rows_csv(out / "recordings.csv", rows)
     errors = [row for row in rows if row["pred"] != row["gold"] or row["technical_failure"] or row["unresolved"]]
-    (out / "errors.json").write_text(json.dumps(errors, ensure_ascii=False, indent=1), encoding="utf-8")
+    storage.atomic_write_json(out / "errors.json", errors)
     write_human_audit_checklist(out / "human-audit-checklist.md", rows)
+    checkpoint("complete")
     if not manifest["self_hostable_compliant"]:
         print("NOTE: this run used a non-self-hostable endpoint (see manifest.json); the README asks for "
               "self-hostable models in the submitted pipeline.", file=sys.stderr)
