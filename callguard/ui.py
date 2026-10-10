@@ -65,13 +65,19 @@ def _assessment(result):
     return text
 
 
+def _format_timestamp(seconds):
+    """0:00 / 12:34, matching the dashboard's own formatTime() in app.js."""
+    seconds = int(seconds)
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
 def _condition_reason(condition):
     """Short, operator-facing rationale for a dashboard fact; never a new model judgement."""
     state = condition["state"]
     refs = condition.get("evidence", [])
     if refs:
         ref = refs[0]
-        at = f" at {ref['start']:.0f}s" if isinstance(ref.get("start"), (int, float)) else ""
+        at = f" at {_format_timestamp(ref['start'])}" if isinstance(ref.get("start"), (int, float)) else ""
         quote = ref.get("quote", "").strip()
         prefix = ("The transcript says" if state == "true" else
                   "The transcript explicitly says" if state == "false" else "Relevant transcript context")
@@ -113,10 +119,11 @@ def dashboard_call(call, segments, results, default, length, cache_status="curre
     items = [evidence_item(ref) for ref in refs]
     if event is not None and event["conditions"]:
         conditions = [{"label": n.replace("_", " ").capitalize(), "state": STATES[c["state"]],
-                       "reason": _condition_reason(c), "hasEvidence": bool(c.get("evidence"))}
+                       "policy": c.get("policy", ""), "reason": _condition_reason(c), "hasEvidence": bool(c.get("evidence"))}
                       for n, c in event["conditions"].items()]
     elif event is not None:
         conditions = [{"label": f"Object type: {event.get('object_type', 'unknown').replace('_', ' ')}", "state": "Supported",
+                       "policy": "Numbers are classified only (never an alarm condition); this is the applied rule, not an extracted fact.",
                        "reason": "Classification-only identifier rule; this policy family never generates an alarm.", "hasEvidence": bool(event.get("evidence"))}]
     else:
         conditions = []

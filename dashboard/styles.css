@@ -193,12 +193,12 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .evidence-text { margin: 0; font: 500 12px/1.55 "DM Sans", sans-serif; min-height: 38px; color: #24363e; white-space: pre-wrap; }
 .reveal-cursor::after { content: ""; display: inline-block; height: 1em; width: 1.5px; background: var(--primary); margin-left: 2px; vertical-align: -.15em; animation: blink .75s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.support-mark { background: #cde9e3; color: #173d38; box-shadow: inset 0 -1px 0 #75b8aa; padding: 1px 0; }
-.keyword-mark { background: #fff0a8; color: #4a4019; border-radius: 2px; padding: 1px 0; box-shadow: inset 0 -1px 0 #dbc45a; }
-.mark-legend { display: flex; gap: 12px; margin-top: 7px; color: var(--muted); font-size: 9px; }
+.support-mark { background: #d7e6fb; color: #0f3a73; box-shadow: inset 0 -1px 0 #7fa8e0; padding: 1px 0; }
+.keyword-mark { background: #ece0fb; color: #3e1f6b; border-radius: 2px; padding: 1px 0; box-shadow: inset 0 -1px 0 #b48fe0; }
+.mark-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; color: var(--muted); font-size: 9.5px; }
 .mark-legend span { display: inline-flex; align-items: center; gap: 4px; }
-.legend-swatch { width: 10px; height: 5px; border-radius: 2px; background: #cde9e3; }
-.legend-swatch.keyword { background: #fff0a8; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 2px; background: #d7e6fb; }
+.legend-swatch.keyword { background: #ece0fb; }
 .show-full { min-height: 23px; height: 23px; font-size: 9.5px; margin-left: auto; display: block; padding: 0 5px; }
 .audio-player { background: #f6f8f9; border-radius: 8px; padding: 8px; }
 .audio-main { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
