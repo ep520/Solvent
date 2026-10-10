@@ -94,6 +94,26 @@ class DashboardCallTest(unittest.TestCase):
         self.assertTrue(all(c["reason"].startswith("The transcript says:") for c in call["conditions"]))
         self.assertEqual(len(call["transcript"]), 2)
 
+    def test_supported_conditions_carry_the_policy_wording_for_explainability(self):
+        """Hovering 'Supported' (or any state) must show which policy rule was checked, not just the quote."""
+        results = {"balanced": dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=0.6)}
+        call = ui.dashboard_call("Stufe1_D02-K1", SEGMENTS, results, "balanced", 155.1)
+        own_trade = next(c for c in call["conditions"] if c["label"] == "Own trade request")
+        self.assertEqual(own_trade["policy"],
+                         POLICIES["families"]["trade"]["conditions"]["own_trade_request"])
+        self.assertTrue(all(c.get("policy") for c in call["conditions"]), "every condition needs its policy text")
+
+    def test_evidence_timestamp_in_the_reason_is_minutes_seconds_not_raw_seconds(self):
+        """A dashboard timestamp must read like the audio player's own clock (0:04), never '4s'."""
+        results = {"balanced": dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=0.6)}
+        call = ui.dashboard_call("Stufe1_D02-K1", SEGMENTS, results, "balanced", 155.1)
+        at_4s = next(c for c in call["conditions"] if "at 0:04" in c["reason"] or " at 4s" in c["reason"])
+        self.assertIn("at 0:04", at_4s["reason"])
+        self.assertNotIn(" at 4s", at_4s["reason"])
+        self.assertEqual(ui._format_timestamp(0), "0:00")
+        self.assertEqual(ui._format_timestamp(65), "1:05")
+        self.assertEqual(ui._format_timestamp(600), "10:00")
+
     def test_call_without_events_has_a_placeholder_evidence(self):
         empty = {"families": {name: {"events": []} for name in POLICIES["families"]}}
         results = {"balanced": dec.decide(empty, SEGMENTS, POLICIES, threshold=0.6)}

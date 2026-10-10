@@ -128,7 +128,7 @@ def evaluate_event(family, raw, grounder, policies, threshold):
         c = (raw.get("conditions") or {}).get(name)
         if not isinstance(c, dict) or c.get("state") not in STATES:
             issues.append(f"{name}: missing or invalid in extraction")
-            conditions[name] = {"state": "unknown", "evidence": [], "downgraded": True,
+            conditions[name] = {"state": "unknown", "evidence": [], "downgraded": True, "policy": fam["conditions"][name],
                                 "uncertainty": [], "grounding_issues": [f"{name}: missing or invalid in extraction"]}
             continue
         refs, grounding_issues = grounder.ground_all(c.get("evidence"), name)
@@ -147,7 +147,7 @@ def evaluate_event(family, raw, grounder, policies, threshold):
             state = "unknown"
             uncertainty.append("actor_role_unknown")
             issues.append(f"{name}: required {required_role} role is not established, set to unknown")
-        conditions[name] = {"state": state, "evidence": refs, "downgraded": downgraded,
+        conditions[name] = {"state": state, "evidence": refs, "downgraded": downgraded, "policy": fam["conditions"][name],
                             "uncertainty": uncertainty, "grounding_issues": grounding_issues}
 
     event_refs, event_grounding_issues = grounder.ground_all(raw.get("evidence"), "event") if not fam["conditions"] else ([], [])
