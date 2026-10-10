@@ -1,0 +1,10 @@
+{
+  "_about": "What the extraction model reads. enabled=true: only the snippets found by the official keyword list (data/Stichwortliste.json), spoken digit sequences and the cue words in config/snippets/<cues>; false: the whole call, as before. Editable without code; a change produces a new extraction on the next pipeline run (cached separately).",
+  "enabled": true,
+  "cues": "cues_general.json",
+  "_cues_note": "cues_general.json is frozen and scenario-free; cues_tuned.json was tuned on the test calls and overfits. Empty string = keywords and digits only.",
+  "fuzzy": true,
+  "max_snippets": 12,
+  "if_no_snippets": "full_transcript",
+  "_if_no_snippets_note": "full_transcript (default, safe): a call where no finder fires is read in full, so it can never be dismissed unseen. skip_model: no model call, the call becomes no_alert."
+}
