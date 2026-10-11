@@ -1,140 +1,55 @@
 # CallGuard pipeline flow
 
-Diagrams for [`PIPELINE.md`](PIPELINE.md), which has the full explanation. One rule holds everywhere
-below: the language model only reports facts with quotations; deterministic code makes every decision.
+This is the operational flow described in [PIPELINE.md](PIPELINE.md). The published default run is `runs/eval-20261011-070834-audio`, containing 42 authentic calls.
 
-## 1. End-to-end flow
+## Inference flow
 
 ```mermaid
 flowchart TD
-    WAV["Audio<br/>data/Audio/*.wav"]
-    ASR_CACHE{"Transcribed already?<br/>(content hash, profile, model)"}
-    ASR["callguard/asr.py<br/>Whisper via the model router"]
-    TRANSCRIPT["Segments: id · start · end · text · avg_logprob<br/>no speakers (no diarization)"]
-
-    WAV --> ASR_CACHE
-    ASR_CACHE -- No --> ASR --> TRANSCRIPT
-    ASR_CACHE -- Yes --> TRANSCRIPT
-    TRANSCRIPT --> TRANSCRIPT_CACHE["data/Transcriptions/*.json"]
-
-    TRANSCRIPT_CACHE --> KEYWORDS["extract.keyword_hits<br/>Stichwortliste.json phrases"]
-    KEYWORDS --> HIGHLIGHTS["Highlights + coverage counts<br/>display only, never decisive"]
-
-    TRANSCRIPT_CACHE --> EXTRACT_CACHE{"Extraction cached?<br/>(transcript, model, prompt, policies)"}
-    POLICIES["config/policies.json<br/>families, predicates, enabled flags, threshold"] --> EXTRACT_CACHE
-    EXTRACT_CACHE -- No --> LLM["One LLM request · extract.py<br/>whole transcript, every enabled family"]
-    EXTRACT_CACHE -- Yes --> FACTS
-    LLM --> FACTS["Facts by family: events, actor, conditions<br/>true · false · unknown + segment id + quote"]
-
-    FACTS --> DECIDE["decide.py (pure code)<br/>anchor quotes → 3-valued rules → ASR threshold"]
+    WAV["WAV recording"] --> ASR["callguard/asr.py<br/>whisper_local or another configured ASR profile"]
+    ASR --> SEGMENTS["Timestamped ASR segments<br/>id · start · end · text · quality"]
+    SEGMENTS --> EXTRACT["callguard/extract.py<br/>qwen3_fast or another configured chat profile"]
+    POLICIES["config/policies.json<br/>policy families · predicates · thresholds"] --> EXTRACT
+    EXTRACT --> FACTS["Structured facts<br/>true · false · unknown + quoted segment evidence"]
+    FACTS --> DECIDE["callguard/decide.py<br/>strict evidence grounding + deterministic rules"]
     POLICIES --> DECIDE
-    HIGHLIGHTS --> RESULT
-    DECIDE --> RESULT["Canonical result per call<br/>label · reasons · events · versions"]
-
-    RESULT --> FILES["runs/eval-&lt;ts&gt;-&lt;mode&gt;/&lt;call&gt;.json<br/>+ manifest.json + summary.json"]
-    RESULT --> CLIPS["evidence.py: ±10 s clips from the original WAV"]
-    WAV --> CLIPS
-    RESULT --> DASHBOARD["ui.py dashboard / API"]
-    CLIPS --> DASHBOARD
+    DECIDE --> RESULT["Canonical call result<br/>alarm · review · no_alert + reasons"]
+    RESULT --> RUN["runs/eval-<timestamp>-audio/<br/>per-call JSON, metadata, and run-owned audio"]
+    RUN --> UI["callguard/ui.py<br/>Dashboard"]
 ```
 
-Keyword matching never filters the transcript and never changes a decision; the full transcript always
-reaches extraction, and extraction always covers every *enabled* family (§3).
+Keyword matching runs over the transcript for highlighting and coverage only. It never filters the input before extraction and never changes a decision.
 
-## 2. Evidence anchoring and decision
+## Decision flow
 
 ```mermaid
 flowchart TD
-    COND["Condition: state + cited segment id + quote"]
-    ID{"Segment id exists?"}
-    EXACT{"Quote found verbatim in that segment,<br/>or starting there and ending in the next one?<br/>(case/whitespace folded, punctuation kept,<br/>no fuzzy match, no other neighbour)"}
-    GROUNDED["Evidence accepted:<br/>real ASR text, exact segment ids and times"]
-    UNANCHORED["true/false with no anchored evidence → unknown"]
-
-    COND --> ID -- No --> UNANCHORED
-    ID -- Yes --> EXACT -- Yes --> GROUNDED
-    EXACT -- No --> UNANCHORED
-    GROUNDED --> RULE
-    UNANCHORED --> RULE{"All of the event's<br/>required conditions"}
-
-    RULE -- "any false" --> ABSENT["Absent → no_alert"]
-    RULE -- "any unknown" --> UNDET{"Why unknown?"}
-    RULE -- "all true" --> PRESENT
-
-    UNDET -- "extraction incomplete<br/>or evidence unanchored" --> TECH["review / technical_uncertainty"]
-    UNDET -- "actor role required<br/>but not inferred" --> ROLE["review / actor_role_unknown"]
-    UNDET -- "call doesn't establish it" --> MISSING["review / missing_policy_fact<br/>+ open question"]
-
-    PRESENT{"Present"} --> SCORE{"Every decisive condition has a quote<br/>at/above the ASR-quality threshold?<br/>(no score at all → not blocking)"}
-    SCORE -- Yes --> ALARM["Alarm"]
-    SCORE -- No --> LOWQ["review / below_escalation_threshold"]
-
-    ABSENT & TECH & ROLE & MISSING & ALARM & LOWQ --> CALL["Call label = highest-severity event<br/>alarm > review > no_alert"]
+    CONDITION["Condition: state + segment ID + quote"] --> ANCHOR{"Quote anchors exactly<br/>to the cited segment(s)?"}
+    ANCHOR -- No --> UNKNOWN["Unknown<br/>grounding issue"]
+    ANCHOR -- Yes --> RULES{"Required conditions"}
+    RULES -- "any false" --> NOALERT["No alert"]
+    RULES -- "any unknown" --> REVIEW["Review<br/>missing fact, role uncertainty, or technical uncertainty"]
+    RULES -- "all true" --> QUALITY{"Decisive evidence meets<br/>the ASR-quality threshold?"}
+    QUALITY -- Yes --> ALARM["Alarm"]
+    QUALITY -- No --> LOWQUALITY["Review<br/>below escalation threshold"]
+    UNKNOWN --> REVIEW
 ```
 
-Thresholds: `sensitive = 0.50`, `balanced = 0.60` (default), `conservative = 0.75` — an ASR-quality
-heuristic, not a fraud probability. A grounding or role failure only touches its own predicate; other
-conditions and other events keep deciding independently.
+The call label is the highest severity across all events. Threshold changes recompute decisions over stored facts; they do not rerun ASR or extraction.
 
-## 3. Policy families
-
-Every enabled family is required in the extraction schema; `"events": []` means "assessed, nothing
-found". A bank can switch a whole family off (`policies.json`'s `enabled` flag) — it is then dropped
-from the LLM request and treated as absent by configuration, not as a gap.
+## Dashboard data flow
 
 ```mermaid
 flowchart LR
-    FACTS["Extraction"] --> GATE{"Family enabled?"}
-    GATE -- No --> OFF["Not requested, not evaluated<br/>(bank configuration)"]
-    GATE -- Yes --> FAMS["Trade · Access · Disclosure<br/>Documentation · Splitting · Numbers"]
-    FAMS --> EVENTS["Per-event decisions (§2)"]
-    EVENTS --> MAX["Call label = maximum severity"]
+    POINTER["runs/_default_run.txt"] --> RUN["runs/eval-20261011-070834-audio"]
+    RUN --> RESULTS["42 canonical results<br/>label + events"]
+    RUN --> AUDIO["42 run-owned WAV files"]
+    RUN --> META["manifest · summary · index · checksums"]
+    RESULTS --> API["/api/data"]
+    AUDIO --> PLAYBACK["/audio/<call>.wav"]
+    META --> FILTER["Metadata is not a call result"]
+    API --> DASHBOARD["localhost:8090"]
+    PLAYBACK --> DASHBOARD
 ```
 
-| Family | Required for an alarm |
-|---|---|
-| Trade | `own_trade_request`, `information_nonpublic`, `information_market_relevant`, `request_based_on_information` |
-| Access | `value_spoken`, `access_secret`, `secret_active` |
-| Disclosure | `advisor_disclosed`, `third_party_detail`, `authority_absent` |
-| Documentation | `concealment_requested`, `fact_relevant`, `designated_recipient` |
-| Splitting | `split_requested`, `movements_connected`, `evasion_purpose` |
-| Numbers | none — classified only, never an alarm |
-
-## 4. Model routing
-
-```mermaid
-flowchart LR
-    TASK{"Task"} -- transcription --> ASRP["ASR profile"]
-    TASK -- extraction --> CHATP["Chat profile"]
-    ASRP & CHATP --> ROUTER["models.py"]
-    ROUTER --> HTTP["openai_compatible: OpenAI, vLLM, Ollama,<br/>llama.cpp, speaches, private gateway"]
-    ROUTER --> CLI["claude_cli: claude -p, JSON schema,<br/>no tools, no user settings"]
-
-    SWITCH["Change profile"] --> SMOKE["eval --smoke"]
-    SMOKE -- pass --> FULL["Full eval"]
-    SMOKE -- fail --> FIX["Fix profile/model"] --> SMOKE
-```
-
-Current profiles: Claude Sonnet 5 (chat) and OpenAI `whisper-1` (ASR) — not self-hostable; every
-`eval` run records this in its `manifest.json`. A self-hosted deployment is the same pipeline with
-different profiles, gated by the same smoke test.
-
-## 5. Dashboard
-
-```mermaid
-flowchart TD
-    CMD{"Command"} -- "pipeline audio &lt;file&gt;" --> ONE["One call, printed explanation"]
-    CMD -- "pipeline eval [--audio|--smoke]" --> MANY["Batch eval → files + manifest"]
-    CMD -- "callguard.ui" --> UI["Dashboard, http://127.0.0.1:8090"]
-
-    UI --> PER_CALL{"Per WAV: cached extraction?"}
-    PER_CALL -- No --> PENDING["Pending"]
-    PER_CALL -- "Yes, with an error" --> FAILED["Failed<br/>(retry — not a compliance read)"]
-    PER_CALL -- "Yes, decided" --> RECOMPUTE["decide() for every threshold preset"]
-    RECOMPUTE --> VIEW["Alarm / Review / No alert<br/>+ evidence, clips, conditions, keywords"]
-```
-
-The dashboard never calls a model. A threshold switch only reruns `decide()` over cached facts;
-a keyword-list save only reruns matching and counts over cached transcripts — neither ever changes a
-classification. **Failed** (extraction error) and **Pending** (nothing cached yet) are shown apart from
-Alarm/Review/No alert: a technical gap needs a retry, not a compliance read.
+On a fresh clone, `python3 -m callguard.ui` follows the pointer and opens this committed run. It therefore displays the processed list and permits evidence and audio playback without `data/Audio`, model endpoints, or a local cache.

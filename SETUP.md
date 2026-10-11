@@ -1,147 +1,73 @@
-# CallGuard Setup and Installation
+# CallGuard setup
 
-## Prerequisites
+This branch ships with a complete, self-contained dashboard run. A fresh clone can display all 42 processed authentic calls, their evidence, and their original audio without an API key, a model server, a cache, or the untracked `data/` directory.
 
-- **OS:** Linux (tested on Ubuntu 24.04)
-- **Python:** 3.10 or later
-- **GPU:** NVIDIA GPU with CUDA 12.8+ (for self-hosted models; optional for CLI-only evaluation)
-- **Storage:** ~50 GB for models (Qwen3-32B, Whisper checkpoints)
-- **RAM:** 32+ GB for concurrent inference
+## Fast path: open the populated dashboard
 
-## Installation
+Prerequisites: Git, Python 3.10 or later, and a modern browser.
 
-### 1. Clone the repository and install dependencies
-
-```bash
-git clone https://github.com/ep520/Solvent.git
+```sh
+git clone --branch evaluation-prep https://github.com/ep520/Solvent.git
 cd Solvent
-pip install -r requirements.txt
-```
-
-### 2. Configure environment
-
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set:
-
-- `OPENAI_API_KEY` (if using cloud Whisper/Chat; optional for self-hosted)
-- `HF_HOME` (HuggingFace cache directory, default: `~/.cache/huggingface`)
-- `CALLGUARD_ASR` (ASR profile: `openai`, `whisper_local`, `swiss_whisper_local`)
-- `CALLGUARD_CHAT` (Chat profile: `claude_code`, `qwen3`, `qwen3_fast`, `ollama_qwen3`)
-
-Example for self-hosted Qwen3 + Whisper:
-
-```bash
-export CALLGUARD_ASR=swiss_whisper_local
-export CALLGUARD_CHAT=qwen3
-export WHISPER_URL=http://127.0.0.1:8002/v1
-export QWEN_URL=http://127.0.0.1:8000/v1
-```
-
-### 3. Download models (self-hosted only)
-
-Models are downloaded automatically on first use via HuggingFace. Pre-download if desired:
-
-```bash
-# ASR model (faster-whisper format)
-python3 -c "from faster_whisper import WhisperModel; \
-  WhisperModel('jayr23/whisper-large-v3-turbo-swiss-german-ct2', \
-  device='cuda', compute_type='float16')"
-
-# Chat model (requires vLLM)
-python3 -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen3-32B-AWQ \
-  --quantization awq \
-  --dtype auto
-```
-
-### 4. Start services (self-hosted)
-
-In separate terminals:
-
-**ASR Server** (faster-whisper):
-
-```bash
-python3 runpod/asr_server.py --host 127.0.0.1 --port 8002
-```
-
-**Chat Server** (vLLM):
-
-```bash
-python3 -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen3-32B-AWQ \
-  --quantization awq \
-  --dtype auto \
-  --port 8000
-```
-
-### 5. Run the application
-
-**Dashboard (web UI):**
-
-```bash
 python3 -m callguard.ui
 ```
 
-Open <http://127.0.0.1:8090>
+Open <http://127.0.0.1:8090>. The server reads `runs/_default_run.txt`, which points to `runs/eval-20261011-070834-audio`. That committed run contains 42 canonical results, their transcripts, evidence, model input, checksums, and run-owned WAV files. No inference is performed when opening the dashboard.
 
-**Batch evaluation:**
+If port 8090 is occupied, use another port:
 
-```bash
-python3 -m callguard.pipeline eval --audio --workers 6
+```sh
+python3 -m callguard.ui --port 8091
 ```
 
-**Minimal example (single call):**
+## What is included in the default run
 
-```bash
-python3 -m callguard.pipeline audio data/Audio/Stufe1_D02-K1.wav
+The repository directory may contain 48 WAV files when the private source data is present. The published dashboard run intentionally includes only the 42 authentic calls: all `*-K1`, `*-K2`, `*-K3`, and `*-K4` recordings. It excludes the six `Stufe*-M*.wav` recordings. The dashboard loads the committed run rather than scanning `data/Audio`, so a fresh clone always shows exactly those 42 processed calls.
+
+## Run inference again (optional)
+
+Re-running inference is not needed for the dashboard demo. It requires access to self-hosted, OpenAI-compatible chat and ASR services, plus the private source recordings in `data/Audio/`.
+
+1. Install the dependencies required by your model servers and local tooling:
+
+   ```sh
+   python3 -m pip install -r requirements.txt
+   ```
+
+2. Start an OpenAI-compatible Qwen server and a separate Whisper-compatible ASR server. Configure the profiles that actually exist in `config/models.json`:
+
+   ```sh
+   export CALLGUARD_CHAT=qwen3_fast
+   export QWEN_URL=http://127.0.0.1:8000/v1
+   export QWEN_KEY=local
+   export QWEN_MODEL=Qwen/Qwen3-14B-AWQ
+
+   export CALLGUARD_ASR=whisper_local
+   export WHISPER_URL=http://127.0.0.1:8001/v1
+   # Optional: set this when the ASR server exposes a different model name.
+   # export WHISPER_MODEL=your-swiss-german-whisper-model
+   ```
+
+3. Check the configured services, then process audio:
+
+   ```sh
+   python3 -m callguard.models
+   python3 -m callguard.pipeline eval --audio --require-self-hostable --workers 2
+   ```
+
+`--audio` processes every WAV visible in `data/Audio`. If that directory contains the six `M-*` recordings as well, select the desired files with `--only`; do not assume that the command recreates the published 42-call selection. A pipeline run writes a new directory under `runs/`. To make one the dashboard default, write its relative path to `runs/_default_run.txt` and commit both the pointer and the complete run artifacts.
+
+## Validation with private source data
+
+```sh
+python3 -m unittest discover -s tests
+python3 -m callguard.pipeline eval --smoke --workers 1
 ```
+
+These commands require the private source-data package. The smoke command uses the script regression set and does not create the published dashboard run. They are not needed to open the committed dashboard after cloning.
 
 ## Troubleshooting
 
-### "Model not found" error
-
-Ensure HF_HOME points to correct directory and HuggingFace token is set (for private models):
-
-```bash
-export HF_HOME=/path/to/cache
-export HF_TOKEN=hf_xxxx...
-```
-
-### ASR/Chat server not responding
-
-Verify endpoints and ports:
-
-```bash
-python3 -m callguard.models --probe --require-self-hostable
-```
-
-### Tests fail with cache errors
-
-Clear the evaluation cache:
-
-```bash
-rm -rf cache/
-python3 -m unittest discover -s tests
-```
-
-## Smoke Test
-
-Run a quick verification:
-
-```bash
-python3 -m callguard.pipeline eval --smoke --workers 5
-```
-
-This processes 5 test calls using cached transcripts (no ASR calls).
-
-## Documentation
-
-- **Pipeline design & results:** [`PIPELINE.md`](PIPELINE.md)
-- **Evaluation methodology:** [`EVALUATION.md`](EVALUATION.md)
-- **Data & split methodology:** [`DATASET.md`](DATASET.md)
-- **Output schema:** [`CANONICAL_RESULT_SCHEMA.md`](CANONICAL_RESULT_SCHEMA.md)
+- **The dashboard is empty:** verify that `runs/_default_run.txt` names an existing run directory.
+- **A new audio run fails with an unknown profile:** use `whisper_local`, not `swiss_whisper_local`; the latter is not a configured profile in this branch.
+- **The dashboard cannot start:** check whether port 8090 is in use, then choose `--port 8091`.
