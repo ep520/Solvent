@@ -27,7 +27,7 @@ The configured policy families are `trade`, `access`, `disclosure`, `documentati
 - An explicitly excluded event becomes **no alert**.
 - The call label is the highest-severity result across its events.
 
-The threshold presets are `sensitive` (0.50), `balanced` (0.60, default), and `conservative` (0.75). They are an ASR-quality heuristic, not a fraud probability. Switching a preset recomputes the deterministic decision over saved evidence; it does not call a model.
+Review settings provide three fixed ASR-quality thresholds: `0.6` (default), `0.7`, and `0.8`. They are an ASR-quality heuristic, not a fraud probability. Switching a value recomputes the deterministic decision over saved evidence; it does not call a model.
 
 ## Published dashboard run
 

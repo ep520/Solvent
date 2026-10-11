@@ -35,7 +35,7 @@ flowchart TD
     UNKNOWN --> REVIEW
 ```
 
-The call label is the highest severity across all events. Threshold changes recompute decisions over stored facts; they do not rerun ASR or extraction.
+The call label is the highest severity across all events. Review settings offer fixed thresholds of 0.6, 0.7, and 0.8; changing one recomputes decisions over stored facts and does not rerun ASR or extraction.
 
 ## Dashboard data flow
 

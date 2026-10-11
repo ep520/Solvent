@@ -4,7 +4,7 @@
   function createUiState(calls, keywords) {
     return {
       selectedId: calls && calls.length > 0 ? calls[0].id : null,
-      threshold: "balanced",
+      threshold: "0.6",
       filter: "All",
       query: "",
       enabledKeywords: new Set(keywords),

@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  const minimumSeverity = Object.freeze({ sensitive: 1, balanced: 2, conservative: 3 });
+  const minimumSeverity = Object.freeze({ "0.6": 1, "0.7": 2, "0.8": 3 });
 
   function classificationFor(call, threshold) {
     // A technical failure (model unreachable, extraction incomplete) is operationally distinct from a
@@ -15,7 +15,7 @@
   }
 
   function assessmentFor(call, threshold) {
-    return call.assessmentByThreshold ? call.assessmentByThreshold[threshold] : call.assessment;
+    return call.assessmentByThreshold?.[threshold] || call.assessment;
   }
 
   const api = Object.freeze({ classificationFor, assessmentFor });

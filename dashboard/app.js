@@ -3,7 +3,6 @@
 
   const decision = window.CallGuardDecision;
   let calls, keywordGroups, keywordConfig, keywordCoverage, allKeywords, state, live = false, thresholdValues = null;
-  let singlePresetRun = false;
   let currentRunDir = null;
   const audioUrl = (base, id, extra = "") =>
     `${base}/${encodeURIComponent(id)}.wav${extra}${currentRunDir ? `${extra ? "&" : "?"}run_dir=${encodeURIComponent(currentRunDir)}` : ""}`;
@@ -82,19 +81,9 @@
   }
 
   function renderThreshold() {
-    if (singlePresetRun) {
-      // This run recorded one decision at one threshold; it was never independently
-      // re-evaluated under the other presets, so there is nothing to switch between.
-      const call = selectedCall();
-      const presetName = call && call.recordedPreset ? call.recordedPreset[0].toUpperCase() + call.recordedPreset.slice(1) : null;
-      const thresholdNote = call && call.recordedThreshold != null ? ` (ASR quality ${call.recordedThreshold})` : "";
-      $("#threshold-control").innerHTML = `<span class="badge badge-ghost badge-sm" title="Saved runs hold a single recorded decision; preset switching is not available.">Recorded preset: ${presetName ? escapeHtml(presetName) + thresholdNote : "unknown"}</span>`;
-      return;
-    }
-    const labels = { sensitive: "Sensitive", balanced: "Balanced", conservative: "Conservative" };
-    const descriptions = { sensitive: "More supported cases become alarms", balanced: "Default escalation behaviour", conservative: "Fewer supported cases become alarms; more go to review" };
-    $("#threshold-control").innerHTML = Object.entries(labels).map(([value, label]) => `
-      <button type="button" class="btn btn-sm join-item threshold-button" role="radio" aria-checked="${state.threshold === value}" aria-label="${label}: ${descriptions[value]}" title="${descriptions[value]}${live ? ` · minimum ASR quality ${thresholdValues[value]}` : ""}" data-threshold="${value}">${label}${live ? ` · ${thresholdValues[value]}` : ""}</button>
+    const descriptions = { "0.6": "More supported cases become alarms", "0.7": "Balanced escalation behaviour", "0.8": "Fewer supported cases become alarms; more go to review" };
+    $("#threshold-control").innerHTML = Object.entries(thresholdValues).map(([value, quality]) => `
+      <button type="button" class="btn btn-sm join-item threshold-button" role="radio" aria-checked="${state.threshold === value}" aria-label="Review threshold ${value}: ${descriptions[value]}" title="${descriptions[value]} · minimum ASR quality ${quality}" data-threshold="${value}">${value}</button>
     `).join("");
   }
 
@@ -662,7 +651,6 @@
     state.selectedId = id;
     state.evidenceIndex = 0;
     state.audioElapsed = 0;
-    if (singlePresetRun) renderThreshold();
     renderQueue();
     renderDetail();
     if (innerWidth <= 760) openMobileDetail();
@@ -1061,7 +1049,6 @@
       live = true;
       ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
       thresholdValues = data.thresholds;
-      singlePresetRun = data.singlePresetRun === true;
       // A persistent default run can be active even with no ?run_dir= in the URL
       // (server resolves it via DEFAULT_RUN_FILE); reflect that in the selector too.
       if (data.source === "run" && data.meta && data.meta.run_dir) currentRunDir = data.meta.run_dir;
@@ -1071,7 +1058,6 @@
       ({ calls, keywordGroups } = window.CallGuardData);
       keywordConfig = null;
       keywordCoverage = null;
-      singlePresetRun = false;
     }
     allKeywords = Object.values(keywordGroups).flat();
     state = window.CallGuardState.createUiState(calls, allKeywords);

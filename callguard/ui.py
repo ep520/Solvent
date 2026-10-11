@@ -38,6 +38,8 @@ CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; c
 
 jobs = {}  # call_id -> {"status": "pending|running|done|error", "run_dir": "...", "error": "..."}
 jobs_lock = threading.Lock()
+REVIEW_THRESHOLDS = {"0.6": 0.6, "0.7": 0.7, "0.8": 0.8}
+DEFAULT_REVIEW_THRESHOLD = "0.6"
 
 
 def _main_event(result):
@@ -599,17 +601,6 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
         except (json.JSONDecodeError, OSError):
             manifest_data = {}
 
-    # Preset/threshold names must come from THIS run's own recorded configuration, never
-    # today's live policies.json -- a preset name is only ever meaningful relative to the
-    # presets table that was actually in effect when the run executed, and those two can
-    # drift apart. When the historical manifest doesn't record them, fall back to a single
-    # unnamed bucket so recordedPreset resolves to None ("unknown") instead of guessing.
-    historical_policies = manifest_data.get("policies") if isinstance(manifest_data.get("policies"), dict) else {}
-    presets = historical_policies.get("escalation_presets")
-    default = historical_policies.get("default_preset")
-    if not isinstance(presets, dict) or not presets or default not in presets:
-        presets, default = {"recorded": None}, "recorded"
-
     # Run-level metadata files (manifest.json, summary.json, and whatever else gets added
     # alongside them -- artifact_index.json, checksums.json, ...) are excluded by SHAPE, not
     # by an ever-growing filename blocklist: a genuine per-call result always has "label" and
@@ -620,24 +611,34 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
         if not isinstance(result, dict) or "label" not in result or "events" not in result:
             continue  # not a per-call result: metadata file or a different schema entirely
 
-        # Load audio file for duration; independent of whether a transcript is available.
-        audio_file = AUDIO / f"{call_name}.wav"
+        # Prefer the run-owned audio so a clean clone can play the recording.
+        audio_file = run_path / "audio" / f"{call_name}.wav"
+        if not audio_file.exists():
+            audio_file = AUDIO / f"{call_name}.wav"
         duration = evidence.duration(audio_file) if audio_file.exists() else 0
 
-        # Transcript (segments) availability: without it we cannot safely resolve the
-        # segment_ids the saved events/evidence reference, so show this call explicitly
-        # as transcript-unavailable (decision only) rather than silently omitting it from
-        # the queue or crashing trying to render evidence against segments we don't have.
-        transcript_file = TRANSCRIPTS / f"{call_name}.json"
+        # The retained ASR artifact provides the exact segments needed to recompute the three
+        # fixed Review thresholds without a cache, private source data, or model call.
+        asr_file = run_path / call_name / "asr.json"
         segments = None
-        if transcript_file.exists():
+        if asr_file.exists():
             try:
-                tx_data = ex.load_json(transcript_file)
+                tx_data = ex.load_json(asr_file)
                 loaded_segments = [{**s, "speaker": None} for s in tx_data.get("segments", [])] \
                     if isinstance(tx_data, dict) else []
                 segments = loaded_segments or None
             except (json.JSONDecodeError, OSError):
                 segments = None
+        if segments is None:
+            transcript_file = TRANSCRIPTS / f"{call_name}.json"
+            if transcript_file.exists():
+                try:
+                    tx_data = ex.load_json(transcript_file)
+                    loaded_segments = [{**s, "speaker": None} for s in tx_data.get("segments", [])] \
+                        if isinstance(tx_data, dict) else []
+                    segments = loaded_segments or None
+                except (json.JSONDecodeError, OSError):
+                    segments = None
 
         # Missing transcript must not hide saved conditions/evidence: proceed with empty
         # segments rather than skipping this call. evidence_item() below falls back to each
@@ -653,10 +654,7 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
         extraction = result.get("extraction")
         extraction_available = extraction is not None and result.get("error") is None
 
-        # This run holds exactly one decision, computed once at the default-preset threshold
-        # (run_inference_job does not re-run decide() per preset). Preserve it as-is for every
-        # preset rather than recomputing at a different threshold or substituting a label.
-        single_decision = {
+        recorded_decision = {
             "label": result.get("label"),
             "status": result.get("status"),
             "reasons": result.get("reasons", []),
@@ -665,7 +663,11 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
             "disabled_families": result.get("disabled_families", []),
             "policies_version": result.get("policies_version"),
         }
-        results = {preset_name: single_decision for preset_name in presets.keys()}
+        if extraction_available and transcript_available:
+            results = {name: dec.decide(extraction, segments, policies, threshold=value)
+                       for name, value in REVIEW_THRESHOLDS.items()}
+        else:
+            results = {name: recorded_decision for name in REVIEW_THRESHOLDS}
 
         # model_input() reads extraction._meta.input (what was actually sent to the model);
         # current_view is result["input"] (the view computed for *this* run, for the
@@ -682,7 +684,7 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
                                   "model input detail (snippets, scores) was not retained."}
 
         call = dashboard_call(
-            call_name, segments, results, default, duration,
+            call_name, segments, results, DEFAULT_REVIEW_THRESHOLD, duration,
             cache_status="run",
             extraction_version=(extraction or {}).get("_meta", {}).get("prompt_version", "unknown"),
             model_input=model_input_detail,
@@ -703,12 +705,6 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
         call["eventsAvailable"] = has_decision_detail
         call["transcriptAvailable"] = transcript_available
 
-        # This decision was computed once, at whichever preset's threshold value matches
-        # result["threshold"]; reverse-lookup the name instead of assuming it was "default"
-        # or recomputing. If no preset matches (policies.json changed since), say so plainly.
-        recorded_threshold = result.get("threshold")
-        call["recordedThreshold"] = recorded_threshold
-        call["recordedPreset"] = next((name for name, value in presets.items() if value == recorded_threshold), None)
         # Source path no longer resolves on disk -- we don't know why (could be a genuinely
         # removed file), so this is reported as "unavailable", not assumed synthetic.
         call["sourceMissing"] = bool(result.get("source")) and not Path(result["source"]).exists()
@@ -717,14 +713,11 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
 
     return {
         "source": "run",
-        # Each call carries one decision computed at one recorded threshold (see recordedPreset/
-        # recordedThreshold per call); it was never independently evaluated under all three
-        # presets, so the frontend must not offer live preset switching for this data.
-        "singlePresetRun": True,
+        "singlePresetRun": False,
         "calls": calls,
         "pending": [],
-        "thresholds": presets,
-        "defaultThreshold": default,
+        "thresholds": REVIEW_THRESHOLDS,
+        "defaultThreshold": DEFAULT_REVIEW_THRESHOLD,
         "keywordGroups": keyword_groups(keywords),
         "keywordConfig": keywords,
         "keywordCoverage": {"coverage": {}},
@@ -744,8 +737,8 @@ def build_data_from_run(run_path, policies, keywords, profile=None):
 
 def build_data(policies, keywords, profile=None):
     chat = models.resolve("chat", profile)
-    presets = policies["escalation"]["presets"]
-    default = policies["escalation"]["default_preset"]
+    presets = REVIEW_THRESHOLDS
+    default = DEFAULT_REVIEW_THRESHOLD
     calls, pending, versions, all_hits = [], [], [], []
     for wav in sorted(AUDIO.glob("*.wav")):
         transcript = TRANSCRIPTS / f"{wav.stem}.json"

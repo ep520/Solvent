@@ -76,11 +76,11 @@ class ClipTest(unittest.TestCase):
 
 class DashboardCallTest(unittest.TestCase):
     def test_canonical_results_map_to_dashboard_fields_per_threshold(self):
-        results = {name: dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=v)
-                   for name, v in {"sensitive": 0.5, "balanced": 0.6, "conservative": 0.75}.items()}
-        call = ui.dashboard_call("Stufe1_D02-K2", SEGMENTS, results, "balanced", 155.1)
-        self.assertEqual(call["classificationByThreshold"], {"sensitive": "Alarm", "balanced": "Alarm", "conservative": "Review"})
-        self.assertEqual(call["reasonByThreshold"]["conservative"], ["below_escalation_threshold"])
+        results = {name: dec.decide(trade_extraction(), SEGMENTS, POLICIES, threshold=value)
+                   for name, value in ui.REVIEW_THRESHOLDS.items()}
+        call = ui.dashboard_call("Stufe1_D02-K2", SEGMENTS, results, ui.DEFAULT_REVIEW_THRESHOLD, 155.1)
+        self.assertEqual(call["classificationByThreshold"], {"0.6": "Alarm", "0.7": "Review", "0.8": "Review"})
+        self.assertEqual(call["reasonByThreshold"]["0.7"], ["below_escalation_threshold"])
         self.assertEqual((call["family"], call["date"], call["time"], call["asrQuality"]), ("Trade", "Level 1", "noisy audio", 67))
         self.assertNotIn("confidence", call)
         self.assertEqual(call["actor"], {"role": "customer", "status": "inferred"})
@@ -122,15 +122,14 @@ class ThresholdPresetTest(unittest.TestCase):
     def test_every_preset_is_a_pure_recompute_of_the_same_cached_extraction(self):
         policies = ex.load_json(ROOT / "config" / "policies.json")
         data = ui.build_data(policies, ex.load_json(ROOT / "data" / "Stichwortliste.json"))
-        presets = set(policies["escalation"]["presets"])
+        presets = set(ui.REVIEW_THRESHOLDS)
         for call in data["calls"]:
             self.assertEqual(set(call["classificationByThreshold"]), presets)
-        sensitive, conservative = policies["escalation"]["presets"]["sensitive"], policies["escalation"]["presets"]["conservative"]
-        self.assertGreater(conservative, sensitive)
+        low, high = "0.6", "0.8"
         rank = {"No alert": 0, "Review": 1, "Alarm": 2}
         for call in data["calls"]:
-            self.assertLessEqual(rank[call["classificationByThreshold"]["conservative"]],
-                                 rank[call["classificationByThreshold"]["sensitive"]],
+            self.assertLessEqual(rank[call["classificationByThreshold"][high]],
+                                 rank[call["classificationByThreshold"][low]],
                                  f"{call['id']}: a stricter preset must never raise the classification")
 
 
