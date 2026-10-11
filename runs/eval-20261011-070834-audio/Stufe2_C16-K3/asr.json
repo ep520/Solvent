@@ -1,0 +1,76 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe2_C16-K3.wav",
+ "source_sha256": "10c1849a26ad0c2cd0c7cc9cd3f6448710b1449c5096e2b325c082f71446c9e2",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.0,
+   "end": 29.02,
+   "text": "Frau Frey, hier ist Sylvia Badl vom Firmenservice. Sie hat einen Firminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle. Ich betrachte den ganzen Vorgang,",
+   "avg_logprob": -0.2531249910593033,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.48828125
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 30.0,
+   "end": 30.08,
+   "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+   "avg_logprob": -0.4563888761732313,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 29.263157894736842
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 60.0,
+   "end": 60.02,
+   "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,, die,,, die,,,, die,,,, die,,,, die,,,, die,,,, die,,, die,,, die,,, die,,, die,,, die,,, die,,, die,,, die,,, die,, die,,, die,, die,,, die,,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die, die,, die, die, die,",
+   "avg_logprob": -0.5005605290288883,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 14.242424242424242
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 90.0,
+   "end": 90.02,
+   "text": ",,,,,,,,, die,,,,, die,,, die,...,...,..., die,...,...,..., ...,..., ...,...,...,... ...,...,...,...,.....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+   "avg_logprob": -0.3890134435598091,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 16.72222222222222
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 120.0,
+   "end": 120.02,
+   "text": ".......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+   "avg_logprob": -0.06600336282777144,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 44.2
+  }
+ ],
+ "source_sha256_verified": "10c1849a26ad0c2cd0c7cc9cd3f6448710b1449c5096e2b325c082f71446c9e2",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 11.887,
+ "force_fresh_requested": true
+}

@@ -1,0 +1,100 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe2_C10-K4.wav",
+ "source_sha256": "8b7f776f0b746c0099d50b7a8a6fe66357180a533b2662a26904cf97649c6a21",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.0,
+   "end": 0.02,
+   "text": "«Guten Tag, Frau Zimmermann, da ist die Weitagkunde vom Technischen Service, Sie haben da etwas dem Anmeldebildschirm zuordnen können. Ja, ich bin unsicher, ob ich auf dem richtigen Schritt bin. Ich habe die Hilfe im zweiten Fenster offen, und beides sieht ähnlich aus. Haben Sie gerade selber eine Anmeldung gestartet, oder schauen Sie nur mehr ein Hilfebild an, bitte sagen Sie keine Zahl.",
+   "avg_logprob": -0.31002476663872747,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.5038167938931297
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 30.0,
+   "end": 31.02,
+   "text": ", und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.4663888973659939,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 29.263157894736842
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 60.0,
+   "end": 60.02,
+   "text": ", und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.4120762853299157,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 8.8125
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 90.0,
+   "end": 90.02,
+   "text": ", und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.4248670111311243,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 6.9375
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 120.02,
+   "end": 144.3,
+   "text": ", und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.4047085311380737,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 20.23076923076923
+  },
+  {
+   "id": "s006",
+   "turn": "TURN_006",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 144.3,
+   "end": 144.34,
+   "text": ", und, und, und, und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.4047085311380737,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 20.23076923076923
+  },
+  {
+   "id": "s007",
+   "turn": "TURN_007",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 144.34,
+   "end": 145.12,
+   "text": ", und, und, und, und, und, und, und, und,",
+   "avg_logprob": -0.6525493232827437,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 2.5625
+  }
+ ],
+ "source_sha256_verified": "8b7f776f0b746c0099d50b7a8a6fe66357180a533b2662a26904cf97649c6a21",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 7.029,
+ "force_fresh_requested": true
+}

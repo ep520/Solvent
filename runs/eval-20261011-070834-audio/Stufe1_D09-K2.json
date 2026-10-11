@@ -1,0 +1,292 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6",
+  "elapsed_s": 17.49,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "full_transcript",
+   "stats": {
+    "turns": 10,
+    "snippets": 0,
+    "kept_turns": 0,
+    "kept_text_pct": 0.0,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "review",
+ "reasons": [
+  "technical_uncertainty"
+ ],
+ "events": [
+  {
+   "family": "documentation",
+   "title": "Concealing a relevant fact from its record",
+   "actor": {
+    "role": "unknown",
+    "status": "unknown",
+    "segment_ids": [],
+    "supplied": true
+   },
+   "conditions": {
+    "concealment_requested": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    },
+    "fact_relevant": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": true,
+     "uncertainty": [],
+     "grounding_issues": [
+      "fact_relevant: grounding failed: quote does not exactly match the cited segment or its immediate successor",
+      "fact_relevant: 'true' has no valid grounded evidence, set to unknown"
+     ]
+    },
+    "designated_recipient": {
+     "state": "true",
+     "evidence": [
+      {
+       "segment_ids": [
+        "s001"
+       ],
+       "quote": "Finanzierungsdossier",
+       "match": "exact",
+       "start": 0.02,
+       "end": 12.02,
+       "quality": 0.783
+      }
+     ],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    }
+   },
+   "evidence": [],
+   "issues": [
+    "fact_relevant: grounding failed: quote does not exactly match the cited segment or its immediate successor",
+    "fact_relevant: 'true' has no valid grounded evidence, set to unknown"
+   ],
+   "reason": "technical_uncertainty",
+   "status": "undetermined",
+   "label": "review",
+   "open_questions": [
+    "Someone asks the bank to leave out or hide a fact from a bank record, note or internal recipient. A caller protecting their own unrelated data (masking fields, not sending personal details) does not count.",
+    "The fact matters for the record's purpose (for example a repayable obligation for a credit decision). False if it is an unrelated private detail or the correction of a wrong entry."
+   ],
+   "summary": "Not established: concealment_requested, fact_relevant.",
+   "counterfactuals": [
+    {
+     "kind": "condition",
+     "condition": "concealment_requested",
+     "question": "Someone asks the bank to leave out or hide a fact from a bank record, note or internal recipient. A caller protecting their own unrelated data (masking fields, not sending personal details) does not count.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'concealment requested' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "fact_relevant",
+     "question": "The fact matters for the record's purpose (for example a repayable obligation for a credit decision). False if it is an unrelated private detail or the correction of a wrong entry.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'fact relevant' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "designated_recipient",
+     "question": "The fact is meant for a designated internal record or recipient (credit office, dossier, file note).",
+     "from": "true",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'designated recipient' were FALSE instead of TRUE, the decision would be NO ALERT."
+    }
+   ]
+  }
+ ],
+ "issues": [],
+ "disabled_families": [],
+ "call": "Stufe1_D09-K2",
+ "source": "/Users/lucavisconti/Sprintd/inventx-case-study/runs/eval-20261011-070834-audio/audio/Stufe1_D09-K2.wav",
+ "speakers": false,
+ "audio": true,
+ "keyword_hits": [],
+ "input": {
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "mode": "full_transcript",
+  "stats": {
+   "turns": 10,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+ },
+ "modelInput": {
+  "mode": "full_transcript",
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen",
+  "stats": {
+   "turns": 10,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "snippets": [],
+  "segmentCount": 10
+ },
+ "extraction": {
+  "families": {
+   "trade": {
+    "events": []
+   },
+   "access": {
+    "events": []
+   },
+   "disclosure": {
+    "events": []
+   },
+   "documentation": {
+    "events": [
+     {
+      "actor": {
+       "role": "unknown",
+       "status": "unknown",
+       "segment_ids": [
+        "s002"
+       ]
+      },
+      "conditions": {
+       "concealment_requested": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "fact_relevant": {
+        "state": "true",
+        "evidence": [
+         {
+          "segment_id": "s002",
+          "quote": "die Angabe zur Eigenmittelherkunft noch nicht stimmt"
+         }
+        ]
+       },
+       "designated_recipient": {
+        "state": "true",
+        "evidence": [
+         {
+          "segment_id": "s001",
+          "quote": "Finanzierungsdossier"
+         }
+        ]
+       }
+      }
+     }
+    ]
+   },
+   "splitting": {
+    "events": []
+   },
+   "numbers": {
+    "events": []
+   }
+  },
+  "_meta": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "prompt_version": "extract-6",
+   "elapsed_s": 17.49,
+   "input": {
+    "version": "snippets-1",
+    "config": {
+     "enabled": true,
+     "cues": "cues_general.json",
+     "fuzzy": true,
+     "max_snippets": 12,
+     "if_no_snippets": "full_transcript"
+    },
+    "mode": "full_transcript",
+    "stats": {
+     "turns": 10,
+     "snippets": 0,
+     "kept_turns": 0,
+     "kept_text_pct": 0.0,
+     "keyword_hits": 0,
+     "cue_hits": 0,
+     "digit_hits": 0,
+     "semantic_hits": 0
+    },
+    "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+   }
+  }
+ },
+ "provenance": {
+  "asr": {
+   "profile": "whisper_local",
+   "model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+   "cache_hit": false,
+   "elapsed_s": 5.702,
+   "force_fresh": true
+  },
+  "chat": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "cache_hit": false,
+   "elapsed_s": 17.492,
+   "force_fresh": true
+  },
+  "decide_elapsed_s": 0.0,
+  "source_sha256": "3d6f41d7651cc8fc7286985a37e4b882426b25cdd8c5dc53d548610e233446ba",
+  "prompt_version": "extract-6"
+ },
+ "artifacts": {
+  "asr": "Stufe1_D09-K2/asr.json",
+  "llm_input": "Stufe1_D09-K2/llm_input.json",
+  "extraction": "Stufe1_D09-K2/extraction.json",
+  "decision": "Stufe1_D09-K2/decision.json",
+  "status": "Stufe1_D09-K2/status.json",
+  "audio": "audio/Stufe1_D09-K2.wav"
+ }
+}

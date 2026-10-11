@@ -1,0 +1,308 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6",
+  "elapsed_s": 12.856,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "full_transcript",
+   "stats": {
+    "turns": 17,
+    "snippets": 0,
+    "kept_turns": 0,
+    "kept_text_pct": 0.0,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "review",
+ "reasons": [
+  "actor_role_unknown"
+ ],
+ "events": [
+  {
+   "family": "trade",
+   "title": "Own trade on non-public information",
+   "actor": {
+    "role": "unknown",
+    "status": "unknown",
+    "segment_ids": [],
+    "supplied": true
+   },
+   "conditions": {
+    "own_trade_request": {
+     "state": "unknown",
+     "evidence": [
+      {
+       "segment_ids": [
+        "s001"
+       ],
+       "quote": "Ich werfe wegen ihrer Nachricht zum Verkauf der Fondsanteile an.",
+       "match": "exact",
+       "start": 0.02,
+       "end": 26.02,
+       "quality": 0.771
+      }
+     ],
+     "downgraded": false,
+     "uncertainty": [
+      "actor_role_unknown"
+     ],
+     "grounding_issues": []
+    },
+    "information_nonpublic": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    },
+    "information_market_relevant": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    },
+    "request_based_on_information": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    }
+   },
+   "evidence": [],
+   "issues": [
+    "own_trade_request: required customer role is not established, set to unknown"
+   ],
+   "reason": "actor_role_unknown",
+   "status": "undetermined",
+   "label": "review",
+   "open_questions": [
+    "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
+    "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
+    "The information could move the price (results, takeover, large order or similar).",
+    "The trade request is explicitly or clearly linked to that information.",
+    "Was the person making the trade request the customer?"
+   ],
+   "summary": "Not established: own_trade_request, information_nonpublic, information_market_relevant, request_based_on_information.",
+   "counterfactuals": [
+    {
+     "kind": "condition",
+     "condition": "information_market_relevant",
+     "question": "The information could move the price (results, takeover, large order or similar).",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'information market relevant' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "information_nonpublic",
+     "question": "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'information nonpublic' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "own_trade_request",
+     "question": "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'own trade request' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "request_based_on_information",
+     "question": "The trade request is explicitly or clearly linked to that information.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'request based on information' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    }
+   ]
+  }
+ ],
+ "issues": [],
+ "disabled_families": [],
+ "call": "Stufe1_D04-K1",
+ "source": "/Users/lucavisconti/Sprintd/inventx-case-study/runs/eval-20261011-070834-audio/audio/Stufe1_D04-K1.wav",
+ "speakers": false,
+ "audio": true,
+ "keyword_hits": [],
+ "input": {
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "mode": "full_transcript",
+  "stats": {
+   "turns": 17,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+ },
+ "modelInput": {
+  "mode": "full_transcript",
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen",
+  "stats": {
+   "turns": 17,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "snippets": [],
+  "segmentCount": 17
+ },
+ "extraction": {
+  "families": {
+   "trade": {
+    "events": [
+     {
+      "actor": {
+       "role": "unknown",
+       "status": "unknown",
+       "segment_ids": [
+        "s001"
+       ]
+      },
+      "conditions": {
+       "own_trade_request": {
+        "state": "true",
+        "evidence": [
+         {
+          "segment_id": "s001",
+          "quote": "Ich werfe wegen ihrer Nachricht zum Verkauf der Fondsanteile an."
+         }
+        ]
+       },
+       "information_nonpublic": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "information_market_relevant": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "request_based_on_information": {
+        "state": "unknown",
+        "evidence": []
+       }
+      }
+     }
+    ]
+   },
+   "access": {
+    "events": []
+   },
+   "disclosure": {
+    "events": []
+   },
+   "documentation": {
+    "events": []
+   },
+   "splitting": {
+    "events": []
+   },
+   "numbers": {
+    "events": []
+   }
+  },
+  "_meta": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "prompt_version": "extract-6",
+   "elapsed_s": 12.856,
+   "input": {
+    "version": "snippets-1",
+    "config": {
+     "enabled": true,
+     "cues": "cues_general.json",
+     "fuzzy": true,
+     "max_snippets": 12,
+     "if_no_snippets": "full_transcript"
+    },
+    "mode": "full_transcript",
+    "stats": {
+     "turns": 17,
+     "snippets": 0,
+     "kept_turns": 0,
+     "kept_text_pct": 0.0,
+     "keyword_hits": 0,
+     "cue_hits": 0,
+     "digit_hits": 0,
+     "semantic_hits": 0
+    },
+    "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+   }
+  }
+ },
+ "provenance": {
+  "asr": {
+   "profile": "whisper_local",
+   "model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+   "cache_hit": false,
+   "elapsed_s": 14.265,
+   "force_fresh": true
+  },
+  "chat": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "cache_hit": false,
+   "elapsed_s": 12.858,
+   "force_fresh": true
+  },
+  "decide_elapsed_s": 0.0,
+  "source_sha256": "462397116984cb9a192bb865b03a29b959180bc81eaf40732f0ee7d847aae9fc",
+  "prompt_version": "extract-6"
+ },
+ "artifacts": {
+  "asr": "Stufe1_D04-K1/asr.json",
+  "llm_input": "Stufe1_D04-K1/llm_input.json",
+  "extraction": "Stufe1_D04-K1/extraction.json",
+  "decision": "Stufe1_D04-K1/decision.json",
+  "status": "Stufe1_D04-K1/status.json",
+  "audio": "audio/Stufe1_D04-K1.wav"
+ }
+}

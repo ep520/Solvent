@@ -94,9 +94,14 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None):
 
     Freezing this alongside a run's results is what makes the run reproducible and auditable: anyone can
     check, after the fact, exactly which endpoint, prompt and configuration a given alarm came from."""
+
+    git_info = git_commit()
+    git_dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+
     return {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "git_commit": git_commit(),
+        "git_commit": git_info,
+        "git_dirty": bool(git_dirty),
         "mode": "audio" if args.audio else "nospeakers" if args.no_speakers else "speakers",
         "chat": {"profile": chat_profile["name"], "model": chat_profile["model"],
                 "self_hostable": bool(chat_profile.get("self_hostable")), "prompt_version": ex.PROMPT_VERSION},
@@ -110,6 +115,7 @@ def run_manifest(args, policies, keywords, chat_profile, asr_profile=None):
                     "disabled_families": [name for name, fam in policies["families"].items()
                                           if not fam.get("enabled", True)]},
         "keywords": {"sha256": file_sha256(args.keywords)},
+        "extraction_cache": {"enabled": True, "directory": str(ROOT / "cache" / "extract")},
         "self_hostable_compliant": bool(chat_profile.get("self_hostable")) and
                                    (asr_profile is None or bool(asr_profile.get("self_hostable"))),
     }

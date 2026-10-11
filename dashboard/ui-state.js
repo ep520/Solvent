@@ -3,7 +3,7 @@
 
   function createUiState(calls, keywords) {
     return {
-      selectedId: calls[0].id,
+      selectedId: calls && calls.length > 0 ? calls[0].id : null,
       threshold: "balanced",
       filter: "All",
       query: "",

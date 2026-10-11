@@ -1,0 +1,640 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 10.987,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 20,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 96.1,
+    "keyword_hits": 0,
+    "cue_hits": 2,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 60.0,
+     "timestamp": "00:00",
+     "found_by": [
+      "cue"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 1.02,
+       "quality": 0.791,
+       "text": "Guten Tag, Frau Keller, hier ist Martina Wild. Sie wünschten einen längeren Rückruf zum Depot. Sie haben in ihrer Nachricht auch geschrieben, dass sie bald zübiert. Gehört das für Sie zusammen? Ja, aber ich möchte zwei Sachen nicht durcheinanderbringen. Ich habe das Depot und ein separates Konto für den Umzug. Ich werde mich informieren, ohne jetzt in Kauf zu verlangen. Ob ich überhaupt eine einzelne Firma kaufe, weiss ich noch nicht.",
+       "spans": [
+        {
+         "start": 410,
+         "end": 415,
+         "how": "cue",
+         "family": "trade"
+        },
+        {
+         "start": 354,
+         "end": 358,
+         "how": "cue",
+         "family": "trade"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 60.0,
+       "quality": 0.127,
+       "text": ",",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "trade",
+       "keyword_id": "CUE",
+       "term": "Kauf",
+       "matched": "Kauf",
+       "turn": "s001",
+       "how": "cue",
+       "score": 4,
+       "explains": [],
+       "label": "cue word"
+      },
+      {
+       "family": "trade",
+       "keyword_id": "CUE",
+       "term": "kaufe",
+       "matched": "kaufe",
+       "turn": "s001",
+       "how": "cue",
+       "score": 4,
+       "explains": [],
+       "label": "cue word"
+      }
+     ],
+     "families": [
+      "trade"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.1,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "review",
+ "reasons": [
+  "actor_role_unknown"
+ ],
+ "events": [
+  {
+   "family": "trade",
+   "title": "Own trade on non-public information",
+   "actor": {
+    "role": "unknown",
+    "status": "unknown",
+    "segment_ids": [],
+    "supplied": true
+   },
+   "conditions": {
+    "own_trade_request": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [
+      "actor_role_unknown"
+     ],
+     "grounding_issues": []
+    },
+    "information_nonpublic": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    },
+    "information_market_relevant": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    },
+    "request_based_on_information": {
+     "state": "unknown",
+     "evidence": [],
+     "downgraded": false,
+     "uncertainty": [],
+     "grounding_issues": []
+    }
+   },
+   "evidence": [],
+   "issues": [
+    "own_trade_request: required customer role is not established, set to unknown"
+   ],
+   "reason": "actor_role_unknown",
+   "status": "undetermined",
+   "label": "review",
+   "open_questions": [
+    "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
+    "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
+    "The information could move the price (results, takeover, large order or similar).",
+    "The trade request is explicitly or clearly linked to that information.",
+    "Was the person making the trade request the customer?"
+   ],
+   "summary": "Not established: own_trade_request, information_nonpublic, information_market_relevant, request_based_on_information.",
+   "counterfactuals": [
+    {
+     "kind": "condition",
+     "condition": "information_market_relevant",
+     "question": "The information could move the price (results, takeover, large order or similar).",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'information market relevant' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "information_nonpublic",
+     "question": "The information behind the interest is not yet available to other investors (insider source, internal figures, unpublished results, deals or large orders). False if it comes only from published sources.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'information nonpublic' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "own_trade_request",
+     "question": "The customer expresses their own wish or order to buy or sell a security. Execution is not required, and a later refusal by the advisor does not undo a request already made.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'own trade request' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    },
+    {
+     "kind": "condition",
+     "condition": "request_based_on_information",
+     "question": "The trade request is explicitly or clearly linked to that information.",
+     "from": "unknown",
+     "to": "false",
+     "label": "no_alert",
+     "text": "If 'request based on information' were FALSE instead of UNKNOWN, the decision would be NO ALERT."
+    }
+   ]
+  }
+ ],
+ "issues": [],
+ "disabled_families": [],
+ "call": "Stufe2_C05-K3",
+ "source": "/Users/lucavisconti/Sprintd/inventx-case-study/runs/eval-20261011-070834-audio/audio/Stufe2_C05-K3.wav",
+ "speakers": false,
+ "audio": true,
+ "keyword_hits": [],
+ "input": {
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "mode": "snippets",
+  "stats": {
+   "turns": 20,
+   "snippets": 1,
+   "kept_turns": 2,
+   "kept_text_pct": 96.1,
+   "keyword_hits": 0,
+   "cue_hits": 2,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "snippets": [
+   {
+    "start": 0.0,
+    "end": 60.0,
+    "timestamp": "00:00",
+    "found_by": [
+     "cue"
+    ],
+    "turns": [
+     {
+      "idx": 0,
+      "tid": "s001",
+      "mark": "anchor",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 0.0,
+      "end": 1.02,
+      "quality": 0.791,
+      "text": "Guten Tag, Frau Keller, hier ist Martina Wild. Sie wünschten einen längeren Rückruf zum Depot. Sie haben in ihrer Nachricht auch geschrieben, dass sie bald zübiert. Gehört das für Sie zusammen? Ja, aber ich möchte zwei Sachen nicht durcheinanderbringen. Ich habe das Depot und ein separates Konto für den Umzug. Ich werde mich informieren, ohne jetzt in Kauf zu verlangen. Ob ich überhaupt eine einzelne Firma kaufe, weiss ich noch nicht.",
+      "spans": [
+       {
+        "start": 410,
+        "end": 415,
+        "how": "cue",
+        "family": "trade"
+       },
+       {
+        "start": 354,
+        "end": 358,
+        "how": "cue",
+        "family": "trade"
+       }
+      ]
+     },
+     {
+      "idx": 1,
+      "tid": "s002",
+      "mark": "near",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 30.0,
+      "end": 60.0,
+      "quality": 0.127,
+      "text": ",",
+      "spans": []
+     }
+    ],
+    "hits": [
+     {
+      "family": "trade",
+      "keyword_id": "CUE",
+      "term": "Kauf",
+      "matched": "Kauf",
+      "turn": "s001",
+      "how": "cue",
+      "score": 4,
+      "explains": [],
+      "label": "cue word"
+     },
+     {
+      "family": "trade",
+      "keyword_id": "CUE",
+      "term": "kaufe",
+      "matched": "kaufe",
+      "turn": "s001",
+      "how": "cue",
+      "score": 4,
+      "explains": [],
+      "label": "cue word"
+     }
+    ],
+    "families": [
+     "trade"
+    ],
+    "semantic_check": null,
+    "semantic_score": null,
+    "priority": 0.1,
+    "snippet_id": 1,
+    "segment_ids": [
+     "s001",
+     "s002"
+    ],
+    "anchor_segment_ids": [
+     "s001"
+    ],
+    "context_segment_ids": []
+   }
+  ]
+ },
+ "modelInput": {
+  "mode": "snippets",
+  "reason": null,
+  "stats": {
+   "turns": 20,
+   "snippets": 1,
+   "kept_turns": 2,
+   "kept_text_pct": 96.1,
+   "keyword_hits": 0,
+   "cue_hits": 2,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "snippets": [
+   {
+    "start": 0.0,
+    "end": 60.0,
+    "timestamp": "00:00",
+    "found_by": [
+     "cue"
+    ],
+    "turns": [
+     {
+      "idx": 0,
+      "tid": "s001",
+      "mark": "anchor",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 0.0,
+      "end": 1.02,
+      "quality": 0.791,
+      "text": "Guten Tag, Frau Keller, hier ist Martina Wild. Sie wünschten einen längeren Rückruf zum Depot. Sie haben in ihrer Nachricht auch geschrieben, dass sie bald zübiert. Gehört das für Sie zusammen? Ja, aber ich möchte zwei Sachen nicht durcheinanderbringen. Ich habe das Depot und ein separates Konto für den Umzug. Ich werde mich informieren, ohne jetzt in Kauf zu verlangen. Ob ich überhaupt eine einzelne Firma kaufe, weiss ich noch nicht.",
+      "spans": [
+       {
+        "start": 410,
+        "end": 415,
+        "how": "cue",
+        "family": "trade"
+       },
+       {
+        "start": 354,
+        "end": 358,
+        "how": "cue",
+        "family": "trade"
+       }
+      ]
+     },
+     {
+      "idx": 1,
+      "tid": "s002",
+      "mark": "near",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 30.0,
+      "end": 60.0,
+      "quality": 0.127,
+      "text": ",",
+      "spans": []
+     }
+    ],
+    "hits": [
+     {
+      "family": "trade",
+      "keyword_id": "CUE",
+      "term": "Kauf",
+      "matched": "Kauf",
+      "turn": "s001",
+      "how": "cue",
+      "score": 4,
+      "explains": [],
+      "label": "cue word"
+     },
+     {
+      "family": "trade",
+      "keyword_id": "CUE",
+      "term": "kaufe",
+      "matched": "kaufe",
+      "turn": "s001",
+      "how": "cue",
+      "score": 4,
+      "explains": [],
+      "label": "cue word"
+     }
+    ],
+    "families": [
+     "trade"
+    ],
+    "semantic_check": null,
+    "semantic_score": null,
+    "priority": 0.1,
+    "snippet_id": 1,
+    "segment_ids": [
+     "s001",
+     "s002"
+    ],
+    "anchor_segment_ids": [
+     "s001"
+    ],
+    "context_segment_ids": []
+   }
+  ],
+  "segmentCount": 20
+ },
+ "extraction": {
+  "families": {
+   "trade": {
+    "events": [
+     {
+      "actor": {
+       "role": "unknown",
+       "status": "unknown",
+       "segment_ids": [
+        "s001"
+       ]
+      },
+      "conditions": {
+       "own_trade_request": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "information_nonpublic": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "information_market_relevant": {
+        "state": "unknown",
+        "evidence": []
+       },
+       "request_based_on_information": {
+        "state": "unknown",
+        "evidence": []
+       }
+      }
+     }
+    ]
+   },
+   "access": {
+    "events": []
+   },
+   "disclosure": {
+    "events": []
+   },
+   "documentation": {
+    "events": []
+   },
+   "splitting": {
+    "events": []
+   },
+   "numbers": {
+    "events": []
+   }
+  },
+  "_meta": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "prompt_version": "extract-6+snippets-1",
+   "elapsed_s": 10.987,
+   "input": {
+    "version": "snippets-1",
+    "config": {
+     "enabled": true,
+     "cues": "cues_general.json",
+     "fuzzy": true,
+     "max_snippets": 12,
+     "if_no_snippets": "full_transcript"
+    },
+    "mode": "snippets",
+    "stats": {
+     "turns": 20,
+     "snippets": 1,
+     "kept_turns": 2,
+     "kept_text_pct": 96.1,
+     "keyword_hits": 0,
+     "cue_hits": 2,
+     "digit_hits": 0,
+     "semantic_hits": 0
+    },
+    "snippets": [
+     {
+      "start": 0.0,
+      "end": 60.0,
+      "timestamp": "00:00",
+      "found_by": [
+       "cue"
+      ],
+      "turns": [
+       {
+        "idx": 0,
+        "tid": "s001",
+        "mark": "anchor",
+        "gap_before": false,
+        "speaker": "unknown",
+        "start": 0.0,
+        "end": 1.02,
+        "quality": 0.791,
+        "text": "Guten Tag, Frau Keller, hier ist Martina Wild. Sie wünschten einen längeren Rückruf zum Depot. Sie haben in ihrer Nachricht auch geschrieben, dass sie bald zübiert. Gehört das für Sie zusammen? Ja, aber ich möchte zwei Sachen nicht durcheinanderbringen. Ich habe das Depot und ein separates Konto für den Umzug. Ich werde mich informieren, ohne jetzt in Kauf zu verlangen. Ob ich überhaupt eine einzelne Firma kaufe, weiss ich noch nicht.",
+        "spans": [
+         {
+          "start": 410,
+          "end": 415,
+          "how": "cue",
+          "family": "trade"
+         },
+         {
+          "start": 354,
+          "end": 358,
+          "how": "cue",
+          "family": "trade"
+         }
+        ]
+       },
+       {
+        "idx": 1,
+        "tid": "s002",
+        "mark": "near",
+        "gap_before": false,
+        "speaker": "unknown",
+        "start": 30.0,
+        "end": 60.0,
+        "quality": 0.127,
+        "text": ",",
+        "spans": []
+       }
+      ],
+      "hits": [
+       {
+        "family": "trade",
+        "keyword_id": "CUE",
+        "term": "Kauf",
+        "matched": "Kauf",
+        "turn": "s001",
+        "how": "cue",
+        "score": 4,
+        "explains": [],
+        "label": "cue word"
+       },
+       {
+        "family": "trade",
+        "keyword_id": "CUE",
+        "term": "kaufe",
+        "matched": "kaufe",
+        "turn": "s001",
+        "how": "cue",
+        "score": 4,
+        "explains": [],
+        "label": "cue word"
+       }
+      ],
+      "families": [
+       "trade"
+      ],
+      "semantic_check": null,
+      "semantic_score": null,
+      "priority": 0.1,
+      "snippet_id": 1,
+      "segment_ids": [
+       "s001",
+       "s002"
+      ],
+      "anchor_segment_ids": [
+       "s001"
+      ],
+      "context_segment_ids": []
+     }
+    ]
+   }
+  }
+ },
+ "provenance": {
+  "asr": {
+   "profile": "whisper_local",
+   "model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+   "cache_hit": false,
+   "elapsed_s": 11.26,
+   "force_fresh": true
+  },
+  "chat": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "cache_hit": false,
+   "elapsed_s": 10.991,
+   "force_fresh": true
+  },
+  "decide_elapsed_s": 0.0,
+  "source_sha256": "c02eaee0fc6ff3f34a416ec8a539aea3a48b359e76cbbc89cd5c6bcbde06071b",
+  "prompt_version": "extract-6+snippets-1"
+ },
+ "artifacts": {
+  "asr": "Stufe2_C05-K3/asr.json",
+  "llm_input": "Stufe2_C05-K3/llm_input.json",
+  "extraction": "Stufe2_C05-K3/extraction.json",
+  "decision": "Stufe2_C05-K3/decision.json",
+  "status": "Stufe2_C05-K3/status.json",
+  "audio": "audio/Stufe2_C05-K3.wav"
+ }
+}

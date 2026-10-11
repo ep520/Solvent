@@ -1,0 +1,66 @@
+{
+ "run_id": "eval-20261011-070834-audio",
+ "generated_at": "2026-10-11T07:16:10+0200",
+ "mode": "audio",
+ "selection": {
+  "target": "original_42_authentic",
+  "count": 42,
+  "excludes": "6 M-recordings and all synthetic copies"
+ },
+ "execution_location": {
+  "orchestration": "Mac (local backend process, via /api/analyze-all), NOT on the Pod",
+  "asr_inference": "GPU Pod, over existing SSH port-forward tunnel (127.0.0.1:8002 -> Pod)",
+  "chat_inference": "GPU Pod, over existing SSH port-forward tunnel (127.0.0.1:8000 -> Pod)",
+  "note": "ASR and Qwen model calls execute on the Pod; this process only sends HTTP requests to them via the tunnel and writes results locally."
+ },
+ "config": {
+  "chat_profile_name": "qwen3_fast",
+  "chat_model_served": "Qwen/Qwen3-32B-AWQ",
+  "chat_model_config_default": "Qwen/Qwen3-14B-AWQ",
+  "chat_model_env_override": "QWEN_MODEL=Qwen/Qwen3-32B-AWQ",
+  "chat_generation": {
+   "temperature": 0.7,
+   "timeout": 600,
+   "max_output_tokens": 4096,
+   "context_tokens": 32768,
+   "json_mode": "json_schema"
+  },
+  "chat_extra_body": {
+   "top_p": 0.8,
+   "top_k": 20,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   }
+  },
+  "asr_profile_name": "swiss_whisper_local",
+  "asr_model_served": "jayr23/whisper-large-v3-turbo-swiss-german-ct2"
+ },
+ "prompt_version_local": "extract-6",
+ "policies": {
+  "version": "policies-0.5",
+  "escalation": {
+   "min_asr_quality": 0.6,
+   "_note": "ASR-quality escalation heuristic, not a probability. An established event becomes an alarm only if every decisive condition has at least one quote whose segments reach this exp(avg_logprob). Below it: review / below_escalation_threshold. When the source gives no score (scripts), quality is reported as unavailable and nothing is downgraded.",
+   "presets": {
+    "sensitive": 0.5,
+    "balanced": 0.6,
+    "conservative": 0.75
+   },
+   "default_preset": "balanced"
+  }
+ },
+ "cache_bypass": {
+  "requested": true,
+  "mechanism": "asr.transcribe(force=True) + extract.extract(force=True); no cache deleted"
+ },
+ "concurrency": {
+  "max_workers": 2
+ },
+ "git": {
+  "commit": "cb737ea",
+  "dirty": true,
+  "diff_stat": "callguard/extract.py  |   8 +-\n callguard/pipeline.py |   8 +-\n callguard/ui.py       | 603 ++++++++++++++++++++++++++++++++++++++++++++++++--\n dashboard/app.js      | 282 ++++++++++++++++++++++-\n dashboard/index.html  |  47 ++++\n dashboard/ui-state.js |   2 +-\n 6 files changed, 923 insertions(+), 27 deletions(-)"
+ },
+ "lineage_note": "NEW configuration lineage (extract-6+snippets-1, Qwen3-32B-AWQ, whisper-large-v3-turbo-swiss-german-ct2). NOT a reproduction of historical run A (extract-8, full_transcript mode). Label differences between this run and run A reflect this configuration difference; not independently causally isolated.",
+ "self_hostable_compliant": true
+}

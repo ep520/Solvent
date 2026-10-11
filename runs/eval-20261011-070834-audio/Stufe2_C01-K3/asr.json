@@ -1,0 +1,100 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe2_C01-K3.wav",
+ "source_sha256": "8e7909b74f70445cfd1164756a5229487d2468b57d97d835bce20cee0b2a59f6",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.02,
+   "end": 10.02,
+   "text": "Sie haben einen Rückrufrag gewünscht, wie sie eine Nummer nicht zuordnen könnten. Was haben Sie gerade vor sich?",
+   "avg_logprob": -0.2701740611957598,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.3658536585365855
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 10.02,
+   "end": 22.02,
+   "text": "Einen Auszug des Online-Heimkaufs. Ich habe die Rechnung und eine Bestätigung nebeneinander, aber auf der Bestätigung steht keine Beschrift über den langen Zahl.",
+   "avg_logprob": -0.2701740611957598,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.3658536585365855
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 22.02,
+   "end": 52.02,
+   "text": ", www.",
+   "avg_logprob": -1.9205729166666667,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 0.42857142857142855
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 52.02,
+   "end": 53.04,
+   "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+   "avg_logprob": -0.3325,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 29.263157894736842
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 82.02,
+   "end": 82.04,
+   "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,, die,,, die,,, die,,,, die,,, die,,, die,,, die,,, die,,, die,,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die,, die, die,, die, die,, die, die, die,, die, die, die, die, die, die, die, die, die, die",
+   "avg_logprob": -0.4383407980871842,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 15.935483870967742
+  },
+  {
+   "id": "s006",
+   "turn": "TURN_006",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 112.02,
+   "end": 112.78,
+   "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,, die,,, die,,,, die,,,, die,,,,, die,,,, die,,,,, die,,,, die,,,, die,,, die,,,, die,,, die,,, die,,,, die,,, die,,, die,,,, die,,, die,,, die,,, die,,, die,,, die,,, die,, die,, die,, die,, die,, die,, die,, die, die,",
+   "avg_logprob": -0.5868833920346247,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 13.787878787878787
+  },
+  {
+   "id": "s007",
+   "turn": "TURN_007",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 142.02,
+   "end": 142.04,
+   "text": ",,,,,,,,,,, die,,,,, die,,, die,,,...,...,..., ...,..., ...,...,...,...,...,...,...,...,...,...,......,...,...................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+   "avg_logprob": -0.4691704132097184,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 17.352941176470587
+  }
+ ],
+ "source_sha256_verified": "8e7909b74f70445cfd1164756a5229487d2468b57d97d835bce20cee0b2a59f6",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 12.789,
+ "force_fresh_requested": true
+}

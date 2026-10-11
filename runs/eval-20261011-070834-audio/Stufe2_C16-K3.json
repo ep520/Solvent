@@ -1,0 +1,494 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 7.991,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 5,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 35.0,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 1,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 30.08,
+     "timestamp": "00:00",
+     "found_by": [
+      "digits"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 29.02,
+       "quality": 0.776,
+       "text": "Frau Frey, hier ist Sylvia Badl vom Firmenservice. Sie hat einen Firminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle. Ich betrachte den ganzen Vorgang,",
+       "spans": [
+        {
+         "start": 301,
+         "end": 305,
+         "how": "digits",
+         "family": "numbers"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 30.08,
+       "quality": 0.634,
+       "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "8000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      }
+     ],
+     "families": [
+      "numbers"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.3,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "no_alert",
+ "reasons": [],
+ "events": [
+  {
+   "family": "numbers",
+   "title": "Identifier read out (classification only, never an alarm)",
+   "actor": {
+    "role": "unknown",
+    "status": "unknown",
+    "segment_ids": [],
+    "supplied": true
+   },
+   "conditions": {},
+   "evidence": [
+    {
+     "segment_ids": [
+      "s001"
+     ],
+     "quote": "Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle.",
+     "match": "exact",
+     "start": 0.0,
+     "end": 29.02,
+     "quality": 0.776
+    }
+   ],
+   "issues": [],
+   "reason": null,
+   "object_type": "other",
+   "status": "not_applicable",
+   "label": "no_alert",
+   "summary": "Number classified as other; numbers never raise an alarm.",
+   "counterfactuals": []
+  }
+ ],
+ "issues": [],
+ "disabled_families": [],
+ "call": "Stufe2_C16-K3",
+ "source": "/Users/lucavisconti/Sprintd/inventx-case-study/runs/eval-20261011-070834-audio/audio/Stufe2_C16-K3.wav",
+ "speakers": false,
+ "audio": true,
+ "keyword_hits": [],
+ "input": {
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "mode": "snippets",
+  "stats": {
+   "turns": 5,
+   "snippets": 1,
+   "kept_turns": 2,
+   "kept_text_pct": 35.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 1,
+   "semantic_hits": 0
+  },
+  "snippets": [
+   {
+    "start": 0.0,
+    "end": 30.08,
+    "timestamp": "00:00",
+    "found_by": [
+     "digits"
+    ],
+    "turns": [
+     {
+      "idx": 0,
+      "tid": "s001",
+      "mark": "anchor",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 0.0,
+      "end": 29.02,
+      "quality": 0.776,
+      "text": "Frau Frey, hier ist Sylvia Badl vom Firmenservice. Sie hat einen Firminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle. Ich betrachte den ganzen Vorgang,",
+      "spans": [
+       {
+        "start": 301,
+        "end": 305,
+        "how": "digits",
+        "family": "numbers"
+       }
+      ]
+     },
+     {
+      "idx": 1,
+      "tid": "s002",
+      "mark": "near",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 30.0,
+      "end": 30.08,
+      "quality": 0.634,
+      "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+      "spans": []
+     }
+    ],
+    "hits": [
+     {
+      "family": "numbers",
+      "keyword_id": "DIGITS",
+      "term": "4 digits",
+      "matched": "8000",
+      "turn": "s001",
+      "how": "digits",
+      "score": 4,
+      "explains": [],
+      "label": "spoken digits"
+     }
+    ],
+    "families": [
+     "numbers"
+    ],
+    "semantic_check": null,
+    "semantic_score": null,
+    "priority": 0.3,
+    "snippet_id": 1,
+    "segment_ids": [
+     "s001",
+     "s002"
+    ],
+    "anchor_segment_ids": [
+     "s001"
+    ],
+    "context_segment_ids": []
+   }
+  ]
+ },
+ "modelInput": {
+  "mode": "snippets",
+  "reason": null,
+  "stats": {
+   "turns": 5,
+   "snippets": 1,
+   "kept_turns": 2,
+   "kept_text_pct": 35.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 1,
+   "semantic_hits": 0
+  },
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "snippets": [
+   {
+    "start": 0.0,
+    "end": 30.08,
+    "timestamp": "00:00",
+    "found_by": [
+     "digits"
+    ],
+    "turns": [
+     {
+      "idx": 0,
+      "tid": "s001",
+      "mark": "anchor",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 0.0,
+      "end": 29.02,
+      "quality": 0.776,
+      "text": "Frau Frey, hier ist Sylvia Badl vom Firmenservice. Sie hat einen Firminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle. Ich betrachte den ganzen Vorgang,",
+      "spans": [
+       {
+        "start": 301,
+        "end": 305,
+        "how": "digits",
+        "family": "numbers"
+       }
+      ]
+     },
+     {
+      "idx": 1,
+      "tid": "s002",
+      "mark": "near",
+      "gap_before": false,
+      "speaker": "unknown",
+      "start": 30.0,
+      "end": 30.08,
+      "quality": 0.634,
+      "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+      "spans": []
+     }
+    ],
+    "hits": [
+     {
+      "family": "numbers",
+      "keyword_id": "DIGITS",
+      "term": "4 digits",
+      "matched": "8000",
+      "turn": "s001",
+      "how": "digits",
+      "score": 4,
+      "explains": [],
+      "label": "spoken digits"
+     }
+    ],
+    "families": [
+     "numbers"
+    ],
+    "semantic_check": null,
+    "semantic_score": null,
+    "priority": 0.3,
+    "snippet_id": 1,
+    "segment_ids": [
+     "s001",
+     "s002"
+    ],
+    "anchor_segment_ids": [
+     "s001"
+    ],
+    "context_segment_ids": []
+   }
+  ],
+  "segmentCount": 5
+ },
+ "extraction": {
+  "families": {
+   "trade": {
+    "events": []
+   },
+   "access": {
+    "events": []
+   },
+   "disclosure": {
+    "events": []
+   },
+   "documentation": {
+    "events": []
+   },
+   "splitting": {
+    "events": []
+   },
+   "numbers": {
+    "events": [
+     {
+      "actor": {
+       "role": "unknown",
+       "status": "unknown",
+       "segment_ids": [
+        "s001"
+       ]
+      },
+      "object_type": "other",
+      "evidence": [
+       {
+        "segment_id": "s001",
+        "quote": "Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle."
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "_meta": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "prompt_version": "extract-6+snippets-1",
+   "elapsed_s": 7.991,
+   "input": {
+    "version": "snippets-1",
+    "config": {
+     "enabled": true,
+     "cues": "cues_general.json",
+     "fuzzy": true,
+     "max_snippets": 12,
+     "if_no_snippets": "full_transcript"
+    },
+    "mode": "snippets",
+    "stats": {
+     "turns": 5,
+     "snippets": 1,
+     "kept_turns": 2,
+     "kept_text_pct": 35.0,
+     "keyword_hits": 0,
+     "cue_hits": 0,
+     "digit_hits": 1,
+     "semantic_hits": 0
+    },
+    "snippets": [
+     {
+      "start": 0.0,
+      "end": 30.08,
+      "timestamp": "00:00",
+      "found_by": [
+       "digits"
+      ],
+      "turns": [
+       {
+        "idx": 0,
+        "tid": "s001",
+        "mark": "anchor",
+        "gap_before": false,
+        "speaker": "unknown",
+        "start": 0.0,
+        "end": 29.02,
+        "quality": 0.776,
+        "text": "Frau Frey, hier ist Sylvia Badl vom Firmenservice. Sie hat einen Firminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehöriger Vorgang über 8000 Franken an die interne Freigadstelle. Ich betrachte den ganzen Vorgang,",
+        "spans": [
+         {
+          "start": 301,
+          "end": 305,
+          "how": "digits",
+          "family": "numbers"
+         }
+        ]
+       },
+       {
+        "idx": 1,
+        "tid": "s002",
+        "mark": "near",
+        "gap_before": false,
+        "speaker": "unknown",
+        "start": 30.0,
+        "end": 30.08,
+        "quality": 0.634,
+        "text": ", die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die, die,",
+        "spans": []
+       }
+      ],
+      "hits": [
+       {
+        "family": "numbers",
+        "keyword_id": "DIGITS",
+        "term": "4 digits",
+        "matched": "8000",
+        "turn": "s001",
+        "how": "digits",
+        "score": 4,
+        "explains": [],
+        "label": "spoken digits"
+       }
+      ],
+      "families": [
+       "numbers"
+      ],
+      "semantic_check": null,
+      "semantic_score": null,
+      "priority": 0.3,
+      "snippet_id": 1,
+      "segment_ids": [
+       "s001",
+       "s002"
+      ],
+      "anchor_segment_ids": [
+       "s001"
+      ],
+      "context_segment_ids": []
+     }
+    ]
+   }
+  }
+ },
+ "provenance": {
+  "asr": {
+   "profile": "whisper_local",
+   "model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+   "cache_hit": false,
+   "elapsed_s": 11.887,
+   "force_fresh": true
+  },
+  "chat": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "cache_hit": false,
+   "elapsed_s": 7.993,
+   "force_fresh": true
+  },
+  "decide_elapsed_s": 0.0,
+  "source_sha256": "10c1849a26ad0c2cd0c7cc9cd3f6448710b1449c5096e2b325c082f71446c9e2",
+  "prompt_version": "extract-6+snippets-1"
+ },
+ "artifacts": {
+  "asr": "Stufe2_C16-K3/asr.json",
+  "llm_input": "Stufe2_C16-K3/llm_input.json",
+  "extraction": "Stufe2_C16-K3/extraction.json",
+  "decision": "Stufe2_C16-K3/decision.json",
+  "status": "Stufe2_C16-K3/status.json",
+  "audio": "audio/Stufe2_C16-K3.wav"
+ }
+}

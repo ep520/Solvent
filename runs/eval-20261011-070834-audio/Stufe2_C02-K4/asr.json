@@ -1,0 +1,88 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe2_C02-K4.wav",
+ "source_sha256": "242ccc6f06a2108f275db118eabe782755174afc782e9b45a30fe7a73799f294",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.0,
+   "end": 30.0,
+   "text": "Sie haben einen Rückrufrag gewünscht, wie sie eine Nummer nicht zuordnen können. Was haben Sie gerade vor sich? Als ein Ausdruck vom Online-Heimkauf. Ich habe die Rechnung und eine Bestätigung nebeneinander, aber auf der Bestätigung steht keine Beschrift über den langen Zahl. Wir schauen den Zusammenhang an, bitte lesen Sie nicht vornlos alle Nummern von, welche Bezeichnung sind.",
+   "avg_logprob": -0.2665441082973106,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.515625
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 30.0,
+   "end": 31.02,
+   "text": ", einen, einen.",
+   "avg_logprob": -2.5758927890232632,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 0.8333333333333334
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 60.0,
+   "end": 60.04,
+   "text": ".",
+   "avg_logprob": -1.83203125,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 0.1111111111111111
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 90.0,
+   "end": 90.04,
+   "text": ", 4.",
+   "avg_logprob": -2.1109375,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 0.3333333333333333
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 120.0,
+   "end": 120.04,
+   "text": ".",
+   "avg_logprob": -1.4778645833333333,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 0.1111111111111111
+  },
+  {
+   "id": "s006",
+   "turn": "TURN_006",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 150.0,
+   "end": 150.04,
+   "text": ".",
+   "avg_logprob": -1.294921875,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 0.1111111111111111
+  }
+ ],
+ "source_sha256_verified": "242ccc6f06a2108f275db118eabe782755174afc782e9b45a30fe7a73799f294",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 5.775,
+ "force_fresh_requested": true
+}

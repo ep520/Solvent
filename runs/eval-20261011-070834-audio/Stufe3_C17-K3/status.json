@@ -1,0 +1,13 @@
+{
+ "call_id": "Stufe3_C17-K3",
+ "stage": "complete",
+ "error": null,
+ "started_at": "2026-10-11T07:14:37+0200",
+ "asr_elapsed_s": 3.922,
+ "asr_cache_hit": false,
+ "extract_elapsed_s": 7.216,
+ "extract_cache_hit": false,
+ "extraction_error": null,
+ "completed_at": "2026-10-11T07:14:48+0200",
+ "label": "no_alert"
+}

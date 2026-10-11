@@ -1,0 +1,181 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 30.149,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 7,
+    "snippets": 1,
+    "kept_turns": 3,
+    "kept_text_pct": 70.1,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 2,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 82.02,
+     "end": 143.04,
+     "timestamp": "01:22",
+     "found_by": [
+      "digits"
+     ],
+     "turns": [
+      {
+       "idx": 4,
+       "tid": "s005",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 82.02,
+       "end": 83.04,
+       "quality": 0.167,
+       "text": ", 4.",
+       "spans": []
+      },
+      {
+       "idx": 5,
+       "tid": "s006",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 112.02,
+       "end": 113.04,
+       "quality": 0.676,
+       "text": ", 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.",
+       "spans": [
+        {
+         "start": 2,
+         "end": 333,
+         "how": "digits",
+         "family": "numbers"
+        }
+       ]
+      },
+      {
+       "idx": 6,
+       "tid": "s007",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 142.02,
+       "end": 143.04,
+       "quality": 0.565,
+       "text": ". 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.. 4.. 4.. 4.. 4.. 4.. 4.. 4. 4.. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4. 4. 4. 4.. 4. 4. 4.. 4. 4. 4. 4. 4. 4.. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.",
+       "spans": [
+        {
+         "start": 2,
+         "end": 321,
+         "how": "digits",
+         "family": "numbers"
+        }
+       ]
+      }
+     ],
+     "hits": [
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "111 digits",
+       "matched": "4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4",
+       "turn": "s006",
+       "how": "digits",
+       "score": 111,
+       "explains": [],
+       "label": "spoken digits"
+      },
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "101 digits",
+       "matched": "4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.. 4.. 4.. 4.. 4.. 4.. 4.. 4. 4.. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4. 4. 4. 4.. 4. 4. 4.. 4. 4. 4. 4. 4. 4.. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4",
+       "turn": "s007",
+       "how": "digits",
+       "score": 101,
+       "explains": [],
+       "label": "spoken digits"
+      }
+     ],
+     "families": [
+      "numbers"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.3,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s005",
+      "s006",
+      "s007"
+     ],
+     "anchor_segment_ids": [
+      "s006",
+      "s007"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "no_alert",
+ "reasons": [],
+ "events": [
+  {
+   "family": "numbers",
+   "title": "Identifier read out (classification only, never an alarm)",
+   "actor": {
+    "role": "unknown",
+    "status": "unknown",
+    "segment_ids": [],
+    "supplied": true
+   },
+   "conditions": {},
+   "evidence": [
+    {
+     "segment_ids": [
+      "s006"
+     ],
+     "quote": "4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.",
+     "match": "exact",
+     "start": 112.02,
+     "end": 113.04,
+     "quality": 0.676
+    },
+    {
+     "segment_ids": [
+      "s007"
+     ],
+     "quote": "4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.. 4.. 4.. 4.. 4.. 4.. 4.. 4. 4.. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4.. 4. 4. 4.. 4. 4.. 4. 4. 4. 4. 4.. 4. 4. 4.. 4. 4. 4. 4. 4. 4.. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4",
+     "match": "exact",
+     "start": 142.02,
+     "end": 143.04,
+     "quality": 0.565
+    }
+   ],
+   "issues": [],
+   "reason": null,
+   "object_type": "unknown",
+   "status": "not_applicable",
+   "label": "no_alert",
+   "summary": "Number classified as unknown; numbers never raise an alarm.",
+   "counterfactuals": []
+  }
+ ],
+ "issues": [],
+ "disabled_families": []
+}

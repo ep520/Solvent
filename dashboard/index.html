@@ -9,6 +9,52 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .detail-empty, .detail-limited, .detail-error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 500px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .detail-limited, .detail-error {
+      display: block;
+      align-items: unset;
+      justify-content: unset;
+      min-height: auto;
+      padding: 20px;
+    }
+
+    .detail-limited header, .detail-error p {
+      margin: 0 0 16px 0;
+    }
+
+    .detail-empty p, .detail-error p {
+      color: #999;
+      font-size: 16px;
+    }
+
+    .detail-error {
+      border: 1px solid #f00;
+      background: #fff5f5;
+      border-radius: 4px;
+      color: #f00;
+    }
+
+    .info-panel {
+      border: 1px solid #ddd;
+      padding: 16px;
+      border-radius: 4px;
+      background: #f9f9f9;
+      text-align: left;
+    }
+
+    .info-panel p {
+      margin: 8px 0;
+    }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#call-detail">Skip to call detail</a>
@@ -21,6 +67,7 @@
         <div><h1>CallGuard</h1><p>Compliance review workspace</p></div>
       </div>
       <div class="top-actions">
+        <select id="run-selector" class="select select-sm" aria-label="Select run" hidden></select>
         <span id="data-badge" class="badge badge-sm demo-badge"><span id="data-badge-text">Demo</span></span>
         <button id="settings-button" class="btn btn-sm btn-ghost" type="button" aria-expanded="false" aria-controls="settings-drawer">Review settings</button>
         <button id="page-guide-button" class="btn btn-sm btn-ghost" type="button" aria-label="Open help">

@@ -1,0 +1,175 @@
+{
+ "families": {
+  "trade": {
+   "events": []
+  },
+  "access": {
+   "events": []
+  },
+  "disclosure": {
+   "events": []
+  },
+  "documentation": {
+   "events": []
+  },
+  "splitting": {
+   "events": []
+  },
+  "numbers": {
+   "events": [
+    {
+     "actor": {
+      "role": "unknown",
+      "status": "unknown",
+      "segment_ids": [
+       "s001"
+      ]
+     },
+     "object_type": "unknown",
+     "evidence": [
+      {
+       "segment_id": "s001",
+       "quote": "in meiner Liste sind 4000 für heute und 5000 für heute"
+      },
+      {
+       "segment_id": "s001",
+       "quote": "Bei uns muss ein zusammengehörender Vorgang über 8000 an die internen Freigabe stehen"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "_meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 10.331,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 6,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 15.5,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 3,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 31.02,
+     "timestamp": "00:00",
+     "found_by": [
+      "digits"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 29.78,
+       "quality": 0.713,
+       "text": "Frau Gislo, da ist wie eine Waltung des Firmenservice. Sie haben eine Frage zu Beträgen, die an denselben Lieferant gehen sollten. Ja, in meiner Liste sind 4000 für heute und 5000 für heute. Ich habe die Liste meiner Kollegin übernommen, aber die Belege haben wir noch nicht zusammenverteicht. Bei uns muss ein zusammengehörender Vorgang über 8000 an die internen Freigabe stehen.",
+       "spans": [
+        {
+         "start": 156,
+         "end": 160,
+         "how": "digits",
+         "family": "numbers"
+        },
+        {
+         "start": 175,
+         "end": 179,
+         "how": "digits",
+         "family": "numbers"
+        },
+        {
+         "start": 343,
+         "end": 347,
+         "how": "digits",
+         "family": "numbers"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 31.02,
+       "quality": 0.126,
+       "text": ", www.",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "4000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      },
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "5000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      },
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "8000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      }
+     ],
+     "families": [
+      "numbers"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.3,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ }
+}

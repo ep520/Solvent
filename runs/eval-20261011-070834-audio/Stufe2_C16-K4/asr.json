@@ -1,0 +1,76 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe2_C16-K4.wav",
+ "source_sha256": "4264f533691f4af91e7f8f04c53bf59ba5bc84294cc7556ea8f01bd783fe37fa",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.0,
+   "end": 29.34,
+   "text": "Frau Frey, hier ist Sylvia Badl vom Bühnen-Service. Sie hat einen Terminwunsch zu den Lieferantenvorgängen gemeldet. Ja, ich bereite die Lieferantenzahlungen vor. Ich möchte zuerst wissen, wie ich sie erfasse, bevor ich einen konkreten Auftrag verlange. Bei uns geht ein zusammengehörende Vorgang über 8000 Franken an die internen Freigabstelle. Ich betrachte den ganzen Vorgang.",
+   "avg_logprob": -0.28027342366320745,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.471264367816092
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 30.0,
+   "end": 31.02,
+   "text": ", ich nehme.",
+   "avg_logprob": -2.2721354166666665,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 0.6
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 60.0,
+   "end": 61.02,
+   "text": ", ich habe, ich habe einen.",
+   "avg_logprob": -2.2828124284744264,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.0
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 90.0,
+   "end": 91.02,
+   "text": ", und hohez, und hohez.",
+   "avg_logprob": -2.341346080486591,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.0454545454545454
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 120.0,
+   "end": 121.02,
+   "text": ", holl.",
+   "avg_logprob": -1.9466145833333333,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 0.4666666666666667
+  }
+ ],
+ "source_sha256_verified": "4264f533691f4af91e7f8f04c53bf59ba5bc84294cc7556ea8f01bd783fe37fa",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 3.815,
+ "force_fresh_requested": true
+}

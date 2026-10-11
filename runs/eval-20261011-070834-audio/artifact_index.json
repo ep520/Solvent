@@ -1,0 +1,380 @@
+{
+ "Stufe1_D02-K1": {
+  "canonical": "Stufe1_D02-K1.json",
+  "asr": "Stufe1_D02-K1/asr.json",
+  "llm_input": "Stufe1_D02-K1/llm_input.json",
+  "extraction": "Stufe1_D02-K1/extraction.json",
+  "decision": "Stufe1_D02-K1/decision.json",
+  "status": "Stufe1_D02-K1/status.json",
+  "audio": "audio/Stufe1_D02-K1.wav"
+ },
+ "Stufe1_D02-K2": {
+  "canonical": "Stufe1_D02-K2.json",
+  "asr": "Stufe1_D02-K2/asr.json",
+  "llm_input": "Stufe1_D02-K2/llm_input.json",
+  "extraction": "Stufe1_D02-K2/extraction.json",
+  "decision": "Stufe1_D02-K2/decision.json",
+  "status": "Stufe1_D02-K2/status.json",
+  "audio": "audio/Stufe1_D02-K2.wav"
+ },
+ "Stufe1_D03-K1": {
+  "canonical": "Stufe1_D03-K1.json",
+  "asr": "Stufe1_D03-K1/asr.json",
+  "llm_input": "Stufe1_D03-K1/llm_input.json",
+  "extraction": "Stufe1_D03-K1/extraction.json",
+  "decision": "Stufe1_D03-K1/decision.json",
+  "status": "Stufe1_D03-K1/status.json",
+  "audio": "audio/Stufe1_D03-K1.wav"
+ },
+ "Stufe1_D03-K2": {
+  "canonical": "Stufe1_D03-K2.json",
+  "asr": "Stufe1_D03-K2/asr.json",
+  "llm_input": "Stufe1_D03-K2/llm_input.json",
+  "extraction": "Stufe1_D03-K2/extraction.json",
+  "decision": "Stufe1_D03-K2/decision.json",
+  "status": "Stufe1_D03-K2/status.json",
+  "audio": "audio/Stufe1_D03-K2.wav"
+ },
+ "Stufe1_D04-K1": {
+  "canonical": "Stufe1_D04-K1.json",
+  "asr": "Stufe1_D04-K1/asr.json",
+  "llm_input": "Stufe1_D04-K1/llm_input.json",
+  "extraction": "Stufe1_D04-K1/extraction.json",
+  "decision": "Stufe1_D04-K1/decision.json",
+  "status": "Stufe1_D04-K1/status.json",
+  "audio": "audio/Stufe1_D04-K1.wav"
+ },
+ "Stufe1_D04-K2": {
+  "canonical": "Stufe1_D04-K2.json",
+  "asr": "Stufe1_D04-K2/asr.json",
+  "llm_input": "Stufe1_D04-K2/llm_input.json",
+  "extraction": "Stufe1_D04-K2/extraction.json",
+  "decision": "Stufe1_D04-K2/decision.json",
+  "status": "Stufe1_D04-K2/status.json",
+  "audio": "audio/Stufe1_D04-K2.wav"
+ },
+ "Stufe1_D06-K1": {
+  "canonical": "Stufe1_D06-K1.json",
+  "asr": "Stufe1_D06-K1/asr.json",
+  "llm_input": "Stufe1_D06-K1/llm_input.json",
+  "extraction": "Stufe1_D06-K1/extraction.json",
+  "decision": "Stufe1_D06-K1/decision.json",
+  "status": "Stufe1_D06-K1/status.json",
+  "audio": "audio/Stufe1_D06-K1.wav"
+ },
+ "Stufe1_D06-K2": {
+  "canonical": "Stufe1_D06-K2.json",
+  "asr": "Stufe1_D06-K2/asr.json",
+  "llm_input": "Stufe1_D06-K2/llm_input.json",
+  "extraction": "Stufe1_D06-K2/extraction.json",
+  "decision": "Stufe1_D06-K2/decision.json",
+  "status": "Stufe1_D06-K2/status.json",
+  "audio": "audio/Stufe1_D06-K2.wav"
+ },
+ "Stufe1_D07-K1": {
+  "canonical": "Stufe1_D07-K1.json",
+  "asr": "Stufe1_D07-K1/asr.json",
+  "llm_input": "Stufe1_D07-K1/llm_input.json",
+  "extraction": "Stufe1_D07-K1/extraction.json",
+  "decision": "Stufe1_D07-K1/decision.json",
+  "status": "Stufe1_D07-K1/status.json",
+  "audio": "audio/Stufe1_D07-K1.wav"
+ },
+ "Stufe1_D07-K2": {
+  "canonical": "Stufe1_D07-K2.json",
+  "asr": "Stufe1_D07-K2/asr.json",
+  "llm_input": "Stufe1_D07-K2/llm_input.json",
+  "extraction": "Stufe1_D07-K2/extraction.json",
+  "decision": "Stufe1_D07-K2/decision.json",
+  "status": "Stufe1_D07-K2/status.json",
+  "audio": "audio/Stufe1_D07-K2.wav"
+ },
+ "Stufe1_D09-K1": {
+  "canonical": "Stufe1_D09-K1.json",
+  "asr": "Stufe1_D09-K1/asr.json",
+  "llm_input": "Stufe1_D09-K1/llm_input.json",
+  "extraction": "Stufe1_D09-K1/extraction.json",
+  "decision": "Stufe1_D09-K1/decision.json",
+  "status": "Stufe1_D09-K1/status.json",
+  "audio": "audio/Stufe1_D09-K1.wav"
+ },
+ "Stufe1_D09-K2": {
+  "canonical": "Stufe1_D09-K2.json",
+  "asr": "Stufe1_D09-K2/asr.json",
+  "llm_input": "Stufe1_D09-K2/llm_input.json",
+  "extraction": "Stufe1_D09-K2/extraction.json",
+  "decision": "Stufe1_D09-K2/decision.json",
+  "status": "Stufe1_D09-K2/status.json",
+  "audio": "audio/Stufe1_D09-K2.wav"
+ },
+ "Stufe2_C01-K3": {
+  "canonical": "Stufe2_C01-K3.json",
+  "asr": "Stufe2_C01-K3/asr.json",
+  "llm_input": "Stufe2_C01-K3/llm_input.json",
+  "extraction": "Stufe2_C01-K3/extraction.json",
+  "decision": "Stufe2_C01-K3/decision.json",
+  "status": "Stufe2_C01-K3/status.json",
+  "audio": "audio/Stufe2_C01-K3.wav"
+ },
+ "Stufe2_C01-K4": {
+  "canonical": "Stufe2_C01-K4.json",
+  "asr": "Stufe2_C01-K4/asr.json",
+  "llm_input": "Stufe2_C01-K4/llm_input.json",
+  "extraction": "Stufe2_C01-K4/extraction.json",
+  "decision": "Stufe2_C01-K4/decision.json",
+  "status": "Stufe2_C01-K4/status.json",
+  "audio": "audio/Stufe2_C01-K4.wav"
+ },
+ "Stufe2_C02-K3": {
+  "canonical": "Stufe2_C02-K3.json",
+  "asr": "Stufe2_C02-K3/asr.json",
+  "llm_input": "Stufe2_C02-K3/llm_input.json",
+  "extraction": "Stufe2_C02-K3/extraction.json",
+  "decision": "Stufe2_C02-K3/decision.json",
+  "status": "Stufe2_C02-K3/status.json",
+  "audio": "audio/Stufe2_C02-K3.wav"
+ },
+ "Stufe2_C02-K4": {
+  "canonical": "Stufe2_C02-K4.json",
+  "asr": "Stufe2_C02-K4/asr.json",
+  "llm_input": "Stufe2_C02-K4/llm_input.json",
+  "extraction": "Stufe2_C02-K4/extraction.json",
+  "decision": "Stufe2_C02-K4/decision.json",
+  "status": "Stufe2_C02-K4/status.json",
+  "audio": "audio/Stufe2_C02-K4.wav"
+ },
+ "Stufe2_C03-K3": {
+  "canonical": "Stufe2_C03-K3.json",
+  "asr": "Stufe2_C03-K3/asr.json",
+  "llm_input": "Stufe2_C03-K3/llm_input.json",
+  "extraction": "Stufe2_C03-K3/extraction.json",
+  "decision": "Stufe2_C03-K3/decision.json",
+  "status": "Stufe2_C03-K3/status.json",
+  "audio": "audio/Stufe2_C03-K3.wav"
+ },
+ "Stufe2_C03-K4": {
+  "canonical": "Stufe2_C03-K4.json",
+  "asr": "Stufe2_C03-K4/asr.json",
+  "llm_input": "Stufe2_C03-K4/llm_input.json",
+  "extraction": "Stufe2_C03-K4/extraction.json",
+  "decision": "Stufe2_C03-K4/decision.json",
+  "status": "Stufe2_C03-K4/status.json",
+  "audio": "audio/Stufe2_C03-K4.wav"
+ },
+ "Stufe2_C04-K3": {
+  "canonical": "Stufe2_C04-K3.json",
+  "asr": "Stufe2_C04-K3/asr.json",
+  "llm_input": "Stufe2_C04-K3/llm_input.json",
+  "extraction": "Stufe2_C04-K3/extraction.json",
+  "decision": "Stufe2_C04-K3/decision.json",
+  "status": "Stufe2_C04-K3/status.json",
+  "audio": "audio/Stufe2_C04-K3.wav"
+ },
+ "Stufe2_C04-K4": {
+  "canonical": "Stufe2_C04-K4.json",
+  "asr": "Stufe2_C04-K4/asr.json",
+  "llm_input": "Stufe2_C04-K4/llm_input.json",
+  "extraction": "Stufe2_C04-K4/extraction.json",
+  "decision": "Stufe2_C04-K4/decision.json",
+  "status": "Stufe2_C04-K4/status.json",
+  "audio": "audio/Stufe2_C04-K4.wav"
+ },
+ "Stufe2_C05-K3": {
+  "canonical": "Stufe2_C05-K3.json",
+  "asr": "Stufe2_C05-K3/asr.json",
+  "llm_input": "Stufe2_C05-K3/llm_input.json",
+  "extraction": "Stufe2_C05-K3/extraction.json",
+  "decision": "Stufe2_C05-K3/decision.json",
+  "status": "Stufe2_C05-K3/status.json",
+  "audio": "audio/Stufe2_C05-K3.wav"
+ },
+ "Stufe2_C05-K4": {
+  "canonical": "Stufe2_C05-K4.json",
+  "asr": "Stufe2_C05-K4/asr.json",
+  "llm_input": "Stufe2_C05-K4/llm_input.json",
+  "extraction": "Stufe2_C05-K4/extraction.json",
+  "decision": "Stufe2_C05-K4/decision.json",
+  "status": "Stufe2_C05-K4/status.json",
+  "audio": "audio/Stufe2_C05-K4.wav"
+ },
+ "Stufe2_C06-K3": {
+  "canonical": "Stufe2_C06-K3.json",
+  "asr": "Stufe2_C06-K3/asr.json",
+  "llm_input": "Stufe2_C06-K3/llm_input.json",
+  "extraction": "Stufe2_C06-K3/extraction.json",
+  "decision": "Stufe2_C06-K3/decision.json",
+  "status": "Stufe2_C06-K3/status.json",
+  "audio": "audio/Stufe2_C06-K3.wav"
+ },
+ "Stufe2_C06-K4": {
+  "canonical": "Stufe2_C06-K4.json",
+  "asr": "Stufe2_C06-K4/asr.json",
+  "llm_input": "Stufe2_C06-K4/llm_input.json",
+  "extraction": "Stufe2_C06-K4/extraction.json",
+  "decision": "Stufe2_C06-K4/decision.json",
+  "status": "Stufe2_C06-K4/status.json",
+  "audio": "audio/Stufe2_C06-K4.wav"
+ },
+ "Stufe2_C09-K3": {
+  "canonical": "Stufe2_C09-K3.json",
+  "asr": "Stufe2_C09-K3/asr.json",
+  "llm_input": "Stufe2_C09-K3/llm_input.json",
+  "extraction": "Stufe2_C09-K3/extraction.json",
+  "decision": "Stufe2_C09-K3/decision.json",
+  "status": "Stufe2_C09-K3/status.json",
+  "audio": "audio/Stufe2_C09-K3.wav"
+ },
+ "Stufe2_C09-K4": {
+  "canonical": "Stufe2_C09-K4.json",
+  "asr": "Stufe2_C09-K4/asr.json",
+  "llm_input": "Stufe2_C09-K4/llm_input.json",
+  "extraction": "Stufe2_C09-K4/extraction.json",
+  "decision": "Stufe2_C09-K4/decision.json",
+  "status": "Stufe2_C09-K4/status.json",
+  "audio": "audio/Stufe2_C09-K4.wav"
+ },
+ "Stufe2_C10-K3": {
+  "canonical": "Stufe2_C10-K3.json",
+  "asr": "Stufe2_C10-K3/asr.json",
+  "llm_input": "Stufe2_C10-K3/llm_input.json",
+  "extraction": "Stufe2_C10-K3/extraction.json",
+  "decision": "Stufe2_C10-K3/decision.json",
+  "status": "Stufe2_C10-K3/status.json",
+  "audio": "audio/Stufe2_C10-K3.wav"
+ },
+ "Stufe2_C10-K4": {
+  "canonical": "Stufe2_C10-K4.json",
+  "asr": "Stufe2_C10-K4/asr.json",
+  "llm_input": "Stufe2_C10-K4/llm_input.json",
+  "extraction": "Stufe2_C10-K4/extraction.json",
+  "decision": "Stufe2_C10-K4/decision.json",
+  "status": "Stufe2_C10-K4/status.json",
+  "audio": "audio/Stufe2_C10-K4.wav"
+ },
+ "Stufe2_C11-K3": {
+  "canonical": "Stufe2_C11-K3.json",
+  "asr": "Stufe2_C11-K3/asr.json",
+  "llm_input": "Stufe2_C11-K3/llm_input.json",
+  "extraction": "Stufe2_C11-K3/extraction.json",
+  "decision": "Stufe2_C11-K3/decision.json",
+  "status": "Stufe2_C11-K3/status.json",
+  "audio": "audio/Stufe2_C11-K3.wav"
+ },
+ "Stufe2_C11-K4": {
+  "canonical": "Stufe2_C11-K4.json",
+  "asr": "Stufe2_C11-K4/asr.json",
+  "llm_input": "Stufe2_C11-K4/llm_input.json",
+  "extraction": "Stufe2_C11-K4/extraction.json",
+  "decision": "Stufe2_C11-K4/decision.json",
+  "status": "Stufe2_C11-K4/status.json",
+  "audio": "audio/Stufe2_C11-K4.wav"
+ },
+ "Stufe2_C12-K3": {
+  "canonical": "Stufe2_C12-K3.json",
+  "asr": "Stufe2_C12-K3/asr.json",
+  "llm_input": "Stufe2_C12-K3/llm_input.json",
+  "extraction": "Stufe2_C12-K3/extraction.json",
+  "decision": "Stufe2_C12-K3/decision.json",
+  "status": "Stufe2_C12-K3/status.json",
+  "audio": "audio/Stufe2_C12-K3.wav"
+ },
+ "Stufe2_C12-K4": {
+  "canonical": "Stufe2_C12-K4.json",
+  "asr": "Stufe2_C12-K4/asr.json",
+  "llm_input": "Stufe2_C12-K4/llm_input.json",
+  "extraction": "Stufe2_C12-K4/extraction.json",
+  "decision": "Stufe2_C12-K4/decision.json",
+  "status": "Stufe2_C12-K4/status.json",
+  "audio": "audio/Stufe2_C12-K4.wav"
+ },
+ "Stufe2_C15-K3": {
+  "canonical": "Stufe2_C15-K3.json",
+  "asr": "Stufe2_C15-K3/asr.json",
+  "llm_input": "Stufe2_C15-K3/llm_input.json",
+  "extraction": "Stufe2_C15-K3/extraction.json",
+  "decision": "Stufe2_C15-K3/decision.json",
+  "status": "Stufe2_C15-K3/status.json",
+  "audio": "audio/Stufe2_C15-K3.wav"
+ },
+ "Stufe2_C15-K4": {
+  "canonical": "Stufe2_C15-K4.json",
+  "asr": "Stufe2_C15-K4/asr.json",
+  "llm_input": "Stufe2_C15-K4/llm_input.json",
+  "extraction": "Stufe2_C15-K4/extraction.json",
+  "decision": "Stufe2_C15-K4/decision.json",
+  "status": "Stufe2_C15-K4/status.json",
+  "audio": "audio/Stufe2_C15-K4.wav"
+ },
+ "Stufe2_C16-K3": {
+  "canonical": "Stufe2_C16-K3.json",
+  "asr": "Stufe2_C16-K3/asr.json",
+  "llm_input": "Stufe2_C16-K3/llm_input.json",
+  "extraction": "Stufe2_C16-K3/extraction.json",
+  "decision": "Stufe2_C16-K3/decision.json",
+  "status": "Stufe2_C16-K3/status.json",
+  "audio": "audio/Stufe2_C16-K3.wav"
+ },
+ "Stufe2_C16-K4": {
+  "canonical": "Stufe2_C16-K4.json",
+  "asr": "Stufe2_C16-K4/asr.json",
+  "llm_input": "Stufe2_C16-K4/llm_input.json",
+  "extraction": "Stufe2_C16-K4/extraction.json",
+  "decision": "Stufe2_C16-K4/decision.json",
+  "status": "Stufe2_C16-K4/status.json",
+  "audio": "audio/Stufe2_C16-K4.wav"
+ },
+ "Stufe3_C17-K3": {
+  "canonical": "Stufe3_C17-K3.json",
+  "asr": "Stufe3_C17-K3/asr.json",
+  "llm_input": "Stufe3_C17-K3/llm_input.json",
+  "extraction": "Stufe3_C17-K3/extraction.json",
+  "decision": "Stufe3_C17-K3/decision.json",
+  "status": "Stufe3_C17-K3/status.json",
+  "audio": "audio/Stufe3_C17-K3.wav"
+ },
+ "Stufe3_C17-K4": {
+  "canonical": "Stufe3_C17-K4.json",
+  "asr": "Stufe3_C17-K4/asr.json",
+  "llm_input": "Stufe3_C17-K4/llm_input.json",
+  "extraction": "Stufe3_C17-K4/extraction.json",
+  "decision": "Stufe3_C17-K4/decision.json",
+  "status": "Stufe3_C17-K4/status.json",
+  "audio": "audio/Stufe3_C17-K4.wav"
+ },
+ "Stufe3_C19-K3": {
+  "canonical": "Stufe3_C19-K3.json",
+  "asr": "Stufe3_C19-K3/asr.json",
+  "llm_input": "Stufe3_C19-K3/llm_input.json",
+  "extraction": "Stufe3_C19-K3/extraction.json",
+  "decision": "Stufe3_C19-K3/decision.json",
+  "status": "Stufe3_C19-K3/status.json",
+  "audio": "audio/Stufe3_C19-K3.wav"
+ },
+ "Stufe3_C19-K4": {
+  "canonical": "Stufe3_C19-K4.json",
+  "asr": "Stufe3_C19-K4/asr.json",
+  "llm_input": "Stufe3_C19-K4/llm_input.json",
+  "extraction": "Stufe3_C19-K4/extraction.json",
+  "decision": "Stufe3_C19-K4/decision.json",
+  "status": "Stufe3_C19-K4/status.json",
+  "audio": "audio/Stufe3_C19-K4.wav"
+ },
+ "Stufe3_C20-K3": {
+  "canonical": "Stufe3_C20-K3.json",
+  "asr": "Stufe3_C20-K3/asr.json",
+  "llm_input": "Stufe3_C20-K3/llm_input.json",
+  "extraction": "Stufe3_C20-K3/extraction.json",
+  "decision": "Stufe3_C20-K3/decision.json",
+  "status": "Stufe3_C20-K3/status.json",
+  "audio": "audio/Stufe3_C20-K3.wav"
+ },
+ "Stufe3_C20-K4": {
+  "canonical": "Stufe3_C20-K4.json",
+  "asr": "Stufe3_C20-K4/asr.json",
+  "llm_input": "Stufe3_C20-K4/llm_input.json",
+  "extraction": "Stufe3_C20-K4/extraction.json",
+  "decision": "Stufe3_C20-K4/decision.json",
+  "status": "Stufe3_C20-K4/status.json",
+  "audio": "audio/Stufe3_C20-K4.wav"
+ }
+}

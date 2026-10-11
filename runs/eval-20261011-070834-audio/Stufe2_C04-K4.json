@@ -1,0 +1,166 @@
+{
+ "threshold": 0.6,
+ "meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6",
+  "elapsed_s": 4.928,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "full_transcript",
+   "stats": {
+    "turns": 10,
+    "snippets": 0,
+    "kept_turns": 0,
+    "kept_text_pct": 0.0,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+  }
+ },
+ "policies_version": "policies-0.5",
+ "status": "ok",
+ "label": "no_alert",
+ "reasons": [],
+ "events": [],
+ "issues": [],
+ "disabled_families": [],
+ "call": "Stufe2_C04-K4",
+ "source": "/Users/lucavisconti/Sprintd/inventx-case-study/runs/eval-20261011-070834-audio/audio/Stufe2_C04-K4.wav",
+ "speakers": false,
+ "audio": true,
+ "keyword_hits": [],
+ "input": {
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "mode": "full_transcript",
+  "stats": {
+   "turns": 10,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+ },
+ "modelInput": {
+  "mode": "full_transcript",
+  "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen",
+  "stats": {
+   "turns": 10,
+   "snippets": 0,
+   "kept_turns": 0,
+   "kept_text_pct": 0.0,
+   "keyword_hits": 0,
+   "cue_hits": 0,
+   "digit_hits": 0,
+   "semantic_hits": 0
+  },
+  "version": "snippets-1",
+  "config": {
+   "enabled": true,
+   "cues": "cues_general.json",
+   "fuzzy": true,
+   "max_snippets": 12,
+   "if_no_snippets": "full_transcript"
+  },
+  "snippets": [],
+  "segmentCount": 10
+ },
+ "extraction": {
+  "families": {
+   "trade": {
+    "events": []
+   },
+   "access": {
+    "events": []
+   },
+   "disclosure": {
+    "events": []
+   },
+   "documentation": {
+    "events": []
+   },
+   "splitting": {
+    "events": []
+   },
+   "numbers": {
+    "events": []
+   }
+  },
+  "_meta": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "prompt_version": "extract-6",
+   "elapsed_s": 4.928,
+   "input": {
+    "version": "snippets-1",
+    "config": {
+     "enabled": true,
+     "cues": "cues_general.json",
+     "fuzzy": true,
+     "max_snippets": 12,
+     "if_no_snippets": "full_transcript"
+    },
+    "mode": "full_transcript",
+    "stats": {
+     "turns": 10,
+     "snippets": 0,
+     "kept_turns": 0,
+     "kept_text_pct": 0.0,
+     "keyword_hits": 0,
+     "cue_hits": 0,
+     "digit_hits": 0,
+     "semantic_hits": 0
+    },
+    "reason": "no keyword, cue word or spoken digit sequence was found: the whole call is sent so that nothing is dropped unseen"
+   }
+  }
+ },
+ "provenance": {
+  "asr": {
+   "profile": "whisper_local",
+   "model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+   "cache_hit": false,
+   "elapsed_s": 14.743,
+   "force_fresh": true
+  },
+  "chat": {
+   "profile": "qwen3_fast",
+   "model": "Qwen/Qwen3-32B-AWQ",
+   "cache_hit": false,
+   "elapsed_s": 4.931,
+   "force_fresh": true
+  },
+  "decide_elapsed_s": 0.0,
+  "source_sha256": "44a3a00fb81c4a11521757cd4d4f4ed25ade32d0a40bc4b6c33afa0423509333",
+  "prompt_version": "extract-6"
+ },
+ "artifacts": {
+  "asr": "Stufe2_C04-K4/asr.json",
+  "llm_input": "Stufe2_C04-K4/llm_input.json",
+  "extraction": "Stufe2_C04-K4/extraction.json",
+  "decision": "Stufe2_C04-K4/decision.json",
+  "status": "Stufe2_C04-K4/status.json",
+  "audio": "audio/Stufe2_C04-K4.wav"
+ }
+}

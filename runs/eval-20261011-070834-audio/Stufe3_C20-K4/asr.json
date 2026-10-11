@@ -1,0 +1,88 @@
+{
+ "format": "whisper-verbatim-1",
+ "source_file": "Stufe3_C20-K4.wav",
+ "source_sha256": "9e3ed46f618d891ae785915c39ff334286249fba28863989fa963321507cd1f8",
+ "asr_profile": "whisper_local",
+ "asr_model": "jayr23/whisper-large-v3-turbo-swiss-german-ct2",
+ "language_hint": "de",
+ "verbatim_constraint": "Transcribe verbatim in the spoken language and dialect. Do not translate, paraphrase, summarize, correct, reorder, omit, or substitute words. Preserve negations, names, numbers, and repetitions exactly as heard.",
+ "role_policy": "Whisper has no diarization; roles are explicitly unknown rather than guessed.",
+ "segments": [
+  {
+   "id": "s001",
+   "turn": "TURN_001",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 0.0,
+   "end": 0.02,
+   "text": "«Krüse, Frau Gieslo», da ist wie gerne Walton von Firmensovis. Sie haben eine Frage zu Beträgen, die an denselben Lieferanten gehen sollten. Ja, in meiner Liste sind 4000 für Leute und 5000 für Wohnen. Ich habe die Liste meiner Kollegin übernommen, aber die Belege haben wir noch nicht zusammenvergleichen. Bei uns muss ein zusammengehörender Vorgang über 8000 an die Internetfreigabe stehen.",
+   "avg_logprob": -0.3787967389989122,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 1.5018726591760299
+  },
+  {
+   "id": "s002",
+   "turn": "TURN_002",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 30.0,
+   "end": 31.02,
+   "text": ", und lau, und lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau",
+   "avg_logprob": -0.3838888931274414,
+   "no_speech_prob": 0.0,
+   "compression_ratio": 14.5
+  },
+  {
+   "id": "s003",
+   "turn": "TURN_003",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 60.0,
+   "end": 60.02,
+   "text": "lau, lau, lau, lau, lau, lau lau, lau, lau lau, lau lau, lau lau, lau lau lau, lau, lau lau lau, lau lau lau, lau lau lau, lau, lau lau lau lau, lau lau lau lau lau, lau lau lau, lau, lau, lau,u, lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,u,u lau,",
+   "avg_logprob": -0.3032511109193879,
+   "no_speech_prob": 2.384185791015625e-07,
+   "compression_ratio": 9.297297297297296
+  },
+  {
+   "id": "s004",
+   "turn": "TURN_004",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 90.0,
+   "end": 90.02,
+   "text": ", lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau,u,u lau,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,",
+   "avg_logprob": -0.30941703394389475,
+   "no_speech_prob": 1.7881393432617188e-07,
+   "compression_ratio": 14.047619047619047
+  },
+  {
+   "id": "s005",
+   "turn": "TURN_005",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 120.0,
+   "end": 120.02,
+   "text": ",u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,",
+   "avg_logprob": -0.029655970365744536,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 17.0
+  },
+  {
+   "id": "s006",
+   "turn": "TURN_006",
+   "role": "UNKNOWN_ROLE",
+   "speaker": "UNKNOWN_SPEAKER",
+   "start": 150.0,
+   "end": 150.02,
+   "text": ",u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,",
+   "avg_logprob": -0.034946048005813975,
+   "no_speech_prob": 5.960464477539063e-08,
+   "compression_ratio": 17.0
+  }
+ ],
+ "source_sha256_verified": "9e3ed46f618d891ae785915c39ff334286249fba28863989fa963321507cd1f8",
+ "asr_cache_hit": false,
+ "asr_elapsed_s": 15.562,
+ "force_fresh_requested": true
+}

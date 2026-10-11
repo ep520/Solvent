@@ -1,0 +1,165 @@
+{
+ "families": {
+  "trade": {
+   "events": [
+    {
+     "actor": {
+      "role": "unknown",
+      "status": "unknown",
+      "segment_ids": [
+       "s001"
+      ]
+     },
+     "conditions": {
+      "own_trade_request": {
+       "state": "unknown",
+       "evidence": []
+      },
+      "information_nonpublic": {
+       "state": "unknown",
+       "evidence": []
+      },
+      "information_market_relevant": {
+       "state": "unknown",
+       "evidence": []
+      },
+      "request_based_on_information": {
+       "state": "unknown",
+       "evidence": []
+      }
+     }
+    }
+   ]
+  },
+  "access": {
+   "events": []
+  },
+  "disclosure": {
+   "events": []
+  },
+  "documentation": {
+   "events": []
+  },
+  "splitting": {
+   "events": []
+  },
+  "numbers": {
+   "events": []
+  }
+ },
+ "_meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 10.19,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 21,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 6.2,
+    "keyword_hits": 0,
+    "cue_hits": 2,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 31.02,
+     "timestamp": "00:00",
+     "found_by": [
+      "cue"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 30.0,
+       "quality": 0.766,
+       "text": "«Guten Tag, Frau Keller», da ist Martina wild. Sie haben einen längeren Rückruf zum Depot gewünscht. Sie haben in ihrer Nachricht auch geschrieben, dass sie bald zügelt. Gehört das für sie zusammen?» «Ja, aber ich möchte zwei Sachen nicht aufeinander bringen. Ich habe das Depot und ein separates Konto für den Umzug. Ich werde mich informieren, ohne jetzt im Kauf zu verlangen. Ob ich überhaupt eine einzelne Firma kaufe, weiß ich nicht.»",
+       "spans": [
+        {
+         "start": 416,
+         "end": 421,
+         "how": "cue",
+         "family": "trade"
+        },
+        {
+         "start": 360,
+         "end": 364,
+         "how": "cue",
+         "family": "trade"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 31.02,
+       "quality": 0.096,
+       "text": ", einen.",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "trade",
+       "keyword_id": "CUE",
+       "term": "Kauf",
+       "matched": "Kauf",
+       "turn": "s001",
+       "how": "cue",
+       "score": 4,
+       "explains": [],
+       "label": "cue word"
+      },
+      {
+       "family": "trade",
+       "keyword_id": "CUE",
+       "term": "kaufe",
+       "matched": "kaufe",
+       "turn": "s001",
+       "how": "cue",
+       "score": 4,
+       "explains": [],
+       "label": "cue word"
+      }
+     ],
+     "families": [
+      "trade"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.1,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ }
+}

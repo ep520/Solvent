@@ -242,14 +242,16 @@ Rules:
     return Path(cache_dir) / (hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest() + ".json")
 
 
-def extract(segments, policies, profile=None, cache_dir=ROOT / "cache" / "extract", view=None):
+def extract(segments, policies, profile=None, cache_dir=ROOT / "cache" / "extract", view=None, force=False):
     """Run the LLM extraction once per (model, prompt, policies, model input); cached on disk as JSON.
 
     view: from input_view(). In snippet mode the model reads only the snippets; the view is stored in
-    _meta["input"] so the dashboard shows exactly what the model read."""
+    _meta["input"] so the dashboard shows exactly what the model read.
+    force: bypass the cache and call the model even if a cached entry exists (mirrors asr.transcribe's
+    own force= parameter); the fresh result still overwrites the same cache entry on disk."""
     p = models.check("chat", profile)
     path = cache_path(segments, policies, p, cache_dir, view)
-    if path.exists():
+    if path.exists() and not force:
         return load_json(path)
     started = time.perf_counter()
     if uses_snippets(view) and not view["snippets"]:

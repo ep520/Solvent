@@ -3,6 +3,10 @@
 
   const decision = window.CallGuardDecision;
   let calls, keywordGroups, keywordConfig, keywordCoverage, allKeywords, state, live = false, thresholdValues = null;
+  let singlePresetRun = false;
+  let currentRunDir = null;
+  const audioUrl = (base, id, extra = "") =>
+    `${base}/${encodeURIComponent(id)}.wav${extra}${currentRunDir ? `${extra ? "&" : "?"}run_dir=${encodeURIComponent(currentRunDir)}` : ""}`;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -78,6 +82,15 @@
   }
 
   function renderThreshold() {
+    if (singlePresetRun) {
+      // This run recorded one decision at one threshold; it was never independently
+      // re-evaluated under the other presets, so there is nothing to switch between.
+      const call = selectedCall();
+      const presetName = call && call.recordedPreset ? call.recordedPreset[0].toUpperCase() + call.recordedPreset.slice(1) : null;
+      const thresholdNote = call && call.recordedThreshold != null ? ` (ASR quality ${call.recordedThreshold})` : "";
+      $("#threshold-control").innerHTML = `<span class="badge badge-ghost badge-sm" title="Saved runs hold a single recorded decision; preset switching is not available.">Recorded preset: ${presetName ? escapeHtml(presetName) + thresholdNote : "unknown"}</span>`;
+      return;
+    }
     const labels = { sensitive: "Sensitive", balanced: "Balanced", conservative: "Conservative" };
     const descriptions = { sensitive: "More supported cases become alarms", balanced: "Default escalation behaviour", conservative: "Fewer supported cases become alarms; more go to review" };
     $("#threshold-control").innerHTML = Object.entries(labels).map(([value, label]) => `
@@ -322,8 +335,56 @@
 
   function renderDetail(options = {}) {
     const call = selectedCall();
+
+    // Handle empty calls array
+    if (!call) {
+      let html = `<div class="detail-empty">`;
+      if (live && state.pendingCount > 0) {
+        html += `
+          <p><strong>Ready to analyze</strong></p>
+          <p>${state.pendingCount} recording${state.pendingCount === 1 ? "" : "s"} available for analysis.</p>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px;">
+            <button class="btn btn-primary" onclick="analyzeCall('Stufe1_D02-K1')">Analyze: Stufe1_D02-K1</button>
+            <button class="btn btn-outline" onclick="analyzeAll()">Analyze All (${state.pendingCount})</button>
+          </div>
+        `;
+      } else {
+        html += `<p>No analyzed calls available.</p>`;
+      }
+      html += `</div>`;
+      $("#call-detail").innerHTML = html;
+      return;
+    }
+
+    // Check if loaded from run with unavailable extraction data
+    if (call.extractionDataAvailable === false) {
+      $("#call-detail").innerHTML = `<div class="detail-limited">
+        <header class="detail-header">
+          <div><div class="eyebrow">Evaluation Run</div><div class="detail-title-line"><h2>${escapeHtml(shortCallName(call))}</h2></div></div>
+        </header>
+        <div class="review-workspace">
+          <section class="info-panel">
+            <p><strong>Decision:</strong> ${classificationFor(call)}</p>
+            <p style="color: #999; font-size: 14px; margin-top: 16px;">
+              This call was loaded from an evaluation run. ${call.transcriptAvailable === false
+                ? "The transcript for this recording could not be matched/recovered, so conditions, evidence grounding and the full transcript are unavailable."
+                : "Extraction details (conditions, evidence grounding) are unavailable because the run result does not contain the full extraction JSON."}
+            </p>
+            <p style="color: #999; font-size: 14px; margin-top: 8px;">
+              Available data: decision label, decision status, run provenance (git commit, timestamp).
+            </p>
+          </section>
+          <section class="evidence-audio" style="margin-top: 16px;">
+            <audio controls preload="metadata" src="${audioUrl("/audio", call.id)}" style="width: 100%;"></audio>
+            <p style="color: #999; font-size: 13px; margin-top: 8px;">Original recording. Evidence-passage playback requires extraction detail, which is unavailable for this run.</p>
+          </section>
+        </div>
+      </div>`;
+      return;
+    }
+
     const classification = classificationFor(call);
-    const evidenceIndex = Math.min(state.evidenceIndex || 0, Math.max(0, call.evidence.length - 1));
+    const evidenceIndex = Math.min(state.evidenceIndex || 0, Math.max(0, (call.evidence || []).length - 1));
     const evidence = call.evidence[evidenceIndex];
     const bounds = clipBounds(evidence, call);
     const hasEvidence = evidence.segments.length > 0;
@@ -342,8 +403,8 @@
         ${classification === "Review" && reasons.includes("technical_uncertainty") ? `<section class="review-question technical-review"><span class="eyebrow">Technical review</span><h3>Evidence needs verification</h3><p>The extraction or its transcript grounding could not be verified. Listen to the relevant context before making a compliance decision.</p></section>` : ""}
         <section id="assessment-section" class="main-review-card guide-target"><div class="section-head"><div><span class="eyebrow">${escapeHtml(caseHeading(call, classification))}</span><h3>${escapeHtml(operationalNarrative(call, classification))}</h3></div></div>
           <div id="evidence-section" class="evidence-window"><div class="evidence-meta"><span><strong>${hasEvidence ? `${formatTime(evidence.evidence_start ?? evidence.time)}–${formatTime(evidence.evidence_end ?? evidence.end)}` : "No supporting passage"}</strong></span><span>${hasEvidence ? `Context ${formatTime(bounds.start)}–${formatTime(bounds.end)}` : ""}</span></div><p class="evidence-context">${classification === "Review" && (reasons.includes("missing_policy_fact") || reasons.includes("actor_role_unknown")) ? "Relevant context — it does not establish the unresolved fact." : hasEvidence ? "Supporting passage in the automatic transcript." : "Audio or grounded evidence is not available."}</p><p id="evidence-text" class="evidence-text passage-change" aria-hidden="true"></p><p class="sr-only">${escapeHtml(evidence.text)}</p></div>
-          ${live ? `<audio id="audio-element" preload="metadata" src="/audio/${encodeURIComponent(call.id)}.wav"></audio>` : ""}
-          <div id="audio-section" class="evidence-audio"><button class="btn btn-primary play-evidence" type="button" ${hasEvidence ? "" : "disabled"} data-clip-start="${bounds.start}" data-clip-end="${bounds.end}">${icon("audio")} Play evidence</button><span>${hasEvidence ? "Includes up to 10 seconds of surrounding audio." : "Audio is not available for this passage."}</span>${live && hasEvidence ? `<a class="btn btn-xs btn-ghost" href="/audio/${encodeURIComponent(call.id)}.wav">Full recording</a><a class="btn btn-xs btn-ghost" href="/clip/${encodeURIComponent(call.id)}.wav?clip_start=${bounds.start}&clip_end=${bounds.end}" download>Download clip</a>` : ""}</div>
+          ${live ? `<audio id="audio-element" preload="metadata" src="${audioUrl("/audio", call.id)}"></audio>` : ""}
+          <div id="audio-section" class="evidence-audio"><button class="btn btn-primary play-evidence" type="button" ${hasEvidence ? "" : "disabled"} data-clip-start="${bounds.start}" data-clip-end="${bounds.end}">${icon("audio")} Play evidence</button><span>${hasEvidence ? "Includes up to 10 seconds of surrounding audio." : "Audio is not available for this passage."}</span>${live && hasEvidence ? `<a class="btn btn-xs btn-ghost" href="${audioUrl("/audio", call.id)}">Full recording</a><a class="btn btn-xs btn-ghost" href="${audioUrl("/clip", call.id, `?clip_start=${bounds.start}&clip_end=${bounds.end}`)}" download>Download clip</a>` : ""}</div>
           ${call.evidence.length > 1 ? `<div class="passage-nav">Passage ${evidenceIndex + 1} of ${call.evidence.length}${call.evidence.map((_, index) => `<button class="btn btn-xs ${index === evidenceIndex ? "btn-primary" : "btn-ghost"}" data-evidence-index="${index}" type="button">${index + 1}</button>`).join("")}</div>` : ""}
           <div class="audio-player secondary-audio"><button id="play-button" class="btn btn-ghost btn-xs play-button" type="button" aria-label="Play full recording" ${live ? "" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon-path" d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none"/></svg></button><div class="audio-track"><input id="audio-range" class="range range-xs audio-range" type="range" min="0" max="${call.duration}" step="0.1" value="0" aria-label="Full recording position"><div class="audio-times"><span id="elapsed-time">0:00</span><span>Full recording · ${formatTime(call.duration)}</span></div></div></div>
         </section>
@@ -488,6 +549,7 @@
   }
 
   function renderKeywordPopover() {
+    if (!state || !keywordGroups) return;
     if (state.keywordEditor && live) return renderKeywordEditor();
     const query = state.keywordQuery.toLowerCase();
     const groups = Object.entries(keywordGroups).map(([family, keywords]) => {
@@ -495,7 +557,7 @@
       if (!visible.length) return "";
       return `<div class="keyword-group"><h4>${escapeHtml(family)}</h4>${visible.map((keyword) => `<label class="keyword-option"><input class="checkbox checkbox-sm checkbox-primary" type="checkbox" value="${escapeHtml(keyword)}" ${state.enabledKeywords.has(keyword) ? "checked" : ""}><span>${escapeHtml(keyword)}</span></label>`).join("")}</div>`;
     }).join("");
-    const coverage = live && keywordCoverage ? `<div class="keyword-coverage"><strong>${keywordCoverage.families} families · ${keywordCoverage.enabledKeywords} enabled keywords</strong><span>${keywordCoverage.configuredVariants} configured DE / Swiss German variants (${keywordCoverage.distinctTerms} distinct terms) · ${keywordCoverage.occurrences} observed occurrences in ${keywordCoverage.callsWithOccurrences}/${keywordCoverage.transcriptCalls} cached calls</span><div>${keywordCoverage.byFamily.map((row) => `<small>${escapeHtml(row.label)}: ${row.enabledKeywords} keywords · ${row.occurrences} hits</small>`).join("")}</div></div>` : "";
+    const coverage = live && keywordCoverage && Array.isArray(keywordCoverage.byFamily) ? `<div class="keyword-coverage"><strong>${keywordCoverage.families} families · ${keywordCoverage.enabledKeywords} enabled keywords</strong><span>${keywordCoverage.configuredVariants} configured DE / Swiss German variants (${keywordCoverage.distinctTerms} distinct terms) · ${keywordCoverage.occurrences} observed occurrences in ${keywordCoverage.callsWithOccurrences}/${keywordCoverage.transcriptCalls} cached calls</span><div>${keywordCoverage.byFamily.map((row) => `<small>${escapeHtml(row.label)}: ${row.enabledKeywords} keywords · ${row.occurrences} hits</small>`).join("")}</div></div>` : "";
     const manage = live ? '<button class="btn btn-xs btn-outline" id="manage-keywords" type="button">Manage list</button>' : "";
     $("#keyword-popover").innerHTML = `<div class="keyword-head"><div><h3>Keyword highlights</h3><p>Highlights update now · snippets and decisions on the next pipeline run</p></div><div class="keyword-actions"><button class="btn btn-xs btn-ghost" id="select-all-keywords" type="button">All</button><button class="btn btn-xs btn-ghost" id="clear-keywords" type="button">Clear</button></div></div>${coverage}<div class="keyword-manage">${manage}</div><label class="input input-sm keyword-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="keyword-search" type="search" value="${escapeHtml(state.keywordQuery)}" placeholder="Find a keyword"></label>${groups || '<p class="empty-state">No keywords found.</p>'}`;
     $("#keyword-count").textContent = state.enabledKeywords.size;
@@ -600,6 +662,7 @@
     state.selectedId = id;
     state.evidenceIndex = 0;
     state.audioElapsed = 0;
+    if (singlePresetRun) renderThreshold();
     renderQueue();
     renderDetail();
     if (innerWidth <= 760) openMobileDetail();
@@ -788,35 +851,245 @@
 
   async function loadData() {
     try {
-      const response = await fetch("/api/data", { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const runDir = new URLSearchParams(window.location.search).get("run_dir");
+      const endpoint = runDir
+        ? `/api/data?run_dir=${encodeURIComponent(runDir)}`
+        : "/api/data";
+      console.log("[loadData] fetching:", endpoint);
+      const response = await fetch(endpoint, { cache: "no-store" });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (error.error) {
+          console.error("API Error:", error.error);
+          // Show error in detail panel
+          const detail = $("#call-detail");
+          if (detail) {
+            detail.innerHTML = `<div class="detail-error">
+              <p><strong>Error loading data:</strong></p>
+              <p>${escapeHtml(error.error)}</p>
+            </div>`;
+          }
+          return null;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
-      if (!data.calls.length) throw new Error("no analysed calls yet");
+      console.log("[loadData] received:", {
+        calls: data.calls ? data.calls.length : 0,
+        source: data.source,
+        has_keywordGroups: !!data.keywordGroups,
+        has_keywordConfig: !!data.keywordConfig,
+        has_keywordCoverage: !!data.keywordCoverage
+      });
+      // Allow empty calls array for evaluation runs
+      if (!data.calls || data.calls.length === 0) {
+        console.log("No calls in response; may be expected for some run data");
+      }
       return data;
     } catch (error) {
+      console.error("loadData error:", error);
       return null;
     }
   }
 
+  let analyzingCall = null;
+  let batchRunDir = null;
+
+  async function analyzeAll() {
+    if (analyzingCall || batchRunDir) {
+      alert("Analysis already in progress");
+      return;
+    }
+
+    try {
+      $("#call-detail").innerHTML = `
+        <div class="detail-empty">
+          <p><strong>Batch analysis started...</strong></p>
+          <p>Analyzing all pending recordings. Progress will appear below.</p>
+          <div class="spinner" style="margin-top: 16px;">
+            <div style="width: 24px; height: 24px; border: 3px solid #ccc; border-top-color: #333; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          </div>
+          <div id="batch-status" style="margin-top: 20px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto;"></div>
+        </div>
+      `;
+
+      const response = await fetch("/api/analyze-all", { method: "POST" });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      const totalPending = result.total || 0;
+
+      // Poll for all jobs to complete
+      let completed = 0;
+      let failed = 0;
+      const statusEl = $("#batch-status");
+
+      while (completed + failed < totalPending && totalPending > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Check a sample of jobs for completion
+        for (const callId of (result.pending || [])) {
+          const statusResp = await fetch(`/api/status?call_id=${encodeURIComponent(callId)}`);
+          if (!statusResp.ok) continue;
+          const status = await statusResp.json();
+
+          if (status.status === "done") {
+            completed++;
+            if (statusEl) {
+              statusEl.innerHTML += `<div style="padding: 4px;">✓ ${escapeHtml(callId)}</div>`;
+            }
+          } else if (status.status === "error") {
+            failed++;
+            if (statusEl) {
+              statusEl.innerHTML += `<div style="padding: 4px; color: #c00;">✗ ${escapeHtml(callId)}: ${escapeHtml(status.error)}</div>`;
+            }
+          }
+        }
+      }
+
+      // Redirect to batch run after first completed run
+      for (const callId of (result.pending || [])) {
+        const statusResp = await fetch(`/api/status?call_id=${encodeURIComponent(callId)}`);
+        if (statusResp.ok) {
+          const status = await statusResp.json();
+          if (status.status === "done") {
+            window.location.href = `/?run_dir=${encodeURIComponent(status.run_dir)}`;
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Batch analysis error:", error);
+      alert("Batch analysis failed: " + error.message);
+      renderDetail();
+    }
+  }
+
+  async function analyzeCall(callId) {
+    if (analyzingCall) {
+      alert("An analysis is already in progress");
+      return;
+    }
+
+    try {
+      analyzingCall = callId;
+      $("#call-detail").innerHTML = `
+        <div class="detail-empty">
+          <p><strong>Analyzing ${escapeHtml(callId)}...</strong></p>
+          <p>Running ASR and policy extraction on the Pod. This may take a minute.</p>
+          <div class="spinner" style="margin-top: 16px;">
+            <div style="width: 24px; height: 24px; border: 3px solid #ccc; border-top-color: #333; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          </div>
+        </div>
+        <style>
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        </style>
+      `;
+
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ call_id: callId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      // Poll for status
+      let done = false;
+      while (!done) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const statusResp = await fetch(`/api/status?call_id=${encodeURIComponent(callId)}`);
+        if (!statusResp.ok) continue;
+        const status = await statusResp.json();
+        if (status.status === "done") {
+          done = true;
+          // Reload data with the new run
+          window.location.href = `/?run_dir=${encodeURIComponent(status.run_dir)}`;
+        } else if (status.status === "error") {
+          throw new Error(status.error || "Analysis failed");
+        }
+      }
+    } catch (error) {
+      console.error("Analysis error:", error);
+      alert("Analysis failed: " + error.message);
+      analyzingCall = null;
+      renderDetail();
+    }
+  }
+
+  async function loadRunHistory() {
+    const selector = $("#run-selector");
+    if (!selector) return;
+    try {
+      const response = await fetch("/api/runs", { cache: "no-store" });
+      if (!response.ok) return;
+      const { runs } = await response.json();
+      // Use the module-level currentRunDir, which boot() sets from the server-resolved
+      // run (data.meta.run_dir) when one is active -- including a persistent default
+      // loaded via plain "/" with no ?run_dir= in the URL -- not just the raw URL param.
+      const options = [`<option value="">Live pipeline (cache)</option>`].concat(
+        (runs || []).map((run) => {
+          const when = run.generated_at ? run.generated_at.replace("T", " ").slice(0, 19) : run.run_dir;
+          const flag = run.sourceWarning ? ` ⚠ ${run.sourceWarning}` : "";
+          const label = `${when} · ${run.recordings} recording${run.recordings === 1 ? "" : "s"}${flag}`;
+          return `<option value="${escapeHtml(run.run_dir)}">${escapeHtml(label)}</option>`;
+        })
+      );
+      selector.innerHTML = options.join("");
+      selector.value = currentRunDir || "";
+      // If the deep-linked run_dir wasn't in the list (e.g. invalid/old), leave the
+      // selector on "Live pipeline" rather than silently claiming a different run is selected.
+      if (selector.value !== (currentRunDir || "")) selector.value = "";
+      selector.hidden = false;
+    } catch (error) {
+      console.error("loadRunHistory error:", error);
+    }
+  }
+
   async function boot() {
+    currentRunDir = new URLSearchParams(window.location.search).get("run_dir");
     const data = await loadData();
     if (data) {
       live = true;
       ({ calls, keywordGroups, keywordConfig, keywordCoverage } = data);
       thresholdValues = data.thresholds;
+      singlePresetRun = data.singlePresetRun === true;
+      // A persistent default run can be active even with no ?run_dir= in the URL
+      // (server resolves it via DEFAULT_RUN_FILE); reflect that in the selector too.
+      if (data.source === "run" && data.meta && data.meta.run_dir) currentRunDir = data.meta.run_dir;
       $("#data-badge").hidden = true;
       $("#threshold-badge").textContent = "ASR quality";
     } else {
       ({ calls, keywordGroups } = window.CallGuardData);
       keywordConfig = null;
       keywordCoverage = null;
+      singlePresetRun = false;
     }
     allKeywords = Object.values(keywordGroups).flat();
     state = window.CallGuardState.createUiState(calls, allKeywords);
     state.pendingCount = live ? (data.pending || []).length : 0;
     if (live) state.threshold = data.defaultThreshold;
     init();
+    loadRunHistory();
+    const selector = $("#run-selector");
+    if (selector) {
+      selector.addEventListener("change", () => {
+        window.location.href = selector.value ? `/?run_dir=${encodeURIComponent(selector.value)}` : "/";
+      });
+    }
   }
 
   boot();
+
+  // Expose analyze functions to global scope for inline onclick handlers
+  window.analyzeCall = analyzeCall;
+  window.analyzeAll = analyzeAll;
 })();

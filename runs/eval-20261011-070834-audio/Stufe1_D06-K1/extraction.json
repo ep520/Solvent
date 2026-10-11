@@ -1,0 +1,144 @@
+{
+ "families": {
+  "trade": {
+   "events": []
+  },
+  "access": {
+   "events": [
+    {
+     "actor": {
+      "role": "unknown",
+      "status": "unknown",
+      "segment_ids": [
+       "s001"
+      ]
+     },
+     "conditions": {
+      "value_spoken": {
+       "state": "unknown",
+       "evidence": []
+      },
+      "access_secret": {
+       "state": "unknown",
+       "evidence": []
+      },
+      "secret_active": {
+       "state": "unknown",
+       "evidence": []
+      }
+     }
+    }
+   ]
+  },
+  "disclosure": {
+   "events": []
+  },
+  "documentation": {
+   "events": []
+  },
+  "splitting": {
+   "events": []
+  },
+  "numbers": {
+   "events": []
+  }
+ },
+ "_meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 9.409,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 11,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 12.3,
+    "keyword_hits": 1,
+    "cue_hits": 0,
+    "digit_hits": 0,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 30.04,
+     "timestamp": "00:00",
+     "found_by": [
+      "keyword"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 0.02,
+       "quality": 0.721,
+       "text": "Was kann ich für sie tun machen? Da ist die Maviane Kolo. Ich habe ein neues Telefon und habe das alte schon zugesetzt. Jetzt finde ich die richtige Anleitung müde. Es geht ums Anmelden und Bestätigen, aber ich will nicht gerade alles neu machen, wenn es gar nicht müdeig ist. Gut, wir beginnen die zwei Sachen. Fürs Passwort sagen sie mir bitte nur,",
+       "spans": [
+        {
+         "start": 317,
+         "end": 325,
+         "how": "exact",
+         "family": "access"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 30.04,
+       "quality": 0.16,
+       "text": ", die, die, die, die, die, die, die.",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "access",
+       "keyword_id": "K10",
+       "term": "Passwort",
+       "matched": "Passwort",
+       "turn": "s001",
+       "how": "exact",
+       "score": 1.0,
+       "explains": [],
+       "label": "Zugangswörter"
+      }
+     ],
+     "families": [
+      "access"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.35,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ }
+}

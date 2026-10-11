@@ -1,0 +1,175 @@
+{
+ "families": {
+  "trade": {
+   "events": []
+  },
+  "access": {
+   "events": []
+  },
+  "disclosure": {
+   "events": []
+  },
+  "documentation": {
+   "events": []
+  },
+  "splitting": {
+   "events": []
+  },
+  "numbers": {
+   "events": [
+    {
+     "actor": {
+      "role": "unknown",
+      "status": "unknown",
+      "segment_ids": [
+       "s001"
+      ]
+     },
+     "object_type": "unknown",
+     "evidence": [
+      {
+       "segment_id": "s001",
+       "quote": "in meiner Liste sind 4000 für Leute und 5000 für Wohnen."
+      },
+      {
+       "segment_id": "s001",
+       "quote": "Bei uns muss ein zusammengehörender Vorgang über 8000 an die Internetfreigabe stehen."
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "_meta": {
+  "profile": "qwen3_fast",
+  "model": "Qwen/Qwen3-32B-AWQ",
+  "prompt_version": "extract-6+snippets-1",
+  "elapsed_s": 8.895,
+  "input": {
+   "version": "snippets-1",
+   "config": {
+    "enabled": true,
+    "cues": "cues_general.json",
+    "fuzzy": true,
+    "max_snippets": 12,
+    "if_no_snippets": "full_transcript"
+   },
+   "mode": "snippets",
+   "stats": {
+    "turns": 6,
+    "snippets": 1,
+    "kept_turns": 2,
+    "kept_text_pct": 41.6,
+    "keyword_hits": 0,
+    "cue_hits": 0,
+    "digit_hits": 3,
+    "semantic_hits": 0
+   },
+   "snippets": [
+    {
+     "start": 0.0,
+     "end": 31.02,
+     "timestamp": "00:00",
+     "found_by": [
+      "digits"
+     ],
+     "turns": [
+      {
+       "idx": 0,
+       "tid": "s001",
+       "mark": "anchor",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 0.0,
+       "end": 0.02,
+       "quality": 0.685,
+       "text": "«Krüse, Frau Gieslo», da ist wie gerne Walton von Firmensovis. Sie haben eine Frage zu Beträgen, die an denselben Lieferanten gehen sollten. Ja, in meiner Liste sind 4000 für Leute und 5000 für Wohnen. Ich habe die Liste meiner Kollegin übernommen, aber die Belege haben wir noch nicht zusammenvergleichen. Bei uns muss ein zusammengehörender Vorgang über 8000 an die Internetfreigabe stehen.",
+       "spans": [
+        {
+         "start": 166,
+         "end": 170,
+         "how": "digits",
+         "family": "numbers"
+        },
+        {
+         "start": 185,
+         "end": 189,
+         "how": "digits",
+         "family": "numbers"
+        },
+        {
+         "start": 356,
+         "end": 360,
+         "how": "digits",
+         "family": "numbers"
+        }
+       ]
+      },
+      {
+       "idx": 1,
+       "tid": "s002",
+       "mark": "near",
+       "gap_before": false,
+       "speaker": "unknown",
+       "start": 30.0,
+       "end": 31.02,
+       "quality": 0.681,
+       "text": ", und lau, und lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau, lau",
+       "spans": []
+      }
+     ],
+     "hits": [
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "4000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      },
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "5000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      },
+      {
+       "family": "numbers",
+       "keyword_id": "DIGITS",
+       "term": "4 digits",
+       "matched": "8000",
+       "turn": "s001",
+       "how": "digits",
+       "score": 4,
+       "explains": [],
+       "label": "spoken digits"
+      }
+     ],
+     "families": [
+      "numbers"
+     ],
+     "semantic_check": null,
+     "semantic_score": null,
+     "priority": 0.3,
+     "snippet_id": 1,
+     "segment_ids": [
+      "s001",
+      "s002"
+     ],
+     "anchor_segment_ids": [
+      "s001"
+     ],
+     "context_segment_ids": []
+    }
+   ]
+  }
+ }
+}

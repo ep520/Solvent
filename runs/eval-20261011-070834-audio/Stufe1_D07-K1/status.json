@@ -1,0 +1,13 @@
+{
+ "call_id": "Stufe1_D07-K1",
+ "stage": "complete",
+ "error": null,
+ "started_at": "2026-10-11T07:10:00+0200",
+ "asr_elapsed_s": 12.371,
+ "asr_cache_hit": false,
+ "extract_elapsed_s": 5.882,
+ "extract_cache_hit": false,
+ "extraction_error": null,
+ "completed_at": "2026-10-11T07:10:18+0200",
+ "label": "no_alert"
+}
