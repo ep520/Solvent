@@ -1,0 +1,21 @@
+# CallGuard pipeline dependencies
+# Python 3.10+
+
+# ASR
+faster-whisper>=0.10.0
+
+# LLM inference
+vllm>=0.4.0
+torch>=2.1.0
+
+# API servers
+fastapi>=0.104.0
+uvicorn>=0.24.0
+flask>=3.0.0
+
+# Embeddings (optional, for semantic snippet matching)
+sentence-transformers>=2.2.0
+transformers>=4.35.0
+
+# Testing
+unittest-discover>=1.1.1
